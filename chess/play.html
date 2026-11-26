@@ -299,6 +299,13 @@
   body.moon #boot .bg { background: url(assets/keyart_moon.jpg) center / cover; opacity: .25; filter: blur(2px); }
   body.moon #boot .mono-only { display: none; }
   body.moon #boot .moon-only { display: block; }
+  /* "tap for sound" hints, shown until the first gesture */
+  .tapsound { position: absolute; left: 50%; top: 24px; transform: translateX(-50%); z-index: 5; background: var(--ink); color: var(--white); padding: 7px 14px;
+    animation: blink 1.2s steps(1) infinite; pointer-events: none; }
+  .title-tap { position: fixed; z-index: 25; top: auto; bottom: 46px; }
+  body:not(.intro) .title-tap, body.sound-ready .tapsound { display: none; }
+  body.moon .tapsound { background: var(--cyan); color: var(--abyss); }
+  #soundOn { font-size: 14px; padding: 10px 18px !important; }
   /* studio card */
   #studio { position: fixed; inset: 0; z-index: 58; display: grid; place-items: center; background: #0d0d0d; color: #fff; transition: opacity .5s; }
   #studio[hidden] { display: none; }
@@ -343,7 +350,11 @@
   body.moon #intro .end .bw { display: none; }
   body.moon #intro .end img { display: block; filter: drop-shadow(0 0 30px rgba(79,224,255,.8)); }
   body.moon #soundOn { background: var(--cyan); color: var(--abyss); }
-  #intro { position: fixed; inset: 0; z-index: 55; background: #000; display: grid; place-items: center; transition: opacity .5s; }
+  #intro { position: fixed; inset: 0; z-index: 55; background: var(--paper); display: grid; place-items: center; transition: opacity .8s ease; }
+  #intro > * { transition: opacity .9s ease; }
+  #intro.fadeout > * { opacity: 0 !important; }
+  #intro video { background: #000; }
+  body.moon #intro { background: #030b1f; }
   #intro[hidden] { display: none; }
   #intro video { width: 100%; height: 100%; object-fit: cover; }
   #intro .bars { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 9vh 0 #000, inset 0 -9vh 0 #000; }
@@ -494,6 +505,15 @@
 </style>
 </head>
 <body class="intro">
+<script>
+  // set the edition's look before anything paints (the module script loads later)
+  (function () {
+    var q = new URLSearchParams(location.search), e = q.get('edition'), t = e || q.get('theme');
+    try { t = t || localStorage.getItem('cf-theme'); } catch (x) {}
+    if (t === 'moon') { document.body.classList.add('moon'); document.querySelector('meta[name=theme-color]').setAttribute('content', '#030b1f'); }
+    if (e) document.body.classList.add('locked');
+  })();
+</script>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
 <div class="streaks" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -529,6 +549,7 @@
   </div>
 </section>
 
+<div class="tapsound mono title-tap" aria-hidden="true">♪ Tap anywhere for sound</div>
 <header><button id="bMenu" title="Menu"><span class="wm">Chess<em>Fantasia</em></span><img class="moonlogo" src="assets/logo_moon.webp" alt="Chess Fantasia"><span class="mono">← Menu</span></button></header>
 <div id="hudtop" class="mono"><span class="live" id="liveLabel">Live</span><span class="tcode" id="mcount">Move 001</span></div>
 
@@ -617,6 +638,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
+  <div class="tapsound mono" aria-hidden="true">♪ Tap anywhere for sound</div>
 </section>
 <section id="studio" aria-label="A Kenneth So Production" hidden>
   <div class="st"><span class="a mono">A</span><span class="n">Kenneth So</span><i class="rule"></i><span class="p mono">Production</span></div>
@@ -629,7 +651,7 @@
   <div class="ov tc mono" id="introTc">REC 00:00:00:00</div>
   <div class="ov card" id="introCard"><span></span></div>
   <div class="ov end" id="introEnd"><div class="kp mono">A Kenneth So Production</div><div class="bw"><span>Chess</span><span>Fantasia</span></div><img src="assets/logo_moon.webp" alt=""></div>
-  <button id="soundOn" class="mono" hidden>♪ Sound on</button>
+  <button id="soundOn" class="mono" hidden>♪ Tap anywhere for sound</button>
   <button id="skip" class="mono">Skip ›</button>
 </section>
 
@@ -2062,7 +2084,7 @@ function setMusic(kind) {
     if (musicEl) { const old = musicEl; musicEl = null; fadeVol(old, 0, 600, () => old.pause()); }
     return;
   }
-  if (musicEl && musicEl.dataset.src === src) return;
+  if (musicEl && musicEl.dataset.src === src) { if (musicEl.paused) musicEl.play().then(() => fadeVol(musicEl, .42, 600), () => {}); return; }
   const old = musicEl;
   const el = new Audio(src);
   el.loop = true; el.volume = 0; el.dataset.src = src;
@@ -2083,11 +2105,21 @@ function setMusicOn(on) {
 document.querySelectorAll('[data-music]').forEach(b => b.onclick = () => { musicUnlocked = true; setMusicOn(b.dataset.music === '1'); });
 $('music').onchange = e => { musicUnlocked = true; setMusicOn(e.target.value === '1'); };
 // browsers only allow audio after a gesture
-['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, () => {
-  if (!$('intro').hidden || document.getElementById('boot')) return;
-  if (!musicUnlocked) { musicUnlocked = true; setMusic(); }
-  else if (musicOn && musicEl && musicEl.paused) musicEl.play().catch(() => {});
-}, { passive: true }));
+// browsers keep pages silent until the first tap / key: that first gesture turns everything on
+let soundReady = false;
+function unlockSound() {
+  try { ac().resume(); } catch (e) { /* audio blocked */ }
+  const vid = $('introVid');
+  if (!$('intro').hidden && vid.muted) { vid.muted = false; vid.play().catch(() => {}); $('soundOn').hidden = true; }
+  if ($('intro').hidden && !document.getElementById('boot')) {
+    musicUnlocked = true;
+    if (musicOn && musicEl && musicEl.paused) musicEl.play().then(() => fadeVol(musicEl, .42, 600), () => {});
+    else setMusic();
+  }
+  soundReady = true;
+  document.body.classList.add('sound-ready');
+}
+['pointerdown', 'keydown', 'touchend'].forEach(ev => addEventListener(ev, unlockSound, { passive: true, capture: true }));
 syncMusicUI();
 
 /* ---------- RPG camera: sits behind the acting piece's shoulder ---------- */
@@ -2859,12 +2891,18 @@ const modelsReady = loadModels();
   const toTitle = () => {
     if (done) return;
     done = true;
-    vid.pause();
-    intro.classList.add('gone');
-    tvStatic(300);
-    setTimeout(() => { intro.hidden = true; }, 500);
-    replayTitle();
-    musicUnlocked = true; setMusic('title');
+    // 1) picture and sound fade out together
+    intro.classList.add('fadeout');
+    fadeVol(vid, 0, 900);
+    setTimeout(() => {
+      vid.pause();
+      // 2) the menu fades in with its intro animation and music
+      replayTitle();
+      musicUnlocked = musicUnlocked || soundReady;
+      setMusic('title');
+      intro.classList.add('gone');
+      setTimeout(() => { intro.hidden = true; }, 800);
+    }, 950);
   };
   // broadcast-style overlays timed against the movie (Mono)
   const CUES = [[.2, 'Channel 01'], [2.0, 'Every'], [4.0, 'Piece'], [6.0, 'Transforms']];
@@ -2898,7 +2936,7 @@ const modelsReady = loadModels();
     vid.volume = .85;
     vid.onended = () => setTimeout(toTitle, 900);
     vid.onerror = toTitle;
-    try { vid.muted = false; await vid.play(); }
+    try { vid.muted = false; await vid.play(); soundReady = true; document.body.classList.add('sound-ready'); }
     catch (e) {
       // no gesture yet: browsers only allow silent autoplay
       vid.muted = true;
@@ -2912,7 +2950,7 @@ const modelsReady = loadModels();
   $('soundOn').onclick = e => { e.stopPropagation(); vid.muted = false; $('soundOn').hidden = true; };
   $('skip').onclick = toTitle;
   addEventListener('keydown', e => { if (!intro.hidden && ['Escape', 'Enter', ' '].includes(e.key)) toTitle(); });
-  intro.addEventListener('click', e => { if (e.target === vid) toTitle(); });
+
   musicUnlocked = false;
 }
 setCameraForSide('w', false);
@@ -2922,7 +2960,7 @@ frame();
 
 // small hook for automated checks
 window.__chess = { get state() { return state; }, play: m => play(m), E, openGallery, closeGallery, gearUp, settings,
-  setT: t => { if (gRig) { gRig.t = t; } }, setGallery: (i, team) => { gIdx = i; gTeam = team; buildGalleryRig(); }, get busy() { return busy; } };
+  setT: t => { if (gRig) { gRig.t = t; } }, setGallery: (i, team) => { gIdx = i; gTeam = team; buildGalleryRig(); }, get busy() { return busy; }, get music() { return musicEl && { paused: musicEl.paused, src: musicEl.dataset.src, vol: musicEl.volume }; } };
 </script>
 </body>
 </html>
