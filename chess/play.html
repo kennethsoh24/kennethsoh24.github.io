@@ -281,7 +281,7 @@
   /* ---------- press start + opening movie ---------- */
   body.locked [data-theme], body.locked .field:has(#theme) { display: none !important; }
   body.locked #title .opts:has([data-theme]) { display: none !important; }
-  #boot { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--paper); cursor: pointer; transition: opacity .4s steps(4); }
+  #boot { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--paper); transition: opacity .4s steps(4); }
   #boot.gone, #intro.gone { opacity: 0; pointer-events: none; }
   #boot .bg { position: absolute; inset: 0; background-image: linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px);
     background-size: 100% 25vh, 12.5vw 100%; opacity: .6; }
@@ -289,14 +289,39 @@
   #boot .bw { font-weight: 900; font-stretch: 62%; font-size: clamp(70px, 14vw, 200px); line-height: .8; text-transform: uppercase; }
   #boot .bw span { display: block; } #boot .bw span + span { font-weight: 300; font-stretch: 100%; font-size: .56em; }
   #boot .moon-only { display: none; width: min(560px, 80vw); filter: drop-shadow(0 0 24px rgba(79,224,255,.6)); }
-  #pressStart { border: 1px solid var(--ink); background: var(--ink); color: var(--white); padding: 12px 26px; font-size: 14px; animation: blink 1.1s steps(1) infinite; }
-  #boot .hint { color: var(--grey); }
+  .bootload { display: grid; gap: 8px; justify-items: center; width: min(360px, 70vw); }
+  .bootload .track { width: 100%; height: 1px; background: var(--rule); }
+  .bootload .fill { height: 3px; margin-top: -1px; width: 0; background: var(--ink); transition: width .3s; }
+  body.moon .bootload { color: var(--cyan); }
+  body.moon .bootload .track { background: rgba(79,224,255,.2); }
+  body.moon .bootload .fill { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
   body.moon #boot { background: radial-gradient(ellipse 70% 55% at 50% 30%, #123f8f 0%, #071d4a 55%, #030b1f 100%); }
   body.moon #boot .bg { background: url(assets/keyart_moon.jpg) center / cover; opacity: .25; filter: blur(2px); }
   body.moon #boot .mono-only { display: none; }
   body.moon #boot .moon-only { display: block; }
-  body.moon #pressStart { background: none; border: 0; color: var(--cyan); font-size: 20px; letter-spacing: .3em; text-shadow: 0 0 12px var(--cyan); }
-  body.moon #boot .hint { color: rgba(234,248,255,.6); }
+  /* opening movie overlays */
+  #intro .scan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
+  #intro .ov { position: absolute; z-index: 2; pointer-events: none; color: #fff; }
+  #intro .tl { left: 22px; top: calc(9vh + 14px); }
+  #intro .tc { left: 22px; bottom: calc(9vh + 14px); background: #fff; color: #000; padding: 3px 8px; }
+  #intro .card { inset: 0; display: grid; place-items: center; opacity: 0; }
+  #intro .card span { display: block; width: 100%; text-align: center; background: #fff; color: #000; font-weight: 900; font-stretch: 62%; text-transform: uppercase;
+    font-size: clamp(70px, 15vw, 220px); line-height: .9; padding: .06em 0 0; }
+  #intro .card.on { animation: card .62s steps(1) both; }
+  @keyframes card { 0% { opacity: 1; filter: invert(1); } 12% { opacity: 1; filter: none; } 88% { opacity: 1; } 100% { opacity: 0; } }
+  #intro .end { inset: 0; display: grid; place-items: center; background: #fff; color: #000; opacity: 0; }
+  #intro .end .bw { font-weight: 900; font-stretch: 62%; font-size: clamp(80px, 16vw, 230px); line-height: .8; text-transform: uppercase; text-align: center; }
+  #intro .end .bw span { display: block; } #intro .end .bw span + span { font-weight: 300; font-stretch: 100%; font-size: .56em; }
+  #intro .end img { display: none; width: min(620px, 80vw); }
+  #intro .end.on { animation: endIn 1.6s cubic-bezier(.2,1,.2,1) both; }
+  #intro .end.on .bw { animation: glitch .4s steps(5) .15s both; }
+  @keyframes endIn { 0% { opacity: 0; } 8% { opacity: 1; } 100% { opacity: 1; } }
+  #soundOn { position: absolute; z-index: 3; right: 22px; top: calc(9vh + 12px); background: #fff; color: #000; border: 0; padding: 8px 14px; animation: blink 1.1s steps(1) infinite; }
+  body.moon #intro .scan, body.moon #intro .tl, body.moon #intro .tc, body.moon #intro .card { display: none; }
+  body.moon #intro .end { background: radial-gradient(circle, rgba(11,58,140,.65), rgba(3,11,31,.92)); }
+  body.moon #intro .end .bw { display: none; }
+  body.moon #intro .end img { display: block; filter: drop-shadow(0 0 30px rgba(79,224,255,.8)); }
+  body.moon #soundOn { background: var(--cyan); color: var(--abyss); }
   #intro { position: fixed; inset: 0; z-index: 55; background: #000; display: grid; place-items: center; transition: opacity .5s; }
   #intro[hidden] { display: none; }
   #intro video { width: 100%; height: 100%; object-fit: cover; }
@@ -563,19 +588,24 @@
 <div id="flash"></div>
 <div id="scan"></div>
 <canvas id="static" width="160" height="90"></canvas>
-<section id="boot" aria-label="Press start">
+<section id="boot" aria-label="Loading">
   <div class="bg" aria-hidden="true"></div>
   <div class="inner">
     <div class="bw mono-only"><span>Chess</span><span>Fantasia</span></div>
     <img class="moon-only" src="assets/logo_moon.webp" alt="Chess Fantasia">
-    <button id="pressStart" class="mono">Press start</button>
-    <div class="hint mono">Tap, click or press any key · sound on</div>
+    <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
 </section>
 <section id="intro" aria-label="Opening movie" hidden>
   <video id="introVid" playsinline preload="auto"></video>
-  <button id="skip" class="mono">Skip ›</button>
+  <div class="scan" aria-hidden="true"></div>
   <div class="bars" aria-hidden="true"></div>
+  <div class="ov tl mono"><span class="live">On air</span> — Channel 01</div>
+  <div class="ov tc mono" id="introTc">REC 00:00:00:00</div>
+  <div class="ov card" id="introCard"><span></span></div>
+  <div class="ov end" id="introEnd"><div class="bw"><span>Chess</span><span>Fantasia</span></div><img src="assets/logo_moon.webp" alt=""></div>
+  <button id="soundOn" class="mono" hidden>♪ Sound on</button>
+  <button id="skip" class="mono">Skip ›</button>
 </section>
 
 <script type="importmap">
@@ -1350,6 +1380,7 @@ let modelsLoaded = 0;
 const MODEL_TOTAL = Object.keys(MODEL_SPEC).length * 2;
 function loadProgress() {
   $('loadFill').style.width = (modelsLoaded / MODEL_TOTAL * 100) + '%';
+  if ($('bootFill')) { $('bootFill').style.width = (modelsLoaded / MODEL_TOTAL * 100) + '%'; $('bootText').textContent = `Loading ${String(modelsLoaded).padStart(2, '0')}/${MODEL_TOTAL}`; }
   $('loadText').textContent = modelsLoaded < MODEL_TOTAL
     ? `Loading models ${String(modelsLoaded).padStart(2, '0')}/${MODEL_TOTAL}`
     : `Ready ${MODEL_TOTAL}/${MODEL_TOTAL} ✓`;
@@ -2027,7 +2058,11 @@ function setMusicOn(on) {
 document.querySelectorAll('[data-music]').forEach(b => b.onclick = () => { musicUnlocked = true; setMusicOn(b.dataset.music === '1'); });
 $('music').onchange = e => { musicUnlocked = true; setMusicOn(e.target.value === '1'); };
 // browsers only allow audio after a gesture
-['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, () => { if (!musicUnlocked && !document.getElementById('boot') && $('intro').hidden) { musicUnlocked = true; setMusic(); } }, { passive: true }));
+['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, () => {
+  if (!$('intro').hidden || document.getElementById('boot')) return;
+  if (!musicUnlocked) { musicUnlocked = true; setMusic(); }
+  else if (musicOn && musicEl && musicEl.paused) musicEl.play().catch(() => {});
+}, { passive: true }));
 syncMusicUI();
 
 /* ---------- RPG camera: sits behind the acting piece's shoulder ---------- */
@@ -2791,12 +2826,14 @@ function frame() {
 
 applyTheme(THEME);
 
-/* ---------- press start → opening movie → title ---------- */
+const modelsReady = loadModels();
+/* ---------- loading → opening movie (auto) → title ---------- */
 {
   const boot = $('boot'), intro = $('intro'), vid = $('introVid');
-  let started = false;
+  let done = false;
   const toTitle = () => {
-    if (intro.classList.contains('gone')) return;
+    if (done) return;
+    done = true;
     vid.pause();
     intro.classList.add('gone');
     tvStatic(300);
@@ -2804,30 +2841,52 @@ applyTheme(THEME);
     replayTitle();
     musicUnlocked = true; setMusic('title');
   };
-  const start = () => {
-    if (started) return;
-    started = true;
+  // broadcast-style overlays timed against the movie (Mono)
+  const CUES = [[.2, 'Channel 01'], [2.0, 'Every'], [4.0, 'Piece'], [6.0, 'Transforms']];
+  let cueI = 0, endShown = false;
+  const pad = n => String(n | 0).padStart(2, '0');
+  function cueLoop() {
+    if (done) return;
+    requestAnimationFrame(cueLoop);
+    const t = vid.currentTime, d = vid.duration || 10;
+    $('introTc').textContent = `REC 00:00:${pad(t)}:${pad(t * 30 % 30)}`;
+    if (THEME === 'mono' && cueI < CUES.length && t >= CUES[cueI][0]) {
+      const c = $('introCard');
+      c.querySelector('span').textContent = CUES[cueI][1];
+      c.classList.remove('on'); void c.offsetWidth; c.classList.add('on');
+      if (soundOn && !vid.muted) try { click(ac().currentTime, .1); } catch (e) { /* audio blocked */ }
+      cueI++;
+    }
+    if (!endShown && t >= d - .85) { endShown = true; $('introEnd').classList.add('on'); }
+  }
+  const play = async () => {
     boot.classList.add('gone');
     setTimeout(() => boot.remove(), 450);
-    vid.src = `assets/intro_${THEME}.mp4`;
     intro.hidden = false;
-    vid.volume = .8;
-    vid.play().then(() => {}, () => toTitle());
-    vid.onended = toTitle;
+    vid.volume = .85;
+    vid.onended = () => setTimeout(toTitle, 900);
     vid.onerror = toTitle;
+    try { vid.muted = false; await vid.play(); }
+    catch (e) {
+      // no gesture yet: browsers only allow silent autoplay
+      vid.muted = true;
+      try { await vid.play(); $('soundOn').hidden = false; } catch (e2) { toTitle(); return; }
+    }
+    cueLoop();
   };
-  boot.addEventListener('click', start);
-  addEventListener('keydown', e => { if (!started) start(); else if (!intro.hidden && (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ')) toTitle(); });
+  vid.src = `assets/intro_${THEME}.mp4`;
+  const videoReady = new Promise(res => { vid.addEventListener('canplaythrough', res, { once: true }); vid.addEventListener('error', res, { once: true }); setTimeout(res, 8000); });
+  Promise.all([modelsReady, videoReady]).then(() => setTimeout(play, 350));
+  $('soundOn').onclick = e => { e.stopPropagation(); vid.muted = false; $('soundOn').hidden = true; };
   $('skip').onclick = toTitle;
+  addEventListener('keydown', e => { if (!intro.hidden && ['Escape', 'Enter', ' '].includes(e.key)) toTitle(); });
   intro.addEventListener('click', e => { if (e.target === vid) toTitle(); });
-  // the title music should wait for the movie
   musicUnlocked = false;
 }
 setCameraForSide('w', false);
 syncAll();
 refreshStatus();
 frame();
-loadModels();
 
 // small hook for automated checks
 window.__chess = { get state() { return state; }, play: m => play(m), E, openGallery, closeGallery, gearUp, settings,
