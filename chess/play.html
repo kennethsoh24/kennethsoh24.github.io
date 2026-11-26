@@ -387,6 +387,73 @@
   #skip:hover { background: #fff; color: #000; }
   body.moon #skip { border-color: var(--cyan); color: var(--cyan); font-size: 14px; }
 
+
+  /* =================== DIRECTOR'S CUT =================== */
+  .dc-only { display: none !important; }
+  body.dc .dc-only { display: initial !important; }
+  body.dc .not-dc { display: none !important; }
+  body.dc #dcQuote { display: block !important; max-width: 34em; color: var(--grey); text-transform: none; letter-spacing: .04em; font-size: 12px; min-height: 2.6em; transition: opacity .6s; }
+  body.dc .dc-cut { font-weight: 600; }
+  body.dc canvas#c { filter: contrast(1.08) saturate(.55); }
+  #dcGrain { position: fixed; inset: -50%; z-index: 29; pointer-events: none; opacity: .09;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    animation: grain .5s steps(4) infinite; }
+  body.dc #dcGrain { display: block !important; }
+  body.dc::after { content: ""; position: fixed; inset: 0; z-index: 28; pointer-events: none; box-shadow: inset 0 0 180px rgba(0,0,0,.28); }
+  @keyframes grain { 0% { transform: translate(0,0); } 25% { transform: translate(-4%,3%); } 50% { transform: translate(3%,-5%); } 75% { transform: translate(-2%,-2%); } }
+  /* cinematic bars for cutscenes */
+  #dcBars i { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 8; transition: height .45s cubic-bezier(.7,0,.2,1); pointer-events: none; }
+  #dcBars i:first-child { top: 0; } #dcBars i:last-child { bottom: 0; }
+  body.cine #dcBars i { height: 11vh; }
+  /* intro film credits */
+  #intro .credit { left: 6vw; bottom: calc(9vh + 50px); color: #fff; font-size: clamp(13px, 1.6vw, 20px); letter-spacing: .3em; opacity: 0; mix-blend-mode: difference; }
+  #intro .credit.on { animation: credit 1.9s ease both; }
+  @keyframes credit { 0% { opacity: 0; transform: translateY(8px); } 20%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  body.dc #intro .card { display: none; }
+  /* episode cards */
+  #dcCard { position: fixed; inset: 0; z-index: 30; background: #000; color: #fff; display: grid; place-content: center; gap: 14px; text-align: center; transition: opacity .7s; }
+  #dcCard[hidden] { display: none; }
+  #dcCard.out { opacity: 0; }
+  #dcCard .ep { letter-spacing: .5em; color: #9a9a9a; }
+  #dcCard .tt { font-weight: 300; font-stretch: 100%; font-size: clamp(40px, 7vw, 96px); letter-spacing: .02em; text-transform: uppercase; clip-path: inset(0 100% 0 0); animation: stWipe 1.1s cubic-bezier(.7,0,.2,1) .3s both; }
+  /* transmissions */
+  #tx { position: fixed; z-index: 9; left: 50%; bottom: 13vh; transform: translateX(-50%); width: min(820px, calc(100% - 24px)); background: rgba(13,13,13,.94); color: #fff;
+    border: 1px solid #fff; cursor: pointer; animation: txIn .35s steps(3) both; }
+  #tx[hidden] { display: none; }
+  @keyframes txIn { 0% { opacity: 0; clip-path: inset(48% 0 48% 0); } 100% { opacity: 1; clip-path: inset(0 0 0 0); } }
+  .txhead { display: flex; justify-content: space-between; padding: 7px 12px; border-bottom: 1px solid rgba(255,255,255,.3); color: #bdbdbd; }
+  .txhead .live::before { background: #fff; }
+  .txbody { display: grid; grid-template-columns: 110px 1fr 110px; gap: 14px; align-items: center; padding: 12px; }
+  .pf { margin: 0; display: grid; gap: 4px; justify-items: center; opacity: .3; transition: opacity .2s; }
+  .pf.on { opacity: 1; }
+  .pf img { width: 100px; height: 100px; object-fit: cover; object-position: top; background: #222; filter: grayscale(1) contrast(1.2); border: 1px solid #fff;
+    -webkit-mask: linear-gradient(#000, #000); }
+  .pf.on img { animation: pfStatic .3s steps(3); }
+  @keyframes pfStatic { 0% { filter: grayscale(1) contrast(3) brightness(2); } 100% { filter: grayscale(1) contrast(1.2); } }
+  .pf figcaption { font-size: 10px; color: #bdbdbd; }
+  .pf[data-empty] img { visibility: hidden; }
+  #txText { margin: 0; font-size: clamp(15px, 1.6vw, 19px); line-height: 1.45; min-height: 3.2em; }
+  #txText::after { content: "▌"; animation: blink .8s steps(1) infinite; margin-left: 2px; }
+  .txhint { text-align: right; padding: 0 12px 8px; color: #8b8b8b; font-size: 10px; }
+  /* end credits */
+  #credits { position: fixed; inset: 0; z-index: 45; background: #000; color: #fff; overflow: hidden; }
+  #credits[hidden] { display: none; }
+  #credits .roll { position: absolute; left: 0; right: 0; top: 100%; text-align: center; display: grid; gap: 34px; padding: 0 20px; }
+  #credits .roll.go { animation: roll 28s linear forwards; }
+  @keyframes roll { to { transform: translateY(calc(-100% - 100vh)); } }
+  #credits h3 { margin: 0; font-weight: 900; font-stretch: 62%; font-size: clamp(40px, 7vw, 90px); text-transform: uppercase; line-height: .9; }
+  #credits h3 small { display: block; font-weight: 300; font-stretch: 100%; font-size: .4em; letter-spacing: .1em; margin-top: 10px; }
+  #credits .role { font-family: var(--mono); font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: #9a9a9a; }
+  #credits .name { font-size: 22px; font-weight: 600; margin-top: 6px; }
+  #credits .quote { font-size: 18px; font-style: italic; color: #cfcfcf; max-width: 32em; margin: 0 auto; }
+  #creditsSkip { position: absolute; right: 22px; bottom: 22px; background: none; color: #fff; border: 1px solid #fff; padding: 8px 14px; }
+  @media (max-width: 760px) {
+    #tx { bottom: 45vh; }
+    .txbody { grid-template-columns: 64px 1fr 64px; gap: 8px; }
+    .pf img { width: 60px; height: 60px; }
+    #txText { font-size: 14px; }
+  }
+
   /* =================== MOONLIT THEME =================== */
   #sea, .streaks, .moonlogo { display: none; }
   body.moon { --cyan: #4fe0ff; --navy: #071d4a; --deep: #0b3a8c; --blue: #1d6cff; --ice: #eaf8ff; --gold: #f5c518; --abyss: #030b1f; --red: #ff3b5c;
@@ -537,6 +604,7 @@
     try { t = t || localStorage.getItem('cf-theme'); } catch (x) {}
     if (t === 'moon') { document.body.classList.add('moon'); document.querySelector('meta[name=theme-color]').setAttribute('content', '#030b1f'); }
     if (e) document.body.classList.add('locked');
+    if (e === 'dc') { document.body.classList.add('dc'); document.title = "Chess Fantasia — Director's Cut"; }
   })();
 </script>
 <section id="boot" aria-label="Loading">
@@ -547,7 +615,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 21</div>
+  <div class="build mono">Build 22</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -562,7 +630,8 @@
     <div class="meta mono"><span class="live">On air</span><span>Channel 01</span><span id="clock">00:00:00</span></div>
     <div class="brand"><h1 class="wordmark"><span>Chess</span><span>Fantasia</span></h1>
     <img class="moonlogo" src="assets/logo_moon.webp" alt="Chess Fantasia"></div>
-    <div class="tagline mono"><b></b><span>Every piece transforms.</span></div>
+    <div class="tagline mono"><b></b><span class="not-dc">Every piece transforms.</span><span class="dc-only dc-cut">Director's Cut</span></div>
+    <div class="dc-only dc-quote mono" id="dcQuote">“A pawn is a king that has not yet remembered.”</div>
     <nav aria-label="Main menu">
       <button class="mi" data-mode="ai-w"><span class="n">01</span><span class="t">Play White</span><span class="a">→</span></button>
       <button class="mi" data-mode="ai-b"><span class="n">02</span><span class="t">Play Black</span><span class="a">→</span></button>
@@ -663,10 +732,23 @@
 <div id="toast" aria-live="polite"><div class="bar"></div><div class="txt"></div><div class="sub mono"></div></div>
 <div id="cutin" aria-hidden="true"><div class="panel"><div class="stripe"></div><img alt=""><div class="word"></div><div class="label mono"></div><div class="label2 mono">CH.02 — Battle feed</div></div></div>
 <div id="flash"></div>
+<div id="dcGrain" class="dc-only" aria-hidden="true"></div>
+<div id="dcBars" aria-hidden="true"><i></i><i></i></div>
+<section id="dcCard" aria-live="polite" hidden><div class="ep mono"></div><div class="tt"></div></section>
+<section id="tx" aria-live="polite" hidden>
+  <div class="txhead mono"><span class="live">Transmission</span><span id="txLine">Line 01 — encrypted</span></div>
+  <div class="txbody">
+    <figure class="pf l"><img alt=""><figcaption class="mono"></figcaption></figure>
+    <p id="txText"></p>
+    <figure class="pf r"><img alt=""><figcaption class="mono"></figcaption></figure>
+  </div>
+  <div class="txhint mono">click to continue</div>
+</section>
+<section id="credits" hidden><div class="roll"></div><button id="creditsSkip" class="mono">Skip ›</button></section>
 <div id="scan"></div>
 <canvas id="static" width="160" height="90"></canvas>
 <section id="studio" aria-label="A Kenneth So Production" hidden>
-  <div class="st"><span class="a mono">A</span><span class="n">Kenneth So</span><i class="rule"></i><span class="p mono">Production</span></div>
+  <div class="st"><span class="a mono">A</span><span class="n">Kenneth So</span><i class="rule"></i><span class="p mono"><span class="not-dc">Production</span><span class="dc-only">Game</span></span></div>
 </section>
 <section id="press" aria-label="Press start" hidden>
   <div class="bg" aria-hidden="true"></div>
@@ -685,7 +767,8 @@
   <div class="ov tl mono"><span class="live">On air</span> — Channel 01</div>
   <div class="ov tc mono" id="introTc">REC 00:00:00:00</div>
   <div class="ov card" id="introCard"><span></span></div>
-  <div class="ov end" id="introEnd"><div class="kp mono">A Kenneth So Production</div><div class="bw"><span>Chess</span><span>Fantasia</span></div><img src="assets/logo_moon.webp" alt=""></div>
+  <div class="ov credit mono" id="introCredit"></div>
+  <div class="ov end" id="introEnd"><div class="kp mono"><span class="not-dc">A Kenneth So Production</span><span class="dc-only">A Kenneth So Game — Director's Cut</span></div><div class="bw"><span>Chess</span><span>Fantasia</span></div><img src="assets/logo_moon.webp" alt=""></div>
   <button id="soundOn" class="mono" hidden>♪ Tap anywhere for sound</button>
   <button id="skip" class="mono">Skip ›</button>
 </section>
@@ -1502,7 +1585,8 @@ const SCENE = {
 let THEME = 'mono';
 // ?edition=mono|moon locks the page to one look (the two separate editions)
 const EDITION = new URLSearchParams(location.search).get('edition');
-try { THEME = EDITION || new URLSearchParams(location.search).get('theme') || localStorage.getItem('cf-theme') || 'mono'; } catch (e) { /* storage blocked */ }
+const DC = EDITION === 'dc';   // Director's Cut: the cinematic, story-driven edition (Mono look)
+try { THEME = (DC ? 'mono' : EDITION) || new URLSearchParams(location.search).get('theme') || localStorage.getItem('cf-theme') || 'mono'; } catch (e) { /* storage blocked */ }
 if (EDITION) document.body.classList.add('locked');
 if (!SCENE[THEME]) THEME = 'mono';
 const SC = () => SCENE[THEME];
@@ -1951,6 +2035,7 @@ function hitReact(vic, dir, power = 1) {
   }).then(() => { vic.root.position.copy(base); vic.root.quaternion.copy(q0); });
 }
 async function hit(vic, dir, power = 1, at = null) {
+  if (DC && navigator.vibrate) try { navigator.vibrate(Math.round(20 + 25 * power)); } catch (e) { /* not supported */ }
   const p = at || vic.root.position.clone().setY(.9);
   hitStop(45 + 45 * power); shake(.05 * power); screenFlash();
   thud(power > 1.2); click(ac().currentTime, .08);
@@ -2213,6 +2298,10 @@ function updateCamera(dt) {
 }
 
 async function battle(att, vic, dir) {
+  if (DC) document.body.classList.add('cine');
+  try { await battleInner(att, vic, dir); } finally { document.body.classList.remove('cine'); }
+}
+async function battleInner(att, vic, dir) {
   const vp = vic.root.position.clone();
   if (settings.cam === 'cine') camBehind(att, vp, { dist: isMobile ? 4.2 : 3.3, h: 2.2, side: 1.15, k: 6 });
   else { await camFocus(att.root.position.clone().lerp(vp, .55), isMobile ? 7.5 : 6.3); }
@@ -2320,6 +2409,7 @@ function refreshStatus() {
     toast('Checkmate', 4200, `${NAME[win]} wins`);
     gameOver = true;
     victory(win);
+    if (DC) dcEnd(win);
     demoNext();
   } else if (st === 'stalemate' || st === 'fifty' || st === 'insufficient') {
     const why = { stalemate: 'Stalemate', fifty: '50-move rule', insufficient: 'Insufficient material' }[st];
@@ -2333,7 +2423,7 @@ function refreshStatus() {
     demoNext();
   } else {
     setStatus(st === 'check' ? `${who} is in check` : (isHuman(state.turn) ? (settings.mode === 'pvp' ? `${who} to move` : 'Your move') : `${settings.mode === 'demo' ? 'COM ' + (state.turn === 'w' ? 1 : 2) + ' — ' + who : who} is plotting…`), st === 'check' ? 'check' : '');
-    if (st === 'check') toast('Check', 1400, `${who} king`);
+    if (st === 'check') { toast('Check', 1400, `${who} king`); if (DC) dcCheck(state.turn); }
   }
   updateTurnUI();
 }
@@ -2409,6 +2499,7 @@ async function play(m) {
   renderMoves();
   busy = false;
   refreshStatus();
+  if (DC) await dcAfterMove(m, before);
   if (!gameOver && !isHuman(state.turn)) setTimeout(aiTurn, 120);
 }
 
@@ -2445,6 +2536,7 @@ async function animateMoveInner(m) {
 
   if (victim) {
     cutIn(rig);
+    if (DC) dcCapture(rig, victim);
     const vp = sqPos(victimSq);
     const toV = vp.clone().sub(rig.root.position).setY(0);
     const reach = toV.length();
@@ -2498,6 +2590,7 @@ async function animateMoveInner(m) {
 /* ---------- AI ---------- */
 async function aiTurn() {
   if (gameOver || isHuman(state.turn) || busy) return;
+  if (DC && dcHolding) { setTimeout(aiTurn, 400); return; }
   busy = true;
   setStatus(`${NAME[state.turn]} is thinking…`);
   await new Promise(r => setTimeout(r, 30));
@@ -2533,6 +2626,7 @@ function newGame() {
 }
 function undo() {
   if (busy || !history.length) return;
+  if (DC) dcUndo();
   let n = 1;
   if (settings.mode !== 'pvp') {
     // step back to the human's turn
@@ -2694,7 +2788,8 @@ function startGame(mode) {
   whenIdle(() => {
     newGame();
     servo(true, .5);
-    setTimeout(() => mode === 'demo' ? toast('Demo', 1600, 'COM vs COM') : toast('Game Start', 1500, 'Channel 01'), 500);
+    if (DC) dcStart();
+    else setTimeout(() => mode === 'demo' ? toast('Demo', 1600, 'COM vs COM') : toast('Game Start', 1500, 'Channel 01'), 500);
   });
 }
 document.querySelectorAll('#title [data-mode]').forEach(b => b.onclick = () => startGame(b.dataset.mode));
@@ -2932,6 +3027,196 @@ function frame() {
 
 applyTheme(THEME);
 
+/* ================================================================
+   DIRECTOR'S CUT — episodes, transmissions, fourth-wall moments,
+   cinematic bars and an end-credits roll. All lines are original.
+   ================================================================ */
+let dcHolding = false, txBusy = false, dcUndos = 0, dcEpisode = 0, dcIdleTimer = 0, dcLastTx = 0, dcCaptures = 0, dcPromoted = false;
+const SPEAK = {
+  P: ['Pawn 2', 'P'], B: ['Bishop 2.0', 'B'], Q: ['Queen', 'Q'], K: ['King', 'K'], N: ['Knight', 'N'], R: ['Rook', 'R'], X: ['The Board', null],
+};
+const portrait = t => t ? `assets/cut_${t}.webp` : '';
+const txQueue = [];
+function transmit(lines, prio = false) {
+  if (!DC) return;
+  prio ? txQueue.unshift(lines) : txQueue.push(lines);
+  if (!txBusy) runTx();
+}
+function typeLine(el, text) {
+  return new Promise(res => {
+    let i = 0, skip = false;
+    const tx = $('tx');
+    const onClick = () => { skip = true; };
+    tx.addEventListener('click', onClick, { once: true });
+    (function step() {
+      if (skip) { el.textContent = text; return res(); }
+      el.textContent = text.slice(0, ++i);
+      if (i % 2 === 0 && soundOn && soundReady) try { const a = ac(), t = a.currentTime, o = a.createOscillator(), g = a.createGain();
+        o.type = 'square'; o.frequency.value = 520 + Math.random() * 120; g.gain.setValueAtTime(.018, t); g.gain.exponentialRampToValueAtTime(.0005, t + .04);
+        o.connect(g).connect(a.destination); o.start(t); o.stop(t + .05); } catch (e) { /* audio blocked */ }
+      if (i < text.length) setTimeout(step, text[i - 1] === '.' || text[i - 1] === '—' ? 180 : 28); else { tx.removeEventListener('click', onClick); res(); }
+    })();
+  });
+}
+function waitClickOr(ms) {
+  return new Promise(res => {
+    const tx = $('tx'); let t;
+    const go = () => { clearTimeout(t); tx.removeEventListener('click', go); res(); };
+    t = setTimeout(go, ms); tx.addEventListener('click', go);
+  });
+}
+async function runTx() {
+  txBusy = true;
+  const tx = $('tx'), L = tx.querySelector('.pf.l'), Rr = tx.querySelector('.pf.r');
+  while (txQueue.length) {
+    const lines = txQueue.shift();
+    tx.hidden = false; tx.style.animation = 'none'; void tx.offsetWidth; tx.style.animation = '';
+    $('txLine').textContent = `Line ${String(++dcLastTx).padStart(2, '0')} — encrypted`;
+    // first speaker on the left, the second distinct speaker on the right
+    const who = [...new Set(lines.map(l => l[0]))];
+    const set = (fig, k) => {
+      if (!k) { fig.dataset.empty = ''; fig.querySelector('figcaption').textContent = ''; return; }
+      const [name, img] = SPEAK[k];
+      if (img) { fig.querySelector('img').src = portrait(img); delete fig.dataset.empty; } else fig.dataset.empty = '';
+      fig.querySelector('figcaption').textContent = name;
+    };
+    set(L, who[0]); set(Rr, who[1]);
+    for (const [k, text] of lines) {
+      L.classList.toggle('on', k === who[0]); Rr.classList.toggle('on', k === who[1]);
+      await typeLine($('txText'), text);
+      await waitClickOr(Math.max(1400, text.length * 42));
+    }
+    tx.hidden = true;
+    await wait(.2);
+  }
+  txBusy = false;
+}
+// full-screen episode title card; holds the AI while it is up
+async function episode(n, title) {
+  if (!DC || n <= dcEpisode) return;
+  dcEpisode = n; dcHolding = true;
+  const c = $('dcCard');
+  c.querySelector('.ep').textContent = n >= 4 ? 'Final episode' : `Episode ${String(n).padStart(2, '0')}`;
+  c.querySelector('.tt').textContent = title;
+  c.classList.remove('out'); c.hidden = false;
+  const tt = c.querySelector('.tt'); tt.style.animation = 'none'; void tt.offsetWidth; tt.style.animation = '';
+  if (soundOn && soundReady) try { thud(true); } catch (e) { /* audio blocked */ }
+  await new Promise(r => setTimeout(r, 2600));
+  c.classList.add('out');
+  await new Promise(r => setTimeout(r, 700));
+  c.hidden = true; dcHolding = false;
+}
+const pick = a => a[Math.random() * a.length | 0];
+const hhmm = () => { const d = new Date(); return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const MUSINGS = [
+  [['X', 'Sixty-four squares. And still nowhere to hide.']],
+  [['X', 'No piece moves alone. Every move is a strand tied to the next one.']],
+  [['X', 'Black and white. You keep looking for grey.']],
+  [['Q', 'Do you ever wonder who is moving you?'], ['K', 'Every day. Then I stop, because it is my turn.']],
+  [['N', 'They call my path crooked.'], ['B', 'It is the only one nobody can predict.']],
+  [['R', 'I was a wall before I was a weapon.'], ['P', 'And I was a weapon before I was anything at all.']],
+];
+const CAPTURE_LINES = {
+  P: ['Forgive me. We were both just pieces.', 'I was told I was expendable. I disagreed.'],
+  B: ['Gear up. Grieve later.', 'Faith is a diagonal line. It never touches the same colour twice.'],
+  N: ['I never walk a straight line. Neither does fate.', 'Over the wall, through the gap. That is how stories end.'],
+  R: ['Fortresses do not apologise.', 'Straight lines. Honest work.'],
+  Q: ['I can go anywhere. That is exactly why they fear me.', 'Freedom is a weapon too.'],
+  K: ['Even a king pays for every square he stands on.', 'I rarely move. When I do, someone falls.'],
+};
+function dcStart() {
+  dcUndos = 0; dcEpisode = 0; dcCaptures = 0; dcPromoted = false; dcLastTx = 0;
+  episode(1, 'The Opening').then(() => {
+    const h = new Date().getHours();
+    if (h >= 0 && h < 5) transmit([['X', `It is ${hhmm()}. Even kings sleep, you know.`], ['K', 'Not tonight.']]);
+    transmit([
+      ['K', 'Every war begins the same way. Someone moves a pawn.'],
+      ['P', 'And the pawn is never asked.'],
+      ['K', 'You were built to be sacrificed. That is not the same as being worthless.'],
+      ['P', 'Then tell me — when I reach the other side, who will I become?'],
+    ]);
+  });
+  armIdle();
+}
+async function dcAfterMove(m, before) {
+  armIdle();
+  const plies = history.length;
+  const minor = state.board.filter(p => p && !'PpKk'.includes(p)).length;
+  if (!gameOver && dcEpisode < 3 && minor <= 6) await episode(3, 'The Endgame');
+  else if (!gameOver && dcEpisode < 2 && plies >= 20) await episode(2, 'The Middlegame');
+  if (m.promo && !dcPromoted) {
+    dcPromoted = true;
+    transmit([['P', 'I crossed the whole board.'], ['P', 'Now I remember who I was meant to be.']], true);
+  } else if (!gameOver && plies % 14 === 0 && !txBusy) transmit(pick(MUSINGS));
+}
+function dcCapture(att, vic) {
+  dcCaptures++;
+  if (dcCaptures === 1 || Math.random() < .45) transmit([[att.type, pick(CAPTURE_LINES[att.type])]]);
+}
+function dcCheck(color) {
+  if (Math.random() < .6) transmit([['Q', 'Your king is exposed.'], ['K', 'A king in check is still a king. Until he is not.']]);
+}
+function dcUndo() {
+  dcUndos++;
+  if (dcUndos === 3) transmit([['X', 'Three times now. If only war could be undone like that.']], true);
+  if (dcUndos === 8) transmit([['X', `${dcUndos} undos. The pieces remember every one of them.`]], true);
+}
+function armIdle() {
+  clearTimeout(dcIdleTimer);
+  if (!DC) return;
+  dcIdleTimer = setTimeout(() => {
+    if (!gameOver && !document.body.classList.contains('intro') && isHuman(state.turn) && !busy)
+      transmit([['X', 'Are you still there?'], ['X', 'The board can wait. It always does.']]);
+  }, 55000);
+}
+if (DC) {
+  ['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, armIdle, { passive: true }));
+  let leftAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) leftAt = Date.now();
+    else if (leftAt && Date.now() - leftAt > 8000 && !document.body.classList.contains('intro') && !gameOver)
+      transmit([['X', 'You looked away.'], ['X', 'The pieces did not.']], true);
+  });
+  // rotating epigraphs on the title screen
+  const Q = ['“A pawn is a king that has not yet remembered.”', '“Every move is a strand between two minds.”', '“We are what we are willing to sacrifice.”', '“The board is black and white. The players never are.”'];
+  let qi = 0;
+  setInterval(() => {
+    if (!document.body.classList.contains('intro')) return;
+    const el = $('dcQuote'); el.style.opacity = 0;
+    setTimeout(() => { qi = (qi + 1) % Q.length; el.textContent = Q[qi]; el.style.opacity = 1; }, 600);
+  }, 6000);
+}
+async function dcEnd(win) {
+  const loser = win === 'w' ? 'b' : 'w';
+  await wait(1.6);
+  transmit([['K', 'So this is how it ends. Not with a bang — with a quiet square.'], ['X', 'Every piece transforms. Even this one.']], true);
+  while (txBusy) await new Promise(r => setTimeout(r, 300));
+  if (settings.mode === 'demo') return;   // the demo loops into the next match instead
+  await episode(4, `${NAME[win]} wins`);
+  rollCredits();
+}
+function rollCredits() {
+  const c = $('credits'), roll = c.querySelector('.roll');
+  const row = (role, name) => `<div><div class="role">${role}</div><div class="name">${name}</div></div>`;
+  roll.innerHTML = `<h3>Chess<small>Fantasia — Director's Cut</small></h3>
+    ${row('A game by', 'Kenneth So')}
+    ${row('Concept, characters &amp; direction', 'Kenneth So')}
+    ${row('Starring', 'Pawn 2 · Bishop 2.0 · King · Queen · Knight · Rook')}
+    ${row('3D models', 'Generated with Higgsfield')}
+    ${row('Key art &amp; cut-ins', 'Generated with Higgsfield')}
+    ${row('Opening movie', 'Generated with Higgsfield')}
+    ${row('Music', 'Generated with Higgsfield')}
+    ${row('Chess engine &amp; programming', 'Claude')}
+    ${row('Special thanks', 'You, for playing')}
+    <p class="quote">“Every piece transforms. The question was only ever into what.”</p>
+    <h3>Thank you<small>for playing</small></h3>`;
+  c.hidden = false;
+  roll.classList.remove('go'); void roll.offsetWidth; roll.classList.add('go');
+  const end = () => { c.hidden = true; roll.classList.remove('go'); $('bMenu').click(); };
+  roll.onanimationend = end;
+  $('creditsSkip').onclick = end;
+}
+
 const modelsReady = loadModels();
 /* ---------- loading → opening movie (auto) → title ---------- */
 {
@@ -2955,6 +3240,8 @@ const modelsReady = loadModels();
   };
   // broadcast-style overlays timed against the movie (Mono)
   const CUES = [[.2, 'Channel 01'], [2.0, 'Every'], [4.0, 'Piece'], [6.0, 'Transforms']];
+  // Director's Cut: film-style opening credits instead of impact cards
+  const DC_CREDITS = [[.4, 'A Kenneth So Game'], [2.6, 'Chess Fantasia'], [4.6, "Director's Cut"], [6.4, 'Starring — Pawn 2 · Bishop 2.0 · King · Queen']];
   let cueI = 0, endShown = false;
   const pad = n => String(n | 0).padStart(2, '0');
   function cueLoop() {
@@ -2962,7 +3249,12 @@ const modelsReady = loadModels();
     requestAnimationFrame(cueLoop);
     const t = vid.currentTime, d = vid.duration || 10;
     $('introTc').textContent = `REC 00:00:${pad(t)}:${pad(t * 30 % 30)}`;
-    if (THEME === 'mono' && cueI < CUES.length && t >= CUES[cueI][0]) {
+    if (DC && cueI < DC_CREDITS.length && t >= DC_CREDITS[cueI][0]) {
+      const c = $('introCredit');
+      c.textContent = DC_CREDITS[cueI][1];
+      c.classList.remove('on'); void c.offsetWidth; c.classList.add('on');
+      cueI++;
+    } else if (!DC && THEME === 'mono' && cueI < CUES.length && t >= CUES[cueI][0]) {
       const c = $('introCard');
       const sp = c.querySelector('span');
       sp.textContent = CUES[cueI][1];
@@ -3040,7 +3332,7 @@ frame();
 
 // small hook for automated checks
 window.__chess = { get state() { return state; }, play: m => play(m), E, openGallery, closeGallery, gearUp, settings,
-  setT: t => { if (gRig) { gRig.t = t; } }, setGallery: (i, team) => { gIdx = i; gTeam = team; buildGalleryRig(); }, get busy() { return busy; }, get music() { return musicEl && { paused: musicEl.paused, src: musicEl.dataset.src, vol: musicEl.volume }; } };
+  setT: t => { if (gRig) { gRig.t = t; } }, setGallery: (i, team) => { gIdx = i; gTeam = team; buildGalleryRig(); }, get busy() { return busy; }, dc: { transmit, episode, rollCredits, get txBusy() { return txBusy; } }, get music() { return musicEl && { paused: musicEl.paused, src: musicEl.dataset.src, vol: musicEl.volume }; } };
 </script>
 </body>
 </html>
