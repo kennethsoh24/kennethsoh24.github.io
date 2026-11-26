@@ -615,7 +615,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 22</div>
+  <div class="build mono">Build 23</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -683,6 +683,8 @@
         <select id="tmode"><option value="move" selected>Every move</option><option value="capture">On capture</option><option value="always">Always mech</option><option value="never">Never</option></select></label>
       <label class="field mono">Battle
         <select id="battle"><option value="full" selected>Full</option><option value="quick">Quick</option></select></label>
+      <label class="field mono">Graphics
+        <select id="gfx"><option value="high">High</option><option value="classic">Classic</option></select></label>
       <label class="field mono">Camera
         <select id="cam"><option value="cine" selected>Cinematic</option><option value="fixed">Fixed</option></select></label>
       <label class="field mono">Music
@@ -783,6 +785,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import * as E from './engine.js';
 
 const V3 = THREE.Vector3, PI = Math.PI;
@@ -800,6 +807,13 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.localClippingEnabled = true;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 120);
+// Graphics: 'high' = lacquered PBR pieces, studio reflections, soft contact shadows, AO + bloom; 'classic' = flat toon + ink outlines
+let GFX = 'high';
+try { GFX = localStorage.getItem('cf-gfx') || 'high'; } catch (e) { /* storage blocked */ }
+const HIGH = () => GFX === 'high';
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envTex = pmrem.fromScene(new RoomEnvironment(), .04).texture;
+let composer = null;
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.enablePan = false;
@@ -825,6 +839,7 @@ scene.add(rim);
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
+  if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); }
   camera.aspect = w / h;
   camera.fov = w < h ? 58 : 36;
   // keep the board clear of the side panel (desktop) or bottom sheet (phone)
@@ -1045,10 +1060,10 @@ class Rig {
       const g = new THREE.Group();
       g.userData.U = U;
       for (const pt of part.parts) {
-        const mesh = new THREE.Mesh(pt.geo, transformMat(pt.map, U));
+        const mesh = new THREE.Mesh(pt.geo, transformMat(pt, U));
         mesh.receiveShadow = true;
         if (!isMobile || which === 'chess') {
-          const ol = new THREE.Mesh(pt.geo, transformOutlineMat(U, which === 'chess' ? .012 : .007));
+          const ol = new THREE.Mesh(pt.geo, transformOutlineMat(U, HIGH() ? (which === 'chess' ? .007 : .0045) : (which === 'chess' ? .012 : .007)));
           ol.raycast = () => {}; ol.userData.ol = true;
           mesh.add(ol);
         }
@@ -1398,8 +1413,19 @@ function buildRook(r, m) {
 }
 
 const BUILDERS = { P: buildPawn, B: buildBishop, Q: (r, m) => buildRoyal(r, m, true), K: (r, m) => buildRoyal(r, m, false), N: buildKnight, R: buildRook };
+const blobTex = canvasTex(128, (g, s) => {
+  const r = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  r.addColorStop(0, 'rgba(0,0,0,.75)'); r.addColorStop(.45, 'rgba(0,0,0,.35)'); r.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = r; g.fillRect(0, 0, s, s);
+});
+const blobGeo = new THREE.PlaneGeometry(1, 1).rotateX(-PI / 2);
 function makeRig(type, team) {
   const r = new Rig(type, team);
+  if (HIGH()) {
+    const blob = new THREE.Mesh(blobGeo, new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: .8 }));
+    blob.position.y = .006; blob.scale.setScalar(.95); blob.renderOrder = 1; blob.raycast = () => {};
+    r.root.add(blob); r.blob = blob;
+  }
   const above = [r.pAbove];
   CUR_OL = { OL: outlineMat(0.011, above), OL_THIN: outlineMat(0.0055, above) };
   r.olMats = { OL_THIN: outlineMat(0.0055, [r.pBelow]) };
@@ -1456,8 +1482,16 @@ const TF_NOISE = `
   float tfCut() { return uVis * 1.1 - 0.05; }
 `;
 
-function transformMat(map, U) {
-  const m = new THREE.MeshToonMaterial({ map, gradientMap: grad });
+function transformMat(pt, U) {
+  const map = pt.map;
+  const m = HIGH()
+    ? new THREE.MeshPhysicalMaterial({
+        map, normalMap: pt.normalMap || null, roughnessMap: pt.rmMap || null, metalnessMap: pt.rmMap || null,
+        roughness: pt.rmMap ? .9 : .45, metalness: pt.rmMap ? .9 : .1,
+        clearcoat: .5, clearcoatRoughness: .18, envMapIntensity: .55,
+      })
+    : new THREE.MeshToonMaterial({ map, gradientMap: grad });
+  if (HIGH() && pt.normalMap) m.normalScale.set(.8, .8);
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = TF_COMMON + sh.vertexShader
@@ -1493,7 +1527,7 @@ function transformMat(map, U) {
         vec3 tfHot = pow( mix( uAccent, vec3( 1.0 ), 0.35 ), vec3( 2.2 ) );
         totalEmissiveRadiance += tfHot * ( tfEdge * 4.0 + tfSeam * 2.2 );`);
   };
-  m.customProgramCacheKey = () => 'tf-toon';
+  m.customProgramCacheKey = () => HIGH() ? 'tf-phys' : 'tf-toon';
   return m;
 }
 function transformOutlineMat(U, th) {
@@ -1536,7 +1570,7 @@ function normaliseModel(gltf, h) {
     g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(fix, o.matrixWorld));
     if (!g.attributes.normal) g.computeVertexNormals();
     g.computeBoundingSphere();
-    parts.push({ geo: g, map: o.material.map || null });
+    parts.push({ geo: g, map: o.material.map || null, normalMap: o.material.normalMap || null, rmMap: o.material.roughnessMap || o.material.metalnessMap || null });
   });
   return { parts };
 }
@@ -1656,13 +1690,16 @@ function boardTexture() {
     }
   });
 }
-let boardMat, boardSide;
+let boardMat, boardSide, boardMatHi, boardSideHi, boardBox;
 function buildBoard() {
   const tex = boardTexture();
   tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   boardMat = new THREE.MeshToonMaterial({ map: tex, gradientMap: grad });
+  boardMatHi = new THREE.MeshPhysicalMaterial({ map: tex, roughness: .6, metalness: 0, clearcoat: .35, clearcoatRoughness: .1, envMapIntensity: .25 });
   const side = boardSide = toon(SC().side);
-  const box = new THREE.Mesh(new THREE.BoxGeometry(9, .36, 9), [side, side, boardMat, side, side, side]);
+  boardSideHi = new THREE.MeshPhysicalMaterial({ color: SC().side, roughness: .45, clearcoat: .4, clearcoatRoughness: .25, envMapIntensity: .3 });
+  boardBox = new THREE.Mesh(new THREE.BoxGeometry(9, .36, 9), [side, side, boardMat, side, side, side]);
+  const box = boardBox;
   box.position.y = -.18;
   box.receiveShadow = true;
   box.castShadow = true;
@@ -1670,7 +1707,7 @@ function buildBoard() {
   const ol = new THREE.Mesh(box.geometry, OL); box.add(ol); ol.raycast = () => {};
 }
 buildBoard();
-document.fonts?.ready.then(() => { const t = boardTexture(); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); boardMat.map = t; boardMat.needsUpdate = true; });
+document.fonts?.ready.then(() => { const t = boardTexture(); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); boardMat.map = t; boardMat.needsUpdate = true; boardMatHi.map = t; boardMatHi.needsUpdate = true; });
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: .28, color: 0x01040c }));
 ground.rotation.x = -PI / 2; ground.position.y = -.37; ground.receiveShadow = true;
@@ -2815,6 +2852,12 @@ $('bMenu').onclick = () => {
 $('speed').onchange = e => { SPEED = +e.target.value; };
 $('battle').onchange = e => { settings.battle = e.target.value; };
 $('cam').onchange = e => { settings.cam = e.target.value; };
+$('gfx').onchange = e => {
+  if (busy) { e.target.value = GFX; return; }
+  GFX = e.target.value;
+  try { localStorage.setItem('cf-gfx', GFX); } catch (er) { /* storage blocked */ }
+  applyGfx(true);
+};
 $('theme').onchange = e => { tvStatic(220); applyTheme(e.target.value); };
 $('sound').onchange = e => { soundOn = e.target.value === '1'; };
 $('tmode').onchange = e => {
@@ -2861,6 +2904,59 @@ function plinthTex() {
   });
 }
 
+/* ---------- graphics quality ---------- */
+let gtao = null, bloom = null;
+function buildComposer() {
+  composer = new EffectComposer(renderer);
+  composer.setPixelRatio(renderer.getPixelRatio());
+  composer.setSize(innerWidth, innerHeight);
+  composer.addPass(new RenderPass(scene, camera));
+  const off = new URLSearchParams(location.search).get('nopost') || '';
+  if (!isMobile && !off.includes('ao')) {
+    gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
+    gtao.updateGtaoMaterial({ radius: .35, distanceExponent: 1.2, thickness: 1.2, scale: 1.1, samples: 12 });
+    gtao.blendIntensity = 1;
+    // sprites and sparks would be read as solid quads by the AO pass: hide them while it samples
+    const gRender = gtao.render.bind(gtao);
+    gtao.render = (...a) => {
+      const hidden = [];
+      scene.traverse(o => { if ((o.isSprite || o.isPoints) && o.visible) { o.visible = false; hidden.push(o); } });
+      gRender(...a);
+      hidden.forEach(o => { o.visible = true; });
+    };
+    composer.addPass(gtao);
+  }
+  // (bloom tried and dropped: on a white board it hazes the whole frame)
+  composer.addPass(new OutputPass());
+}
+function usePost() { return HIGH() && THEME === 'mono'; }
+function applyGfx(rebuild = true) {
+  const hi = HIGH();
+  renderer.toneMapping = hi ? THREE.NeutralToneMapping : THREE.NoToneMapping;
+  renderer.toneMappingExposure = hi ? 1.0 : 1;
+  scene.environment = hi ? envTex : null;
+  // lacquered studio light vs flat ink light
+  hemi.intensity = hi ? .75 : SC().hemi[2];
+  sun.intensity = hi ? 2.9 : 2.4;
+  sun.shadow.radius = hi ? 3 : 1;
+  const ms = hi ? (isMobile ? 2048 : 4096) : (isMobile ? 1024 : 2048);
+  if (sun.shadow.mapSize.x !== ms) { sun.shadow.mapSize.set(ms, ms); sun.shadow.map?.dispose(); sun.shadow.map = null; }
+  rim.intensity = hi ? .9 : SC().rim[1];
+  ground.material.opacity = hi ? .38 : SC().shadow;
+  const top = hi ? boardMatHi : boardMat, side = hi ? boardSideHi : boardSide;
+  boardBox.material = [side, side, top, side, side, side];
+  plinthTop.envMapIntensity = .6;
+  // the post chain needs an opaque background; Mono's paper colour
+  if (usePost()) { if (!composer) buildComposer(); scene.background = new THREE.Color(0xf2f1ed); }
+  else scene.background = null;
+  document.querySelectorAll('[data-gfx]').forEach(b => b.setAttribute('aria-pressed', b.dataset.gfx === GFX));
+  if ($('gfx')) $('gfx').value = GFX;
+  if (rebuild) {
+    if (typeof syncAll === 'function' && !busy) syncAll();
+    if (galleryOn && gRig) buildGalleryRig(true);
+  }
+}
+
 /* ---------- theme switch: CSS class + every scene colour ---------- */
 function applyTheme(name) {
   THEME = SCENE[name] ? name : 'mono';
@@ -2870,7 +2966,8 @@ function applyTheme(name) {
   if (!EDITION) try { localStorage.setItem('cf-theme', THEME); } catch (e) { /* storage blocked */ }
   const t = boardTexture(); t.anisotropy = renderer.capabilities.getMaxAnisotropy();
   boardMat.map?.dispose(); boardMat.map = t; boardMat.needsUpdate = true;
-  boardSide.color.setHex(P.side); plinthSide.color.setHex(P.side);
+  boardMatHi.map = t; boardMatHi.needsUpdate = true;
+  boardSide.color.setHex(P.side); boardSideHi.color.setHex(P.side); plinthSide.color.setHex(P.side);
   plinthTop.map?.dispose(); plinthTop.map = plinthTex(); plinthTop.needsUpdate = true;
   hemi.color.setHex(P.hemi[0]); hemi.groundColor.setHex(P.hemi[1]); hemi.intensity = P.hemi[2];
   rim.color.setHex(P.rim[0]); rim.intensity = P.rim[1];
@@ -2880,6 +2977,7 @@ function applyTheme(name) {
   document.querySelectorAll('[data-theme]').forEach(b => b.setAttribute('aria-pressed', b.dataset.theme === THEME));
   if ($('theme')) $('theme').value = THEME;
   if (typeof setMusic === 'function' && musicUnlocked) setMusic();
+  if (typeof applyGfx === 'function' && boardMatHi) applyGfx(false);
 }
 document.querySelectorAll('[data-theme]').forEach(b => b.onclick = () => { tvStatic(220); applyTheme(b.dataset.theme); });
 
@@ -3019,13 +3117,14 @@ function frame() {
   controls.update();
   const off = shakeAmt > .002 ? new V3((Math.random() - .5) * shakeAmt, (Math.random() - .5) * shakeAmt, (Math.random() - .5) * shakeAmt) : null;
   if (off) camera.position.add(off);
-  renderer.render(scene, camera);
+  if (usePost() && composer) composer.render(); else renderer.render(scene, camera);
   if (off) camera.position.sub(off);
   shakeAmt *= .86;
   requestAnimationFrame(frame);
 }
 
 applyTheme(THEME);
+applyGfx(false);
 
 /* ================================================================
    DIRECTOR'S CUT — episodes, transmissions, fourth-wall moments,
