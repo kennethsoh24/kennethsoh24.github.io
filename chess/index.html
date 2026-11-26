@@ -7,10 +7,11 @@
 <meta name="description" content="Chess Fantasia — 3D chess where every piece transforms into a mech.">
 <meta name="theme-color" content="#f2f1ed">
 <meta property="og:image" content="assets/keyart.jpg">
+<link rel="preload" href="assets/logo_moon.webp" as="image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111'/%3E%3Crect x='16' y='16' width='16' height='16' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,600;1,600;1,800;1,900&display=swap" rel="stylesheet">
 <style>
   :root {
     --paper: #f2f1ed;
@@ -227,11 +228,153 @@
     #gallery .chips .btn:nth-child(-n+3) { border-bottom: 1px solid var(--ink); }
     #cutin img { right: -14%; }
   }
+
+  /* =================== MOONLIT THEME =================== */
+  #sea, .streaks, .moonlogo { display: none; }
+  body.moon { --cyan: #4fe0ff; --navy: #071d4a; --deep: #0b3a8c; --blue: #1d6cff; --ice: #eaf8ff; --gold: #f5c518; --abyss: #030b1f; --red: #ff3b5c;
+    --it: "Barlow Condensed", "Archivo", sans-serif; color: var(--ice);
+    background: radial-gradient(ellipse 70% 55% at 62% 18%, #123f8f 0%, #0a2660 35%, var(--navy) 60%, var(--abyss) 100%); }
+  body.moon #grid, body.moon #scan { display: none; }
+  body.moon #sea { display: block; position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  body.moon #sea::before { content: ""; position: absolute; width: 46vmin; height: 46vmin; right: 9vw; top: -8vmin; border-radius: 50%;
+    background: radial-gradient(circle, rgba(234,248,255,.55) 0%, rgba(140,200,255,.18) 38%, transparent 70%); }
+  body.moon #sea::after { content: ""; position: absolute; inset: -20%; opacity: .22; mix-blend-mode: screen;
+    background: repeating-radial-gradient(ellipse 120px 60px at 30% 40%, rgba(79,224,255,.25) 0 2px, transparent 3px 26px),
+                repeating-radial-gradient(ellipse 90px 140px at 70% 70%, rgba(79,224,255,.18) 0 2px, transparent 3px 30px);
+    animation: caustic 26s linear infinite alternate; }
+  @keyframes caustic { to { transform: translate(6%, -4%) rotate(3deg); } }
+  body.moon .streaks { display: block; position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .streaks i { position: absolute; left: -40vw; height: 2px; width: 40vw; background: linear-gradient(90deg, transparent, rgba(79,224,255,.55), transparent);
+    animation: streak 7s linear infinite; opacity: 0; }
+  .streaks i:nth-child(1) { top: 22%; } .streaks i:nth-child(2) { top: 58%; animation-delay: 2.4s; } .streaks i:nth-child(3) { top: 81%; animation-delay: 4.7s; }
+  @keyframes streak { 0% { opacity: 0; transform: translateX(0) rotate(-18deg); } 10% { opacity: 1; } 100% { opacity: 0; transform: translateX(180vw) rotate(-18deg); } }
+
+  body.moon .mono { font-family: var(--it); font-style: italic; font-weight: 800; letter-spacing: .12em; font-size: 12.5px; }
+  body.moon .btn { border: 0; background: none; color: var(--ice); font-family: var(--it); font-style: italic; font-weight: 800; font-size: 14px; letter-spacing: .06em; margin-left: 4px !important; }
+  body.moon .btn::before { transform: skewX(-16deg); background: rgba(7,29,74,.85); border: 1.5px solid rgba(79,224,255,.55); transition: background .15s, box-shadow .15s; }
+  body.moon .btn:hover, body.moon .btn[aria-pressed="true"] { color: var(--abyss); }
+  body.moon .btn:hover::before, body.moon .btn[aria-pressed="true"]::before { background: var(--cyan); border-color: var(--ice); box-shadow: 4px 4px 0 var(--abyss); }
+  body.moon select { border: 1.5px solid rgba(79,224,255,.6); background: rgba(3,11,31,.85); color: var(--ice); font-family: var(--it); font-size: 13px; }
+  body.moon .live::before { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+
+  /* title */
+  body.moon #title { display: block; background: var(--abyss); }
+  body.moon #title .right { position: absolute; inset: 0; padding: 0; background: none; display: block; }
+  body.moon #title .right .meta { display: none; }
+  body.moon .screen { position: absolute; inset: 0; border: 0; background: url(assets/keyart_moon.jpg) 70% 50% / cover no-repeat; animation: drift 30s ease-in-out infinite alternate; }
+  @keyframes drift { from { transform: scale(1.04); } to { transform: scale(1.1) translateX(-1.5%); } }
+  body.moon .screen::before { background: linear-gradient(100deg, rgba(3,11,31,.94) 0%, rgba(3,11,31,.7) 34%, rgba(3,11,31,.05) 64%, transparent 100%), linear-gradient(0deg, rgba(3,11,31,.7), transparent 30%); }
+  body.moon .screen::after { display: none; }
+  body.moon .screen .ch, body.moon .screen .tc { display: none; }
+  body.moon #title .credits { position: absolute; right: 2.5vw; bottom: 3vh; color: rgba(234,248,255,.7); gap: 24px; }
+  body.moon #title .left { position: absolute; z-index: 1; left: 0; top: 0; bottom: 0; width: min(660px, 60vw); border: 0; background: none; padding: 4vh 4vw 4vh 5vw; isolation: isolate; }
+  body.moon #title .left::before { content: ""; position: absolute; z-index: -1; left: -30%; top: 0; bottom: 0; width: 100%; transform: skewX(-14deg); transform-origin: top;
+    border-right: 3px solid var(--cyan); box-shadow: 8px 0 40px rgba(79,224,255,.35); background: linear-gradient(180deg, rgba(11,58,140,.35), rgba(3,11,31,.2));
+    animation: slashIn .9s cubic-bezier(.2,1,.3,1) both; }
+  @keyframes slashIn { from { transform: skewX(-14deg) translateX(-100%); } }
+  body.moon #title .left .meta { border-color: rgba(79,224,255,.4); color: var(--cyan); }
+  body.moon .wordmark, body.moon .tagline { display: none; }
+  body.moon #title .moonlogo { display: block; width: min(480px, 42vw); margin-left: -1vw; filter: drop-shadow(0 0 18px rgba(79,224,255,.45));
+    animation: logoIn 1s cubic-bezier(.2,1.3,.4,1) both .3s; }
+  @keyframes logoIn { from { opacity: 0; transform: translateX(-40px) skewX(-10deg); } }
+  body.moon #title nav { border: 0; display: grid; gap: 2px; }
+  body.moon .mi { border: 0; grid-template-columns: 46px auto 1fr; padding: 4px 30px 4px 10px; color: var(--ice); transition: transform .18s, color .12s; text-shadow: 0 3px 0 rgba(3,11,31,.6); }
+  body.moon .mi::before { inset: 6% 8% 6% -2%; background: var(--cyan); transform: skewX(-18deg) scaleX(0); transform-origin: left; box-shadow: 6px 6px 0 var(--blue); }
+  body.moon .mi .n { font-family: var(--it); font-style: italic; font-weight: 800; color: var(--cyan); font-size: 15px; }
+  body.moon .mi .t { font-family: var(--it); font-style: italic; font-weight: 900; font-size: clamp(30px, 4vw, 54px); letter-spacing: .01em; }
+  body.moon .mi .a { display: none; }
+  body.moon .mi:hover, body.moon .mi:focus-visible { color: var(--abyss); transform: translateX(18px); text-shadow: none; }
+  body.moon .mi:hover::before, body.moon .mi:focus-visible::before { transform: skewX(-18deg) scaleX(1); }
+  body.moon .mi:hover .n, body.moon .mi:focus-visible .n { color: var(--abyss); }
+  body.moon .opts { color: var(--cyan); }
+  body.moon .loadbar { color: var(--cyan); }
+  body.moon .loadbar .track { background: rgba(79,224,255,.2); }
+  body.moon .loadbar .fill { background: linear-gradient(90deg, var(--blue), var(--cyan)); box-shadow: 0 0 10px var(--cyan); }
+
+  /* HUD */
+  body.moon header .wm { display: none; }
+  body.moon header .moonlogo { display: block; height: 70px; width: auto; filter: drop-shadow(0 0 10px rgba(79,224,255,.4)); }
+  body.moon header .mono { color: var(--cyan); }
+  body.moon #hudtop { color: var(--cyan); }
+  body.moon #hudtop .tcode { background: var(--cyan); color: var(--abyss); transform: skewX(-12deg); }
+  body.moon #panel { top: 104px; background: linear-gradient(160deg, rgba(11,58,140,.8), rgba(3,11,31,.88)); backdrop-filter: blur(6px); border: 0; border-left: 4px solid var(--cyan);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%); }
+  body.moon #panel section { border-bottom: 1px solid rgba(79,224,255,.25); }
+  body.moon .sec { color: var(--cyan); }
+  body.moon .player { position: relative; isolation: isolate; border: 0; margin: 0 0 4px; padding: 6px 16px 6px 12px; transition: transform .25s cubic-bezier(.2,1,.3,1), color .2s; }
+  body.moon .player::before { content: ""; position: absolute; inset: 0; z-index: -1; transform: skewX(-14deg); background: rgba(3,11,31,.55); border: 1px solid rgba(234,248,255,.15); }
+  body.moon .player .name { font-family: var(--it); font-style: italic; font-weight: 900; font-stretch: 100%; font-size: 24px; }
+  body.moon .player .name small { font-family: var(--it); font-style: italic; color: rgba(234,248,255,.7); }
+  body.moon .player .adv { font-family: var(--it); font-style: italic; font-weight: 900; color: var(--cyan); font-size: 18px; }
+  body.moon .player.active { background: none; color: var(--abyss); transform: translateX(8px); }
+  body.moon .player.active .name small, body.moon .player.active .adv { color: rgba(3,11,31,.75); }
+  body.moon #pW.active::before { background: var(--ice); box-shadow: 5px 5px 0 var(--cyan); }
+  body.moon #pB.active::before { background: var(--gold); box-shadow: 5px 5px 0 var(--blue); }
+  body.moon #status { color: var(--cyan); font-family: var(--it); font-style: italic; font-weight: 800; font-size: 14px; }
+  body.moon #status.check { color: #fff; background: linear-gradient(90deg, var(--red), transparent); }
+  body.moon #status.over { color: var(--abyss); background: linear-gradient(90deg, var(--cyan), transparent); }
+  body.moon .tools { gap: 4px 6px; }
+  body.moon #moves { font-family: var(--it); font-weight: 600; font-size: 15px; color: rgba(234,248,255,.85); }
+  body.moon #moves li::marker { color: var(--cyan); }
+  body.moon #moves li span.last { background: var(--cyan); color: var(--abyss); }
+  body.moon details summary::after { color: var(--cyan); }
+  body.moon #fab { background: none; border: 0; place-items: center; align-content: center; text-align: center; width: 118px; height: 118px; }
+  body.moon #fab::before { content: ""; position: absolute; inset: 14px; transform: rotate(45deg); background: linear-gradient(135deg, var(--blue), var(--navy));
+    border: 2px solid var(--cyan); box-shadow: 0 0 0 5px rgba(3,11,31,.7), 0 0 26px rgba(79,224,255,.55); transition: transform .3s cubic-bezier(.2,1.5,.4,1); }
+  body.moon #fab:hover::before { transform: rotate(45deg) scale(1.07); }
+  body.moon #fab.on::before { background: linear-gradient(135deg, var(--gold), #c47a00); border-color: var(--ice); }
+  body.moon #fab .t { position: relative; font-family: var(--it); font-style: italic; font-weight: 900; font-stretch: 100%; font-size: 26px; color: var(--ice); text-shadow: 0 2px 0 var(--abyss); }
+  body.moon #fab .mono { display: none; }
+
+  /* banners, cut-in, flash */
+  body.moon #toast .bar { background: linear-gradient(90deg, rgba(3,11,31,0), rgba(3,11,31,.92) 15%, rgba(3,11,31,.92) 85%, rgba(3,11,31,0));
+    border-top: 3px solid var(--cyan); border-bottom: 3px solid var(--cyan); transform: skewY(-4deg); }
+  body.moon #toast:not(.show) .bar { border-color: transparent; }
+  body.moon #toast .txt { font-family: var(--it); font-style: italic; font-stretch: 100%; text-shadow: 4px 4px 0 var(--blue); }
+  body.moon #toast .sub { color: var(--cyan); }
+  body.moon #cutin .panel { background: repeating-linear-gradient(90deg, rgba(79,224,255,.12) 0 3px, transparent 3px 22px), linear-gradient(90deg, var(--navy), var(--deep) 60%, var(--navy));
+    border-top: 5px solid var(--cyan); border-bottom: 5px solid var(--cyan); transform: skewY(-7deg); box-shadow: 0 0 60px rgba(79,224,255,.4); }
+  body.moon #cutin .panel::before { display: none; }
+  body.moon #cutin .stripe { background: linear-gradient(90deg, rgba(29,108,255,.7), transparent 70%); }
+  body.moon #cutin img { filter: drop-shadow(-12px 10px 0 rgba(3,11,31,.75)) drop-shadow(0 0 18px rgba(79,224,255,.5)); }
+  body.moon #cutin .word { font-family: var(--it); font-style: italic; font-stretch: 100%; text-shadow: 6px 6px 0 var(--blue); }
+  body.moon #cutin .label, body.moon #cutin .label2 { color: var(--cyan); }
+  body.moon #flash { background: #bff4ff; mix-blend-mode: screen; }
+  body.moon #lines { background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(79,224,255,.6) 0deg .6deg, transparent .6deg 7deg); }
+  body.moon .modal { background: rgba(3,11,31,.6); }
+  body.moon .card { background: linear-gradient(150deg, var(--deep), var(--abyss)); border: 2px solid var(--cyan); box-shadow: 8px 8px 0 var(--blue); }
+  body.moon .card h2 { font-family: var(--it); font-style: italic; font-stretch: 100%; }
+  body.moon .card .mono { color: var(--cyan) !important; }
+  body.moon .promo-row .btn { margin-left: 6px !important; }
+  body.moon #gName { font-family: var(--it); font-style: italic; font-stretch: 100%; color: var(--ice); text-shadow: 5px 5px 0 var(--blue); }
+  body.moon #gName small { color: var(--cyan); text-shadow: none; }
+  body.moon #gallery { background: rgba(3,11,31,.8); border: 1px solid rgba(79,224,255,.5); backdrop-filter: blur(4px); padding: 8px 6px; }
+  body.moon #gallery .chips, body.moon #gallery .row { border: 0; gap: 6px; }
+  body.moon #gallery .chips .btn, body.moon #gallery .row .btn { border: 0; }
+  body.moon #gNote { color: rgba(234,248,255,.8); font-family: var(--it); font-style: italic; }
+  body.moon .slider { color: var(--cyan); }
+  body.moon input[type=range] { accent-color: var(--cyan); }
+  @media (max-width: 760px) {
+    body.moon #title .left { width: 100%; top: auto; padding: 14px 18px 18px; background: linear-gradient(0deg, rgba(3,11,31,.95) 70%, transparent); }
+    body.moon #title .left::before { display: none; }
+    body.moon #title .moonlogo { width: 78vw; }
+    body.moon .screen { background-position: 78% 30%; }
+    body.moon #title .credits { display: none; }
+    body.moon header .moonlogo { height: 46px; }
+    body.moon #panel { clip-path: none; border-left: 0; border-top: 3px solid var(--cyan); top: auto; }
+    body.moon .player { margin: 0 4px 0 0; }
+    body.moon .player.active { transform: none; }
+    body.moon .player .name { font-size: 19px; }
+    body.moon #fab { width: 84px; height: 84px; }
+    body.moon #fab .t { font-size: 18px; }
+  }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; } }
 </style>
 </head>
 <body class="intro">
 <div id="grid"></div>
+<div id="sea" aria-hidden="true"></div>
+<div class="streaks" aria-hidden="true"><i></i><i></i><i></i></div>
 <canvas id="c" tabindex="0" aria-label="3D chess board"></canvas>
 <div id="lines" aria-hidden="true"></div>
 
@@ -239,6 +382,7 @@
   <div class="left">
     <div class="meta mono"><span class="live">On air</span><span>Channel 01</span><span id="clock">00:00:00</span></div>
     <h1 class="wordmark"><span>Chess</span><span>Fantasia</span></h1>
+    <img class="moonlogo" src="assets/logo_moon.webp" alt="Chess Fantasia">
     <div class="tagline mono"><b></b><span>Every piece transforms.</span></div>
     <nav aria-label="Main menu">
       <button class="mi" data-mode="ai-w"><span class="n">01</span><span class="t">Play White</span><span class="a">→</span></button>
@@ -249,6 +393,7 @@
     </nav>
     <div class="foot">
       <div class="opts mono"><span>AI —</span><span id="tLevel" style="display:flex"><button class="btn" data-l="1">Easy</button><button class="btn" data-l="2" aria-pressed="true" style="margin-left:-1px">Normal</button><button class="btn" data-l="3" style="margin-left:-1px">Hard</button></span></div>
+      <div class="opts mono"><span>Theme —</span><span style="display:flex"><button class="btn" data-theme="mono">Mono</button><button class="btn" data-theme="moon" style="margin-left:-1px">Moonlit</button></span></div>
       <div class="loadbar mono"><span id="loadText">Loading models</span><div class="track"><div class="fill" id="loadFill"></div></div></div>
     </div>
   </div>
@@ -259,7 +404,7 @@
   </div>
 </section>
 
-<header><button id="bMenu" title="Menu"><span class="wm">Chess<em>Fantasia</em></span><span class="mono">← Menu</span></button></header>
+<header><button id="bMenu" title="Menu"><span class="wm">Chess<em>Fantasia</em></span><img class="moonlogo" src="assets/logo_moon.webp" alt="Chess Fantasia"><span class="mono">← Menu</span></button></header>
 <div id="hudtop" class="mono"><span class="live" id="liveLabel">Live</span><span class="tcode" id="mcount">Move 001</span></div>
 
 <aside id="panel">
@@ -288,6 +433,8 @@
         <select id="tmode"><option value="move" selected>Every move</option><option value="capture">On capture</option><option value="always">Always mech</option><option value="never">Never</option></select></label>
       <label class="field mono">Battle
         <select id="battle"><option value="full" selected>Full</option><option value="quick">Quick</option></select></label>
+      <label class="field mono">Theme
+        <select id="theme"><option value="mono">Mono</option><option value="moon">Moonlit</option></select></label>
       <label class="field mono">Speed
         <select id="speed"><option value="1">1×</option><option value="1.6" selected>1.6×</option><option value="2.6">2.6×</option></select></label>
       <label class="field mono">Sound
@@ -369,7 +516,8 @@ controls.maxDistance = 30;
 controls.maxPolarAngle = 1.38;
 controls.target.set(0, 0.3, 0);
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x555555, 1.6));
+const hemi = new THREE.HemisphereLight(0xffffff, 0x555555, 1.6);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 2.4);
 sun.position.set(-5, 13, 7);
 sun.castShadow = true;
@@ -1130,12 +1278,29 @@ scene.add(boardGroup);
 const piecesGroup = new THREE.Group();
 boardGroup.add(piecesGroup);
 
+/* two looks: Mono (black & white broadcast) and Moonlit (navy & cyan) */
+const SCENE = {
+  mono: { frame: '#0d0d0d', light: '#f7f6f2', dark: 'rgba(18,18,18,.97)', blot: (c, a) => `rgba(${c},${c},${c},${a * .35})`,
+    lightBlot: 'rgba(0,0,0,.03)', grid: '#0d0d0d', gridW: 3, coord: '#f7f6f2', font: cs => `500 ${cs * .24}px "IBM Plex Mono", monospace`,
+    side: 0x0d0d0d, hemi: [0xffffff, 0x555555, 1.6], rim: [0xffffff, .9], shadow: .28, mark: 0x7a7a7a, last: [0x9a9a96, .45],
+    plinthTop: '#f7f6f2', plinthRing: '#0d0d0d', fx: 0x0d0d0d, spark: () => (Math.random() < .3 ? 0xffffff : 0x111111), ink: 0x111111, ring: 0x111111 },
+  moon: { frame: '#061536', light: '#e3f0ff', dark: 'rgba(20,60,140,.94)', blot: (c, a) => `rgba(${c * .2 | 0},${c * .5 | 0},${c + 40},${a})`,
+    lightBlot: 'rgba(60,120,220,.07)', grid: 'rgba(79,224,255,.95)', gridW: 4, coord: '#4fe0ff', font: cs => `italic 800 ${cs * .38}px "Barlow Condensed", sans-serif`,
+    side: 0x061536, hemi: [0xe2f0ff, 0x1a2c55, 1.65], rim: [0x4fe0ff, 1.4], shadow: .5, mark: 0x4fe0ff, last: [0xf5c518, .32],
+    plinthTop: '#0d2c66', plinthRing: '#4fe0ff', fx: 0xeaf8ff, spark: () => (Math.random() < .4 ? 0xffffff : 0x4fe0ff), ink: 0x0b1d45, ring: 0x4fe0ff },
+};
+let THEME = 'mono';
+try { THEME = new URLSearchParams(location.search).get('theme') || localStorage.getItem('cf-theme') || 'mono'; } catch (e) { /* storage blocked */ }
+if (!SCENE[THEME]) THEME = 'mono';
+const SC = () => SCENE[THEME];
+
 function boardTexture() {
+  const P = SC();
   return canvasTex(1152, (g, S) => {
     const cs = S / 9, off = cs / 2;
-    g.fillStyle = '#0d0d0d'; g.fillRect(0, 0, S, S);
+    g.fillStyle = P.frame; g.fillRect(0, 0, S, S);
     // paper squares
-    g.fillStyle = '#f7f6f2'; g.fillRect(off, off, cs * 8, cs * 8);
+    g.fillStyle = P.light; g.fillRect(off, off, cs * 8, cs * 8);
     for (let i = 0; i < 9000; i++) {
       g.fillStyle = `rgba(0,0,0,${Math.random() * .035})`;
       g.fillRect(off + Math.random() * cs * 8, off + Math.random() * cs * 8, 1 + Math.random() * 3, 1);
@@ -1154,12 +1319,12 @@ function boardTexture() {
       g.closePath();
       g.clip();
       if (dark) {
-        g.fillStyle = 'rgba(18,18,18,.97)'; g.fillRect(x, y, cs, cs);
+        g.fillStyle = P.dark; g.fillRect(x, y, cs, cs);
         for (let i = 0; i < 26; i++) {
           const bx = x + Math.random() * cs, by = y + Math.random() * cs, br = 10 + Math.random() * 55;
           const rg = g.createRadialGradient(bx, by, 0, bx, by, br);
           const a = .05 + Math.random() * .16, c = 30 + Math.random() * 50 | 0;
-          rg.addColorStop(0, `rgba(${c},${c},${c},${a * .35})`); rg.addColorStop(1, `rgba(${c},${c},${c},0)`);
+          rg.addColorStop(0, P.blot(c, a)); rg.addColorStop(1, P.blot(c, 0));
           g.fillStyle = rg; g.fillRect(x, y, cs, cs);
         }
         for (let i = 0; i < 500; i++) {
@@ -1173,18 +1338,18 @@ function boardTexture() {
         for (let i = 0; i < 5; i++) {
           const bx = x + Math.random() * cs, by = y + Math.random() * cs, br = 20 + Math.random() * 40;
           const rg = g.createRadialGradient(bx, by, 0, bx, by, br);
-          rg.addColorStop(0, 'rgba(0,0,0,.03)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+          rg.addColorStop(0, P.lightBlot); rg.addColorStop(1, 'rgba(0,0,0,0)');
           g.fillStyle = rg; g.fillRect(x, y, cs, cs);
         }
       }
       g.restore();
     }
     // hand-drawn grid lines
-    g.strokeStyle = '#0d0d0d'; g.lineWidth = 3;
+    g.strokeStyle = P.grid; g.lineWidth = P.gridW;
     g.strokeRect(off - 2, off - 2, cs * 8 + 4, cs * 8 + 4);
     // coordinates
-    g.fillStyle = '#f7f6f2';
-    g.font = `500 ${cs * .24}px "IBM Plex Mono", monospace`;
+    g.fillStyle = P.coord;
+    g.font = P.font(cs);
     g.textAlign = 'center'; g.textBaseline = 'middle';
     for (let i = 0; i < 8; i++) {
       g.fillText(E.FILES[i], off + cs * (i + .5), S - off / 2);
@@ -1194,12 +1359,12 @@ function boardTexture() {
     }
   });
 }
-let boardMat;
+let boardMat, boardSide;
 function buildBoard() {
   const tex = boardTexture();
   tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   boardMat = new THREE.MeshToonMaterial({ map: tex, gradientMap: grad });
-  const side = toon(0x0d0d0d);
+  const side = boardSide = toon(SC().side);
   const box = new THREE.Mesh(new THREE.BoxGeometry(9, .36, 9), [side, side, boardMat, side, side, side]);
   box.position.y = -.18;
   box.receiveShadow = true;
@@ -1210,7 +1375,7 @@ function buildBoard() {
 buildBoard();
 document.fonts?.ready.then(() => { const t = boardTexture(); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); boardMat.map = t; boardMat.needsUpdate = true; });
 
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: .28 }));
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: .28, color: 0x01040c }));
 ground.rotation.x = -PI / 2; ground.position.y = -.37; ground.receiveShadow = true;
 scene.add(ground);
 
@@ -1247,14 +1412,14 @@ function showDots(moves) {
     if (seen.has(m.to)) continue;
     seen.add(m.to);
     const cap = !!m.captured;
-    const d = cap ? flatSprite(ringTex, 0x8a8a8a, .98, 1) : flatSprite(inkTex, accentHex(), .3, .85);
+    const d = cap ? flatSprite(ringTex, SC().mark, .98, 1) : flatSprite(inkTex, accentHex(), .3, .85);
     d.position.copy(sqPos(m.to)).setY(.012);
     d.userData.pulse = Math.random() * 6;
     markGroup.add(d);
     moveDots.push(d);
   }
 }
-const accentHex = () => 0x7a7a7a;
+const accentHex = () => SC().mark;
 
 /* ================================================================
    Tweens & sound
@@ -1348,7 +1513,7 @@ function glide(rig, to, { jump = 0, steps = 0, dur } = {}) {
 /* ---------- FX ---------- */
 const fxGroup = new THREE.Group();
 scene.add(fxGroup);
-function inkBurst(pos, n = 14, color = 0x111111) {
+function inkBurst(pos, n = 14, color = SC().ink) {
   const ps = [];
   for (let i = 0; i < n; i++) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: inkTex, color, transparent: true, depthWrite: false }));
@@ -1417,7 +1582,7 @@ function updateSparks(dt) {
   sparkGeo.attributes.position.needsUpdate = true;
   sparkGeo.attributes.color.needsUpdate = true;
 }
-const sparkColor = () => (Math.random() < .3 ? 0xffffff : 0x111111);
+const sparkColor = () => SC().spark();
 // sparks thrown off the glowing seams of a transforming piece
 function seamSparks(rig, n) {
   const spec = MODEL_SPEC[rig.type], H = rig.t < .5 ? spec.ch : spec.rh;
@@ -1431,7 +1596,7 @@ function seamSparks(rig, n) {
   }
 }
 function shockwave(pos, color, size = 2.4) {
-  const ring = flatSprite(ringTex, 0x111111, 1, 1);
+  const ring = flatSprite(ringTex, SC().ring, 1, 1);
   ring.position.copy(pos).setY(.03);
   fxGroup.add(ring);
   tween(.55, k => { ring.scale.setScalar(.3 + easeIO(k) * size); ring.material.opacity = 1 - k; })
@@ -1647,7 +1812,7 @@ const CHOREO = {
       if (big) { await tween(.3, k => shake(.015)); }
       thud(big); burst(from, 8);
       tween(.12, k => a.root.position.copy(base).addScaledVector(dir, -(big ? .35 : .15) * Math.sin(k * PI)));
-      const shell = new THREE.Mesh(G('shell', () => new THREE.SphereGeometry(.09, 10, 8)), new THREE.MeshBasicMaterial({ color: 0x0d0d0d }));
+      const shell = new THREE.Mesh(G('shell', () => new THREE.SphereGeometry(.09, 10, 8)), new THREE.MeshBasicMaterial({ color: SC().fx }));
       fxGroup.add(shell);
       await tween(big ? .22 : .18, k => { shell.position.lerpVectors(from, to, k); shell.position.y += Math.sin(k * PI) * (big ? .2 : .6); shell.scale.setScalar(big ? 2 : 1); });
       shell.material.dispose(); shell.removeFromParent();
@@ -1661,7 +1826,7 @@ const CHOREO = {
     servo(true, .4);
     await tween(.35, k => { a.root.position.y = Math.sin(k * PI / 2) * .5; });
     const needle = (pos, big) => {
-      const m = new THREE.Mesh(G('needle', () => new THREE.ConeGeometry(.07, 1.6, 6).rotateX(PI)), new THREE.MeshBasicMaterial({ color: 0x0d0d0d }));
+      const m = new THREE.Mesh(G('needle', () => new THREE.ConeGeometry(.07, 1.6, 6).rotateX(PI)), new THREE.MeshBasicMaterial({ color: SC().fx }));
       m.scale.setScalar(big ? 2.2 : 1); fxGroup.add(m);
       return tween(.16, k => { m.position.copy(pos).setY(7 - 6.2 * k * k); }).then(() => { m.material.dispose(); m.removeFromParent(); });
     };
@@ -1685,7 +1850,7 @@ const CHOREO = {
     servo(false, .5);
     await tween(.3, k => { a.root.position.y = Math.sin(k * PI / 2) * .4; });
     const pillar = new THREE.Mesh(G('pillar', () => new THREE.CylinderGeometry(.42, .42, 6, 6, 1, true).translate(0, 3, 0)),
-      new THREE.MeshBasicMaterial({ color: 0x0d0d0d, side: THREE.DoubleSide }));
+      new THREE.MeshBasicMaterial({ color: SC().fx, side: THREE.DoubleSide }));
     pillar.position.copy(vp).setY(9); fxGroup.add(pillar);
     await tween(.2, k => { pillar.position.y = 9 * (1 - k * k); });
     await hit(v, dir, 2.2, vp.clone().setY(.3));
@@ -1923,10 +2088,10 @@ async function play(m) {
 /* capture cut-in: the attacker's portrait slashes across the screen */
 const CUT_NAME = { P: 'PAWN 2', B: 'BISHOP 2.0', Q: 'QUEEN', K: 'KING', N: 'KNIGHT', R: 'ROOK' };
 const CUT_WORD = ['TAKE!', 'STRIKE!', 'BREAK!', 'CRUSH!'];
-for (const t of 'PBQKNR') { const i = new Image(); i.src = `assets/cut_${t}.webp`; }
+for (const t of 'PBQKNR') for (const k of ['cut', 'cutc']) { const i = new Image(); i.src = `assets/${k}_${t}.webp`; }
 function cutIn(rig) {
   const c = $('cutin');
-  c.querySelector('img').src = `assets/cut_${rig.type}.webp`;
+  c.querySelector('img').src = `assets/${THEME === 'moon' ? 'cutc' : 'cut'}_${rig.type}.webp`;
   c.querySelector('.word').textContent = CUT_WORD[Math.random() * CUT_WORD.length | 0];
   c.querySelector('.label').textContent = `${rig.team === 'w' ? 'White' : 'Black'} — ${CUT_NAME[rig.type]}`;
   c.classList.remove('go'); void c.offsetWidth; c.classList.add('go');
@@ -2148,6 +2313,7 @@ $('bMenu').onclick = () => {
 };
 $('speed').onchange = e => { SPEED = +e.target.value; };
 $('battle').onchange = e => { settings.battle = e.target.value; };
+$('theme').onchange = e => { tvStatic(220); applyTheme(e.target.value); };
 $('sound').onchange = e => { soundOn = e.target.value === '1'; };
 $('tmode').onchange = e => {
   settings.tmode = e.target.value;
@@ -2183,19 +2349,45 @@ canvas.addEventListener('pointerup', e => {
 /* ================================================================
    Gallery — turn each character on a plinth
    ================================================================ */
+const plinthSide = toon(0x0d0d0d), plinthTop = new THREE.MeshToonMaterial({ gradientMap: grad });
+function plinthTex() {
+  const P = SC();
+  return canvasTex(512, (g, s) => {
+    g.fillStyle = P.plinthTop; g.fillRect(0, 0, s, s);
+    g.strokeStyle = P.plinthRing; g.lineWidth = 10; g.beginPath(); g.arc(s / 2, s / 2, s / 2 - 8, 0, PI * 2); g.stroke();
+    g.lineWidth = 2; g.beginPath(); g.arc(s / 2, s / 2, s / 2 - 34, 0, PI * 2); g.stroke();
+  });
+}
+
+/* ---------- theme switch: CSS class + every scene colour ---------- */
+function applyTheme(name) {
+  THEME = SCENE[name] ? name : 'mono';
+  const P = SC();
+  document.body.classList.toggle('moon', THEME === 'moon');
+  document.querySelector('meta[name=theme-color]').setAttribute('content', THEME === 'moon' ? '#030b1f' : '#f2f1ed');
+  try { localStorage.setItem('cf-theme', THEME); } catch (e) { /* storage blocked */ }
+  const t = boardTexture(); t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  boardMat.map?.dispose(); boardMat.map = t; boardMat.needsUpdate = true;
+  boardSide.color.setHex(P.side); plinthSide.color.setHex(P.side);
+  plinthTop.map?.dispose(); plinthTop.map = plinthTex(); plinthTop.needsUpdate = true;
+  hemi.color.setHex(P.hemi[0]); hemi.groundColor.setHex(P.hemi[1]); hemi.intensity = P.hemi[2];
+  rim.color.setHex(P.rim[0]); rim.intensity = P.rim[1];
+  ground.material.opacity = P.shadow;
+  selMark.material.color.setHex(P.mark); checkMark.material.color.setHex(P.mark);
+  lastMarks.forEach(m => { m.material.color.setHex(P.last[0]); m.material.opacity = P.last[1]; });
+  document.querySelectorAll('[data-theme]').forEach(b => b.setAttribute('aria-pressed', b.dataset.theme === THEME));
+  if ($('theme')) $('theme').value = THEME;
+}
+document.querySelectorAll('[data-theme]').forEach(b => b.onclick = () => { tvStatic(220); applyTheme(b.dataset.theme); });
+
 const galleryStage = new THREE.Group();
 galleryStage.visible = false;
 scene.add(galleryStage);
 {
-  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.4, .36, 64), toon(0x0d0d0d));
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.4, .36, 64), plinthSide);
   plinth.position.y = -.18; plinth.receiveShadow = true; plinth.castShadow = true;
   galleryStage.add(plinth);
-  const top = new THREE.Mesh(new THREE.CircleGeometry(1.2, 64).rotateX(-PI / 2), new THREE.MeshToonMaterial({ map: canvasTex(512, (g, s) => {
-    g.fillStyle = '#f7f6f2'; g.fillRect(0, 0, s, s);
-    g.strokeStyle = '#0d0d0d'; g.lineWidth = 10; g.beginPath(); g.arc(s / 2, s / 2, s / 2 - 8, 0, PI * 2); g.stroke();
-    g.lineWidth = 2; g.beginPath(); g.arc(s / 2, s / 2, s / 2 - 34, 0, PI * 2); g.stroke();
-    for (let i = 0; i < 40; i++) { const x = s / 2 + (Math.random() - .5) * s * .7, y = s / 2 + (Math.random() - .5) * s * .7, r = 30 + Math.random() * 90; const rg = g.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(0, 0, s, s); }
-  }), gradientMap: grad }));
+  const top = new THREE.Mesh(new THREE.CircleGeometry(1.2, 64).rotateX(-PI / 2), plinthTop);
   top.position.y = .001; top.receiveShadow = true;
   galleryStage.add(top);
 }
@@ -2329,6 +2521,7 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+applyTheme(THEME);
 setCameraForSide('w', false);
 syncAll();
 refreshStatus();
