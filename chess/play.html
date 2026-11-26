@@ -467,6 +467,136 @@
     #txText { font-size: 14px; }
   }
 
+
+  /* =================== CINEMA UI (overcast, glass, hairlines) =================== */
+  body.strand { --s-bg: #15191b; --s-glass: rgba(16,20,22,.58); --s-line: rgba(232,230,224,.22); --s-text: #e8e6e0; --s-dim: #8f9590; --s-amber: #e3a54a;
+    color: var(--s-text); background: radial-gradient(ellipse at 60% 30%, #4a5156 0%, #23282a 55%, #121517 100%); }
+  body.strand #grid, body.strand #scan { display: none; }
+  body.strand .mono { color: inherit; font-weight: 400; letter-spacing: .22em; }
+  body.strand .live::before { background: var(--s-amber); box-shadow: 0 0 8px var(--s-amber); }
+  body.strand .btn { background: transparent; color: var(--s-text); border: 1px solid var(--s-line); font-weight: 400; letter-spacing: .2em; }
+  body.strand .btn::before { background: rgba(232,230,224,.92); }
+  body.strand .btn:hover, body.strand .btn[aria-pressed="true"] { color: #111; }
+  body.strand select { background: rgba(0,0,0,.3); color: var(--s-text); border: 1px solid var(--s-line); }
+  body.strand :focus-visible { outline-color: var(--s-amber); }
+
+  /* title: full-bleed film still, thin wide type */
+  body.strand #title { display: block; background: #111; }
+  body.strand #title .right { position: absolute; inset: 0; padding: 0; background: none; display: block; }
+  body.strand #title .right .meta, body.strand #title .right .credits { display: none; }
+  body.strand .screen { position: absolute; inset: 0; border: 0; background: #111 url(assets/keyart_strand.jpg) 65% 50% / cover no-repeat;
+    animation: slowpush 40s ease-in-out infinite alternate; }
+  @keyframes slowpush { from { transform: scale(1.03); } to { transform: scale(1.1) translate(-1%, -.5%); } }
+  body.strand .screen::before { background: linear-gradient(90deg, rgba(10,12,13,.82) 0%, rgba(10,12,13,.5) 38%, rgba(10,12,13,0) 70%), linear-gradient(0deg, rgba(10,12,13,.6), transparent 35%); }
+  body.strand .screen::after { box-shadow: inset 0 0 200px rgba(0,0,0,.55); }
+  body.strand .screen .ch, body.strand .screen .tc, body.strand .screen .castimg, body.strand .screen .castname, body.strand .screen .castbg { display: none !important; }
+  body.strand #title .left { position: absolute; z-index: 1; inset: 0 auto 0 0; width: min(640px, 62vw); border: 0; background: none; padding: 7vh 5vw 60px; }
+  body.strand #title .left .meta { border: 0; color: var(--s-dim); }
+  body.strand .wordmark { font-weight: 300; font-stretch: 125%; letter-spacing: .42em; font-size: clamp(30px, 4.2vw, 64px); line-height: 1.3; }
+  body.strand .wordmark span + span { font-weight: 300; font-stretch: 125%; font-size: .5em; letter-spacing: .9em; margin-top: .4em; color: var(--s-dim); }
+  body.strand .brand::after { display: none; }
+  body.strand .wordmark.glitch span { animation: none; }
+  body.strand .tagline { color: var(--s-dim); }
+  body.strand .tagline b { width: 34px; height: 1px; background: var(--s-amber); }
+  body.strand #title nav { border-top: 0; display: grid; gap: 2px; }
+  body.strand .mi { border-bottom: 0; grid-template-columns: 44px 1fr auto; padding: 1.1vh 4px; color: rgba(232,230,224,.72); transition: color .25s, padding .25s; }
+  body.strand .mi::before { inset: auto auto 0 44px; height: 1px; width: 0; transform: none; background: var(--s-amber); transition: width .35s cubic-bezier(.2,1,.2,1); }
+  body.strand .mi .n { color: var(--s-dim); font-size: 11px; }
+  body.strand .mi .t { font-weight: 300; font-stretch: 115%; font-size: clamp(18px, 2vw, 28px); letter-spacing: .3em; }
+  body.strand .mi .a { opacity: 0; transition: opacity .25s, transform .25s; color: var(--s-amber); }
+  body.strand .mi:hover, body.strand .mi:focus-visible { color: #fff; padding-left: 14px; }
+  body.strand .mi:hover::before, body.strand .mi:focus-visible::before { width: calc(100% - 44px); transform: none; }
+  body.strand .mi:hover .a, body.strand .mi:focus-visible .a { opacity: 1; transform: none; }
+  body.strand .opts, body.strand .loadbar { color: var(--s-dim); }
+  body.strand .loadbar .track { background: var(--s-line); }
+  body.strand .loadbar .fill { background: var(--s-amber); height: 1px; margin: 0; }
+  body.strand .ticker { background: rgba(10,12,13,.55); color: var(--s-dim); border-top: 1px solid var(--s-line); backdrop-filter: blur(6px); }
+  body.strand #tfx { opacity: .5; }
+
+  /* HUD */
+  body.strand header .wm { font-weight: 300; font-stretch: 125%; letter-spacing: .4em; font-size: 18px; }
+  body.strand header .wm em { font-size: .6em; letter-spacing: .6em; color: var(--s-dim); }
+  body.strand #hudtop { color: var(--s-dim); }
+  body.strand #hudtop .tcode { background: transparent; border: 1px solid var(--s-line); color: var(--s-text); }
+  body.strand #panel { background: var(--s-glass); border: 1px solid var(--s-line); backdrop-filter: blur(12px) saturate(.8); color: var(--s-text); }
+  body.strand #panel::before, body.strand #panel::after { content: ""; position: absolute; width: 10px; height: 10px; border: 1px solid var(--s-amber); pointer-events: none; }
+  body.strand #panel::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+  body.strand #panel::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+  body.strand #panel section { border-bottom: 1px solid var(--s-line); }
+  body.strand .sec { color: var(--s-dim); }
+  body.strand .player { border: 1px solid var(--s-line); background: transparent; }
+  body.strand .player .name { font-weight: 300; font-stretch: 115%; letter-spacing: .3em; font-size: 16px; }
+  body.strand .player .name small { color: var(--s-dim); }
+  body.strand .player.active { background: rgba(232,230,224,.08); color: #fff; box-shadow: inset 2px 0 0 var(--s-amber); }
+  body.strand .player.active .name::after { color: var(--s-amber); }
+  body.strand #status { color: var(--s-dim); }
+  body.strand #status.check, body.strand #status.over { background: var(--s-amber); color: #111; }
+  body.strand #moves li::marker { color: var(--s-dim); }
+  body.strand #moves li span.last { background: none; color: var(--s-amber); }
+  body.strand #fab { background: rgba(16,20,22,.5); color: var(--s-text); border: 1px solid var(--s-line); border-radius: 50%; width: 112px; height: 112px;
+    place-items: center; align-content: center; text-align: center; backdrop-filter: blur(8px); box-shadow: inset 0 0 0 6px rgba(0,0,0,0), 0 0 0 0 var(--s-amber); }
+  body.strand #fab::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; border: 1px solid var(--s-amber); border-right-color: transparent; border-bottom-color: transparent;
+    animation: spin 6s linear infinite; }
+  body.strand #fab .t { font-weight: 300; font-stretch: 115%; letter-spacing: .3em; font-size: 15px; line-height: 1.5; }
+  body.strand #fab .mono { display: none; }
+  body.strand #fab:hover { background: rgba(232,230,224,.12); }
+  body.strand #fab.on { background: rgba(227,165,74,.18); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* banner: quiet centred line, not a block */
+  body.strand #toast .bar { background: linear-gradient(90deg, transparent, rgba(10,12,13,.55) 30%, rgba(10,12,13,.55) 70%, transparent); }
+  body.strand #toast.show .bar { height: 92px; }
+  body.strand #toast .txt { font-weight: 300; font-stretch: 125%; letter-spacing: .5em; font-size: clamp(22px, 3.4vw, 44px); color: #fff; }
+  body.strand #toast .sub { color: var(--s-amber); }
+  /* cut-in: film strip with a warm-graded portrait */
+  body.strand #cutin .panel { background: rgba(12,14,15,.82); border-color: var(--s-line); backdrop-filter: blur(6px); }
+  body.strand #cutin .panel::after { display: none; }
+  body.strand #cutin .stripe { background: linear-gradient(90deg, rgba(227,165,74,.0), rgba(227,165,74,.22) 60%, rgba(227,165,74,0)); height: 1px; top: 70%; }
+  body.strand #cutin img { filter: grayscale(.85) sepia(.25) contrast(1.05) brightness(.95) drop-shadow(0 0 30px rgba(0,0,0,.6)); }
+  body.strand #cutin .word { font-weight: 300; font-stretch: 125%; letter-spacing: .4em; color: #fff; font-size: clamp(34px, 6vw, 80px); }
+  body.strand #cutin .label, body.strand #cutin .label2 { color: var(--s-amber); }
+  body.strand #flash { background: #fff3df; mix-blend-mode: soft-light; }
+  body.strand #lines { display: none; }
+  body.strand #tag { background: var(--s-glass); border: 1px solid var(--s-line); border-left: 2px solid var(--s-amber); backdrop-filter: blur(8px); }
+  body.strand .modal { background: rgba(10,12,13,.5); backdrop-filter: blur(4px); }
+  body.strand .card { background: var(--s-glass); border: 1px solid var(--s-line); color: var(--s-text); backdrop-filter: blur(12px); }
+  body.strand .card h2 { font-weight: 300; font-stretch: 125%; letter-spacing: .4em; font-size: 26px; }
+  body.strand #gName { font-weight: 300; font-stretch: 125%; letter-spacing: .3em; color: #fff; text-shadow: 0 2px 30px rgba(0,0,0,.6); }
+  body.strand #gName small { color: var(--s-amber); }
+  body.strand #gallery { background: var(--s-glass); border: 1px solid var(--s-line); backdrop-filter: blur(12px); }
+  body.strand #gallery .chips .btn, body.strand #gallery .row .btn { border-color: var(--s-line); }
+  body.strand #gNote { color: var(--s-dim); }
+
+  /* boot / studio / press / movie */
+  body.strand #boot, body.strand #press { background: #111; color: var(--s-text); }
+  body.strand #boot .bg, body.strand #press .bg { background: #111 url(assets/keyart_strand.jpg) center / cover; opacity: .28; filter: blur(3px); }
+  body.strand #boot .bw, body.strand #press .bw, body.strand #intro .end .bw { font-weight: 300; font-stretch: 125%; letter-spacing: .45em; font-size: clamp(28px, 5vw, 64px); line-height: 1.4; }
+  body.strand #boot .bw span + span, body.strand #press .bw span + span, body.strand #intro .end .bw span + span { font-weight: 300; font-stretch: 125%; font-size: .45em; letter-spacing: 1em; color: var(--s-dim); }
+  body.strand .bootload { color: var(--s-dim); }
+  body.strand .bootload .track { background: var(--s-line); }
+  body.strand .bootload .fill { background: var(--s-amber); height: 1px; margin: 0; }
+  body.strand .bootcredit, body.strand #press .kp, body.strand .build { color: var(--s-dim); }
+  body.strand #pressBtn { background: transparent; color: var(--s-text); border: 1px solid var(--s-line); letter-spacing: .5em; animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .35; } }
+  body.strand #press .hint { color: var(--s-dim); }
+  body.strand #studio { background: #0c0e0f; }
+  body.strand #studio .n { font-weight: 300; font-stretch: 125%; letter-spacing: .4em; font-size: clamp(28px, 5vw, 60px); }
+  body.strand #studio .rule { background: var(--s-amber); }
+  body.strand #intro { background: #0c0e0f; }
+  body.strand #intro video { filter: sepia(.22) saturate(.8) contrast(1.04); }
+  body.strand #intro .scan, body.strand #intro .tl, body.strand #intro .tc, body.strand #intro .card { display: none !important; }
+  body.strand #intro .end { background: #0c0e0f; color: var(--s-text); }
+  body.strand #intro .end .kp { color: var(--s-dim); }
+  body.strand #skip { background: transparent; border: 1px solid var(--s-line); color: var(--s-text); }
+  body.strand #intro .credit { mix-blend-mode: normal; color: #fff; letter-spacing: .5em; text-shadow: 0 1px 20px rgba(0,0,0,.7); }
+  @media (max-width: 760px) {
+    body.strand #title .left { width: 100%; top: auto; padding: 18px 20px 46px; background: linear-gradient(0deg, rgba(10,12,13,.95) 65%, transparent); }
+    body.strand .screen { background-position: 72% 40%; }
+    body.strand #panel { border-left: 0; border-right: 0; border-bottom: 0; }
+    body.strand #fab { width: 78px; height: 78px; }
+    body.strand #fab .t { font-size: 11px; }
+  }
+
   /* =================== MOONLIT THEME =================== */
   #sea, .streaks, .moonlogo { display: none; }
   body.moon { --cyan: #4fe0ff; --navy: #071d4a; --deep: #0b3a8c; --blue: #1d6cff; --ice: #eaf8ff; --gold: #f5c518; --abyss: #030b1f; --red: #ff3b5c;
@@ -618,6 +748,7 @@
     if (t === 'moon') { document.body.classList.add('moon'); document.querySelector('meta[name=theme-color]').setAttribute('content', '#030b1f'); }
     if (e) document.body.classList.add('locked');
     if (e === 'dc') { document.body.classList.add('dc'); document.title = "Chess Fantasia — Director's Cut"; }
+    if (t !== 'moon') document.body.classList.add('strand');
   })();
 </script>
 <section id="boot" aria-label="Loading">
@@ -628,7 +759,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 24</div>
+  <div class="build mono">Build 25</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -697,7 +828,7 @@
       <label class="field mono">Battle
         <select id="battle"><option value="full" selected>Full</option><option value="quick">Quick</option></select></label>
       <label class="field mono">Graphics
-        <select id="gfx"><option value="ink">Ink</option><option value="high">High</option><option value="classic">Classic</option></select></label>
+        <select id="gfx"><option value="cinema">Cinema</option><option value="high">High</option><option value="classic">Classic</option></select></label>
       <label class="field mono">Camera
         <select id="cam"><option value="cine" selected>Cinematic</option><option value="fixed">Fixed</option></select></label>
       <label class="field mono">Music
@@ -804,6 +935,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import * as E from './engine.js';
 
@@ -823,13 +955,15 @@ renderer.localClippingEnabled = true;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 120);
 // Graphics: 'high' = lacquered PBR pieces, studio reflections, soft contact shadows, AO + bloom; 'classic' = flat toon + ink outlines
-let GFX = 'ink';
-try { GFX = localStorage.getItem('cf-gfx') || 'ink'; } catch (e) { /* storage blocked */ }
-const HIGH = () => GFX === 'high' || GFX === 'ink';
-const INK = () => GFX === 'ink';
+let GFX = 'cinema';
+try { GFX = localStorage.getItem('cf-gfx') || 'cinema'; } catch (e) { /* storage blocked */ }
+if (GFX === 'ink') GFX = 'cinema';
+const HIGH = () => GFX === 'high' || GFX === 'cinema';
+const INK = () => false;
+const CINE = () => GFX === 'cinema' && THEME === 'mono';
 const pmrem = new THREE.PMREMGenerator(renderer);
 const envTex = pmrem.fromScene(new RoomEnvironment(), .04).texture;
-let composer = null, inkPass = null;
+let composer = null, inkPass = null, gradePass = null, bloomPass = null;
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.enablePan = false;
@@ -855,6 +989,7 @@ scene.add(rim);
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
+  if (gradePass) gradePass.uniforms.uRes.value.set(w, h);
   if (inkPass) inkPass.uniforms.uRes.value.set(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
   if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); }
   camera.aspect = w / h;
@@ -2058,6 +2193,10 @@ async function die(vic, fromDir) {
 let shakeAmt = 0, frozenUntil = 0;
 const shake = a => { shakeAmt = Math.max(shakeAmt, a); };
 function impactFrame(ms = 70) {
+  if (gradePass && gradePass.enabled) {
+    gradePass.uniforms.uImpact.value = 1;
+    tween(ms / 1000 * 3, k => { gradePass.uniforms.uImpact.value = 1 - k; });
+  }
   if (!inkPass || !inkPass.enabled) return;
   inkPass.uniforms.uImpact.value = 1;
   setTimeout(() => { inkPass.uniforms.uImpact.value = 0; }, ms);
@@ -3016,6 +3155,99 @@ const InkShader = {
       gl_FragColor = vec4(inked, 1.0);
     }`,
 };
+/* ---------- Cinema look: overcast sky, fog, wet ground, rain, mist, film grade ---------- */
+const skyTex = canvasTex(512, (g, s) => {
+  const gr = g.createLinearGradient(0, 0, 0, s);
+  gr.addColorStop(0, '#3b4247'); gr.addColorStop(.45, '#5f676c'); gr.addColorStop(.62, '#77746d'); gr.addColorStop(.7, '#5d6260'); gr.addColorStop(1, '#1e2224');
+  g.fillStyle = gr; g.fillRect(0, 0, s, s);
+  // a faint warm glow on the horizon
+  const r = g.createRadialGradient(s * .72, s * .62, 0, s * .72, s * .62, s * .45);
+  r.addColorStop(0, 'rgba(232,170,96,.35)'); r.addColorStop(1, 'rgba(232,170,96,0)');
+  g.fillStyle = r; g.fillRect(0, 0, s, s);
+});
+skyTex.mapping = THREE.EquirectangularReflectionMapping;
+const cineFog = new THREE.FogExp2(0x535a5e, .03);
+// wet terrain: dark stone with puddles (low roughness patches)
+const terrainRough = canvasTex(512, (g, s) => {
+  g.fillStyle = '#d0d0d0'; g.fillRect(0, 0, s, s);
+  for (let i = 0; i < 70; i++) {
+    const x = Math.random() * s, y = Math.random() * s, r = 12 + Math.random() * 60;
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, 'rgba(20,20,20,.95)'); gr.addColorStop(.7, 'rgba(20,20,20,.6)'); gr.addColorStop(1, 'rgba(20,20,20,0)');
+    g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, r, r * (.4 + Math.random() * .5), Math.random() * 3, 0, PI * 2); g.fill();
+  }
+});
+terrainRough.colorSpace = THREE.NoColorSpace;
+terrainRough.wrapS = terrainRough.wrapT = THREE.RepeatWrapping; terrainRough.repeat.set(6, 6);
+const terrainCol = canvasTex(512, (g, s) => {
+  g.fillStyle = '#2b2f30'; g.fillRect(0, 0, s, s);
+  for (let i = 0; i < 9000; i++) { const v = 25 + Math.random() * 40 | 0; g.fillStyle = `rgba(${v},${v + 3},${v + 2},.35)`; g.fillRect(Math.random() * s, Math.random() * s, 1 + Math.random() * 3, 1 + Math.random() * 3); }
+  for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(70,84,60,${.12 + Math.random() * .15})`; g.beginPath(); g.arc(Math.random() * s, Math.random() * s, 4 + Math.random() * 26, 0, PI * 2); g.fill(); }
+});
+terrainCol.wrapS = terrainCol.wrapT = THREE.RepeatWrapping; terrainCol.repeat.set(6, 6);
+const terrain = new THREE.Mesh(new THREE.CircleGeometry(80, 64).rotateX(-PI / 2),
+  new THREE.MeshPhysicalMaterial({ map: terrainCol, roughnessMap: terrainRough, roughness: 1, metalness: 0, envMapIntensity: 1.1, clearcoat: .4, clearcoatRoughness: .25 }));
+terrain.position.y = -.37; terrain.receiveShadow = true; terrain.visible = false;
+scene.add(terrain);
+// rain: thin streaks that fall around the board
+const RAIN = isMobile ? 500 : 1400;
+const rainGeo = new THREE.BufferGeometry();
+const rainPos = new Float32Array(RAIN * 6), rainV = new Float32Array(RAIN);
+for (let i = 0; i < RAIN; i++) {
+  const x = (Math.random() - .5) * 30, y = Math.random() * 14, z = (Math.random() - .5) * 30;
+  rainPos.set([x, y, z, x - .02, y + .32, z + .01], i * 6); rainV[i] = 11 + Math.random() * 6;
+}
+rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xd9dee0, transparent: true, opacity: .32, depthWrite: false }));
+rain.frustumCulled = false; rain.visible = false;
+scene.add(rain);
+function updateRain(dt) {
+  if (!rain.visible) return;
+  for (let i = 0; i < RAIN; i++) {
+    const j = i * 6, d = rainV[i] * dt;
+    rainPos[j + 1] -= d; rainPos[j + 4] -= d;
+    if (rainPos[j + 1] < -.35) { const x = (Math.random() - .5) * 30, z = (Math.random() - .5) * 30, y = 12 + Math.random() * 3;
+      rainPos.set([x, y, z, x - .02, y + .32, z + .01], j); }
+  }
+  rainGeo.attributes.position.needsUpdate = true;
+}
+// low mist banks drifting across the scene
+const mistTex = canvasTex(256, (g, s) => {
+  for (let i = 0; i < 30; i++) { const x = s * (.2 + Math.random() * .6), y = s * (.35 + Math.random() * .3), r = s * (.1 + Math.random() * .22);
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,.18)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, s, s); }
+});
+const mist = new THREE.Group(); mist.visible = false; scene.add(mist);
+for (let i = 0; i < 9; i++) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(16, 5), new THREE.MeshBasicMaterial({ map: mistTex, color: 0xc9cfd2, transparent: true, opacity: .55, depthWrite: false, fog: true }));
+  m.position.set((Math.random() - .5) * 26, .4 + Math.random() * 1.2, (Math.random() - .5) * 26 - 4);
+  m.userData.v = .15 + Math.random() * .25; m.raycast = () => {};
+  mist.add(m);
+}
+function updateMist(dt) {
+  if (!mist.visible) return;
+  for (const m of mist.children) { m.position.x += m.userData.v * dt; if (m.position.x > 16) m.position.x = -16; m.quaternion.copy(camera.quaternion); }
+}
+// film grade: muted palette, teal shadows / warm highlights, lifted blacks, vignette, grain, chromatic aberration on impact
+const GradeShader = {
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uImpact: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } },
+  vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uTime; uniform float uImpact; uniform vec2 uRes; varying vec2 vUv;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main() {
+      vec2 c = vUv - .5;
+      float ca = .0012 + uImpact * .006;
+      vec3 col = vec3(texture2D(tDiffuse, vUv + c * ca).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - c * ca).b);
+      float l = dot(col, vec3(.299, .587, .114));
+      col = mix(vec3(l), col, .62);                                    // desaturate
+      col += mix(vec3(-.012, .006, .02), vec3(.03, .012, -.02), smoothstep(.2, .8, l));   // teal shadows, warm highs
+      col = col * .94 + .035;                                          // lifted blacks
+      col = mix(col, vec3(1.0), uImpact * .45);                        // impact exposure flash
+      col *= 1.0 - smoothstep(.45, .95, length(c * vec2(1.25, 1.0))) * .55;  // vignette
+      col += (hash(vUv * uRes + uTime) - .5) * .045;                   // grain
+      gl_FragColor = vec4(col, 1.0);
+    }`,
+};
 function buildComposer() {
   composer = new EffectComposer(renderer);
   composer.setPixelRatio(renderer.getPixelRatio());
@@ -3036,8 +3268,12 @@ function buildComposer() {
     };
     composer.addPass(gtao);
   }
-  // (bloom tried and dropped: on a white board it hazes the whole frame)
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .32, .5, .82);
+  composer.addPass(bloomPass);
   composer.addPass(new OutputPass());
+  gradePass = new ShaderPass(GradeShader);
+  gradePass.uniforms.uRes.value.set(innerWidth, innerHeight);
+  composer.addPass(gradePass);
   inkPass = new ShaderPass(InkShader);
   inkPass.uniforms.uRes.value.set(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
   inkPass.uniforms.uDot.value = 4.5 * renderer.getPixelRatio();
@@ -3071,6 +3307,27 @@ function applyGfx(rebuild = true) {
   // the post chain needs an opaque background; Mono's paper colour
   if (usePost()) { if (!composer) buildComposer(); scene.background = new THREE.Color(0xf2f1ed); }
   else scene.background = null;
+  // Cinema: overcast world, fog, wet ground, rain, mist, soft light, film grade
+  const cine = CINE();
+  if (gradePass) gradePass.enabled = cine;
+  if (bloomPass) bloomPass.enabled = false;   // bloom hazes the pale board; the grade carries the mood
+  terrain.visible = rain.visible = mist.visible = cine;
+  ground.visible = !cine;
+  scene.fog = cine ? cineFog : null;
+  if (cine) {
+    scene.background = skyTex;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .78;
+    hemi.color.setHex(0xb9c4ca); hemi.groundColor.setHex(0x2f3434); hemi.intensity = 1.05;
+    sun.color.setHex(0xe9ecef); sun.intensity = 1.5; sun.position.set(-6, 12, 3);
+    rim.color.setHex(0xffb36a); rim.intensity = .55;
+    boardMatHi.color.setHex(0x8e8b85); boardMatHi.roughness = .85; boardMatHi.clearcoat = .25; boardMatHi.clearcoatRoughness = .35; boardMatHi.envMapIntensity = .35;
+    boardSideHi.color.setHex(0x3a3d3e); boardSideHi.roughness = .95; boardSideHi.clearcoat = 0;
+    boardMatHi.needsUpdate = boardSideHi.needsUpdate = true;
+  } else {
+    hemi.color.setHex(SC().hemi[0]); hemi.groundColor.setHex(SC().hemi[1]);
+    sun.color.setHex(0xffffff); rim.color.setHex(SC().rim[0]);
+    boardMatHi.color.setHex(0xffffff); boardSideHi.color.setHex(SC().side);
+  }
   document.querySelectorAll('[data-gfx]').forEach(b => b.setAttribute('aria-pressed', b.dataset.gfx === GFX));
   if ($('gfx')) $('gfx').value = GFX;
   if (rebuild) {
@@ -3230,6 +3487,8 @@ function frame() {
     }
   }
   updateSparks(dt);
+  updateRain(dt); updateMist(dt);
+  if (gradePass) gradePass.uniforms.uTime.value = time % 100;
   placeTag();
   if (inkPass) inkPass.uniforms.uTime.value = Math.floor(time * 8) / 8;
   updateCamera(dt);
