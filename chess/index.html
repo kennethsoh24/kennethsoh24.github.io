@@ -4,23 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>變形棋 · Transform Chess</title>
+<meta name="description" content="3D chess where every piece transforms into a mech — Pawn 2, Bishop 2.0, King & Queen.">
+<meta property="og:image" content="assets/keyart.jpg">
+<link rel="icon" href="assets/logo.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Permanent+Marker&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Permanent+Marker&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="preload" href="assets/logo.webp" as="image">
 <style>
   :root {
     --paper: #f1eee6;
+    --paper-2: #e7e3d8;
     --ink: #121214;
-    --ink-soft: #55555a;
+    --ink-soft: #5a5a60;
     --blue: #2c5bd6;
     --gold: #f0c419;
     --red: #c8321e;
     --band: var(--blue);
+    --rough: 4px 10px 5px 12px / 11px 4px 10px 5px;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: var(--paper); color: var(--ink);
     font-family: "Noto Sans TC", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
-  /* paper + ink wash backdrop */
   #paper { position: fixed; inset: 0; z-index: 0;
     background:
       radial-gradient(ellipse 38% 30% at 58% 46%, rgba(40,40,44,.16), transparent 70%),
@@ -28,7 +33,7 @@
       radial-gradient(ellipse 30% 18% at 66% 70%, rgba(20,20,24,.10), transparent 70%),
       radial-gradient(circle at 20% 15%, rgba(0,0,0,.04), transparent 40%),
       var(--paper); }
-  #paper::after { content: ""; position: absolute; inset: 0; opacity: .5; mix-blend-mode: multiply;
+  #paper::after, .grain::after { content: ""; position: absolute; inset: 0; opacity: .5; mix-blend-mode: multiply; pointer-events: none;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
   /* the colour band from the sketches: blue when white moves, yellow when black moves */
   #band { position: fixed; top: 0; bottom: 0; right: 0; width: 13vw; min-width: 46px; z-index: 0;
@@ -36,110 +41,195 @@
     clip-path: polygon(6% 0, 100% 0, 100% 100%, 2% 100%, 5% 88%, 1% 74%, 4% 60%, 0 47%, 5% 33%, 2% 20%, 6% 9%); }
   canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; display: block; touch-action: none; outline: none; }
 
-  header { position: fixed; left: 18px; top: 14px; z-index: 3; pointer-events: none; }
-  header h1 { margin: 0; line-height: .95; font-weight: 400; }
-  header .zh { font-family: "Noto Sans TC", sans-serif; font-weight: 700; font-size: 30px; letter-spacing: .08em; display: block; }
-  header .en { font-family: "Permanent Marker", cursive; font-size: 26px; display: block; transform: rotate(-2deg);
-    border-bottom: 3px solid var(--ink); padding-bottom: 2px; width: max-content; }
-  header .sub { font-family: Caveat, cursive; font-size: 19px; color: var(--ink-soft); margin-top: 6px; }
-
-  #panel { position: fixed; z-index: 3; left: 18px; top: 128px; width: 262px; max-height: calc(100% - 146px);
-    display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px;
-    background: rgba(246,244,238,.86); backdrop-filter: blur(4px); border: 2px solid var(--ink);
-    border-radius: 3px 9px 4px 11px / 10px 3px 8px 4px; box-shadow: 4px 5px 0 rgba(0,0,0,.18); }
-  #status { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; min-height: 26px; }
-  #turnDot { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid var(--ink); background: #fff;
-    box-shadow: inset 0 0 0 3px var(--blue); transition: background .3s, box-shadow .3s; }
-  #turnDot.b { background: #1d1d22; box-shadow: inset 0 0 0 3px var(--gold); }
-  #statusText small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 12px; }
-  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* ---------- shared controls ---------- */
   button, select { font: inherit; font-size: 13px; color: var(--ink); }
-  button { cursor: pointer; background: #fff; border: 2px solid var(--ink); padding: 5px 9px;
-    border-radius: 4px 8px 3px 7px / 7px 3px 8px 4px; box-shadow: 2px 2px 0 var(--ink); transition: transform .08s, box-shadow .08s; }
+  button { cursor: pointer; background: #fff; border: 2px solid var(--ink); padding: 6px 10px;
+    border-radius: 4px 8px 3px 7px / 7px 3px 8px 4px; box-shadow: 2px 2px 0 var(--ink); transition: transform .08s, box-shadow .08s, background .15s; }
   button:hover { background: #fffbe6; }
   button:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--ink); }
   button.primary { background: var(--ink); color: #fff; }
   button.primary:hover { background: #2b2b30; }
   button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
-  details summary { cursor: pointer; font-family: Caveat, cursive; font-size: 20px; list-style: none; }
-  details summary::before { content: "＋ "; font-family: system-ui; font-size: 13px; }
+  select { width: 100%; padding: 4px 6px; border: 2px solid var(--ink); border-radius: 4px; background: #fff; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* ---------- title screen ---------- */
+  #title { position: fixed; inset: 0; z-index: 20; display: grid; grid-template-rows: 1fr auto; overflow: hidden;
+    background: var(--paper); transition: opacity .6s ease, visibility .6s; }
+  #title.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+  #title .art { position: absolute; inset: 0; background: url(assets/keyart.jpg) center 62% / cover no-repeat; filter: saturate(1.05);
+    animation: drift 24s ease-in-out infinite alternate; }
+  @keyframes drift { from { transform: scale(1.06) translateX(-1.2%); } to { transform: scale(1.12) translateX(1.2%); } }
+  #title .veil { position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(241,238,230,.0) 0%, rgba(241,238,230,.0) 45%, rgba(241,238,230,.92) 80%, var(--paper) 100%); }
+  #title .logo { position: relative; justify-self: center; align-self: start; margin-top: 3vh; width: min(560px, 78vw);
+    filter: drop-shadow(0 4px 0 rgba(241,238,230,.9)) drop-shadow(0 0 24px rgba(241,238,230,.95));
+    animation: stamp .9s cubic-bezier(.2,1.6,.4,1) both .15s; }
+  @keyframes stamp { from { transform: scale(1.35) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  #title .menu { position: relative; justify-self: center; width: min(620px, calc(100% - 28px)); margin-bottom: 4vh;
+    display: grid; gap: 12px; animation: rise .7s ease both .5s; }
+  @keyframes rise { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .modes button { padding: 12px 8px 10px; font-size: 15px; font-weight: 700; display: grid; gap: 2px; justify-items: center;
+    box-shadow: 4px 4px 0 var(--ink); border-width: 2.5px; border-radius: var(--rough); }
+  .modes button small { font-weight: 400; font-size: 12px; color: var(--ink-soft); }
+  .modes button .chip { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--ink); margin-bottom: 4px; }
+  .chip.w { background: #fff; box-shadow: inset 0 0 0 4px var(--blue); }
+  .chip.b { background: #1d1d22; box-shadow: inset 0 0 0 4px var(--gold); }
+  .chip.wb { background: linear-gradient(90deg, #fff 50%, #1d1d22 50%); }
+  .modes button:hover { background: #fffbe6; transform: translateY(-2px); }
+  .modes button.w:hover { box-shadow: 4px 4px 0 var(--blue); }
+  .modes button.b:hover { box-shadow: 4px 4px 0 var(--gold); }
+  .sub-row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 13px; }
+  .seg { display: inline-flex; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; background: #fff; }
+  .seg button { border: 0; border-radius: 0; box-shadow: none; padding: 5px 12px; }
+  .seg button + button { border-left: 2px solid var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .loadbar { display: grid; gap: 4px; justify-items: center; font-family: Caveat, cursive; font-size: 18px; color: var(--ink-soft); }
+  .loadbar .track { width: min(320px, 70vw); height: 6px; border: 1.5px solid var(--ink); border-radius: 4px; overflow: hidden; background: #fff; }
+  .loadbar .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--blue), var(--gold)); transition: width .3s; }
+  .credit { text-align: center; font-family: Caveat, cursive; font-size: 17px; color: var(--ink-soft); }
+
+  /* ---------- in-game header ---------- */
+  header { position: fixed; left: 14px; top: 10px; z-index: 3; }
+  header button { all: unset; cursor: pointer; display: block; }
+  header img { display: block; height: 92px; width: auto; filter: drop-shadow(0 2px 0 rgba(241,238,230,.9)); transition: transform .2s; }
+  header button:hover img { transform: rotate(-2deg) scale(1.03); }
+  header button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
+
+  /* ---------- side panel ---------- */
+  #panel { position: fixed; z-index: 3; left: 16px; top: 116px; width: 276px; max-height: calc(100% - 132px);
+    display: flex; flex-direction: column; gap: 10px; padding: 12px;
+    background: rgba(246,244,238,.9); backdrop-filter: blur(5px); border: 2px solid var(--ink);
+    border-radius: var(--rough); box-shadow: 5px 6px 0 rgba(0,0,0,.18); }
+  .player { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; padding: 7px 9px;
+    border: 2px solid transparent; border-radius: 8px; transition: border-color .3s, background .3s, box-shadow .3s; }
+  .player .chip { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--ink); }
+  .player .name { font-weight: 700; font-size: 14px; line-height: 1.15; }
+  .player .name small { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-soft); }
+  .player .caps { grid-column: 2 / 4; font-size: 17px; line-height: 1; letter-spacing: -1px; min-height: 17px; color: var(--ink-soft); }
+  .player .adv { font-family: "Permanent Marker", cursive; font-size: 15px; }
+  .player.active { background: #fff; border-color: var(--ink); box-shadow: 3px 3px 0 var(--band); }
+  .player.active .name::after { content: " ◀"; font-size: 11px; color: var(--band); }
+  #status { min-height: 22px; font-size: 13px; font-weight: 700; text-align: center; padding: 3px 6px; border-radius: 6px; }
+  #status.check { background: var(--red); color: #fff; animation: pulse 1s ease-in-out infinite; }
+  #status.over { background: var(--ink); color: #fff; }
+  @keyframes pulse { 50% { transform: scale(1.03); } }
+  .tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .tools button { padding: 6px 2px 5px; display: grid; justify-items: center; gap: 1px; font-size: 11.5px; }
+  .tools button b { font-size: 17px; line-height: 1; font-weight: 400; }
+  details summary { cursor: pointer; font-family: Caveat, cursive; font-size: 19px; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "＋ "; font-family: system-ui; font-size: 12px; }
   details[open] summary::before { content: "－ "; }
   .field { display: grid; grid-template-columns: 78px 1fr; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; }
-  select { width: 100%; padding: 4px 6px; border: 2px solid var(--ink); border-radius: 4px; background: #fff; }
-  #moves { margin: 0; padding: 6px 4px 6px 30px; overflow-y: auto; min-height: 40px; max-height: 210px; font-family: ui-monospace, Menlo, monospace;
+  #moves { margin: 0; padding: 6px 4px 6px 30px; overflow-y: auto; min-height: 30px; max-height: 170px; font-family: ui-monospace, Menlo, monospace;
     font-size: 13px; border-top: 1.5px dashed var(--ink-soft); }
   #moves li { padding: 1px 0; }
   #moves li span { display: inline-block; width: 62px; }
   #moves li span.last { background: var(--gold); border-radius: 3px; }
-  .hint { font-family: Caveat, cursive; font-size: 17px; color: var(--ink-soft); line-height: 1.15; }
+
+  /* gear-up action button */
+  #fab { position: fixed; z-index: 4; right: max(18px, 2.5vw); bottom: 22px; width: 104px; height: 104px; border-radius: 50%;
+    display: grid; place-items: center; padding: 0; background: var(--ink); color: #fff; border: 3px solid var(--ink);
+    box-shadow: 0 0 0 4px var(--paper), 0 0 0 7px var(--band), 5px 7px 0 7px rgba(0,0,0,.25); }
+  #fab:hover { background: #26262b; }
+  #fab svg { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); animation: spin 9s linear infinite; opacity: .9; }
+  #fab.on svg { animation-duration: 2.2s; }
+  #fab span { position: relative; font-family: "Permanent Marker", cursive; font-size: 15px; line-height: 1.05; text-align: center; }
+  #fab span b { display: block; font-family: "Noto Sans TC", sans-serif; font-weight: 900; font-size: 19px; letter-spacing: .1em; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   #toast { position: fixed; left: 50%; top: 18px; transform: translate(-50%, -140%); visibility: hidden; z-index: 6; transition: transform .35s cubic-bezier(.2,1.4,.4,1);
-    background: var(--ink); color: #fff; padding: 10px 20px; font-family: "Permanent Marker", cursive; font-size: 20px;
-    border-radius: 3px 10px 4px 9px; box-shadow: 4px 4px 0 var(--band); pointer-events: none; white-space: nowrap; }
+    background: var(--ink); color: #fff; padding: 10px 22px; font-family: "Permanent Marker", cursive; font-size: 22px;
+    border-radius: 3px 10px 4px 9px; box-shadow: 5px 5px 0 var(--band); pointer-events: none; white-space: nowrap; }
   #toast.show { transform: translate(-50%, 0); visibility: visible; }
 
   .modal { position: fixed; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(241,238,230,.55); }
   .modal[hidden] { display: none; }
   .card { background: var(--paper); border: 2.5px solid var(--ink); padding: 18px 20px; box-shadow: 6px 6px 0 var(--band);
-    border-radius: 4px 12px 5px 10px / 11px 4px 10px 5px; text-align: center; max-width: 92vw; }
+    border-radius: var(--rough); text-align: center; max-width: 92vw; }
   .card h2 { margin: 0 0 12px; font-family: "Permanent Marker", cursive; font-weight: 400; }
   .promo-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
   .promo-row button { min-width: 74px; padding: 10px 8px; font-size: 14px; }
   .promo-row button b { display: block; font-size: 30px; line-height: 1; }
 
   /* gallery */
-  #gallery { position: fixed; z-index: 4; left: 50%; bottom: 16px; transform: translateX(-50%); width: min(640px, calc(100% - 32px));
-    padding: 12px 14px; background: rgba(246,244,238,.9); border: 2px solid var(--ink); backdrop-filter: blur(4px);
-    border-radius: 4px 12px 5px 10px / 11px 4px 10px 5px; box-shadow: 5px 5px 0 rgba(0,0,0,.2); }
+  #gallery { position: fixed; z-index: 4; left: 50%; bottom: 16px; transform: translateX(-50%); width: min(660px, calc(100% - 32px));
+    padding: 12px 14px; background: rgba(246,244,238,.92); border: 2px solid var(--ink); backdrop-filter: blur(4px);
+    border-radius: var(--rough); box-shadow: 5px 5px 0 rgba(0,0,0,.2); }
   #gallery[hidden] { display: none; }
   #gallery .chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
   #gallery .chips button[aria-pressed="true"] { background: var(--ink); color: #fff; }
-  #gNote { font-family: Caveat, cursive; font-size: 22px; text-align: center; margin: 8px 0 4px; min-height: 28px; }
-  #gName { font-family: "Permanent Marker", cursive; font-size: 30px; text-align: center; margin: 0; }
+  #gNote { font-family: Caveat, cursive; font-size: 22px; text-align: center; margin: 6px 0 2px; min-height: 26px; }
+  #gName { font-family: "Permanent Marker", cursive; font-size: 30px; text-align: center; margin: 4px 0 0; }
   .slider { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: 13px; font-weight: 700; margin: 6px 0 8px; }
   input[type=range] { width: 100%; accent-color: var(--ink); }
-  body.gallery #panel, body.gallery header .sub { display: none; }
-  body.gallery #band { background: var(--band); }
+  body.gallery #panel, body.gallery #fab { display: none; }
+  body.intro #panel, body.intro #fab, body.intro header { visibility: hidden; }
 
   @media (max-width: 760px) {
-    header { left: 12px; top: 10px; }
-    header .zh { font-size: 22px; } header .en { font-size: 19px; } header .sub { display: none; }
-    #panel { left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 44vh; padding: 10px; gap: 8px; }
-    #moves { max-height: 54px; }
-    #panel .hint { display: none; }
+    header img { height: 58px; }
+    #panel { left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 42vh; padding: 9px; gap: 7px; }
+    .players { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .player { padding: 5px 6px; grid-template-columns: 22px 1fr auto; gap: 5px; }
+    .player .chip { width: 20px; height: 20px; }
+    .player .name { font-size: 12.5px; }
+    .player .caps { font-size: 14px; min-height: 14px; }
+    #moves { max-height: 46px; }
     #band { width: 11vw; }
+    #fab { width: 76px; height: 76px; right: 12px; bottom: auto; top: 12px; }
+    #fab span { font-size: 11px; } #fab span b { font-size: 14px; }
     #gallery { bottom: 8px; padding: 10px; }
     #gName { font-size: 24px; } #gNote { font-size: 18px; }
+    .modes { grid-template-columns: 1fr; gap: 8px; }
+    .modes button { grid-template-columns: auto 1fr; justify-items: start; align-items: center; column-gap: 10px; text-align: left; padding: 9px 12px; }
+    .modes button .chip { grid-row: span 2; margin: 0; }
+    #title .art { background-position: center 40%; }
   }
 </style>
 </head>
-<body>
+<body class="intro">
 <div id="paper"></div>
 <div id="band"></div>
 <canvas id="c" tabindex="0" aria-label="3D chess board"></canvas>
 
-<header>
-  <h1><span class="zh">變形棋</span><span class="en">TRANSFORM CHESS</span></h1>
-  <div class="sub">Pawn 2 · Bishop 2.0 · King &amp; Queen — gear up!</div>
-</header>
+<section id="title" class="grain" aria-label="Title screen">
+  <div class="art" aria-hidden="true"></div>
+  <div class="veil" aria-hidden="true"></div>
+  <img class="logo" src="assets/logo.webp" alt="變形棋 Transform Chess">
+  <div class="menu">
+    <div class="modes">
+      <button class="w" data-mode="ai-w"><span class="chip w"></span>執白對電腦<small>Play White vs AI</small></button>
+      <button class="b" data-mode="ai-b"><span class="chip b"></span>執黑對電腦<small>Play Black vs AI</small></button>
+      <button data-mode="pvp"><span class="chip wb"></span>雙人對戰<small>2 players, one screen</small></button>
+    </div>
+    <div class="sub-row">
+      <span>電腦 AI</span>
+      <span class="seg" id="tLevel"><button data-l="1">易 Easy</button><button data-l="2" aria-pressed="true">中 Normal</button><button data-l="3">難 Hard</button></span>
+      <button id="tGallery">角色圖鑑 Gallery</button>
+    </div>
+    <div class="loadbar" id="loadbar"><span id="loadText">assembling the army 組裝中…</span><div class="track"><div class="fill" id="loadFill"></div></div></div>
+    <div class="credit">Pawn 2 · Bishop 2.0 · King &amp; Queen — concept sketches 4–6 · 3D via Higgsfield</div>
+  </div>
+</section>
+
+<header><button id="bMenu" title="Menu 選單"><img src="assets/logo.webp" alt="變形棋 Transform Chess — menu"></button></header>
 
 <aside id="panel">
-  <div id="status"><span id="turnDot"></span><span id="statusText">—</span></div>
-  <div class="row">
-    <button id="bNew" class="primary">新局 New</button>
-    <button id="bUndo">悔棋 Undo</button>
-    <button id="bFlip">翻轉 Flip</button>
-    <button id="bGear">全軍變形 Gear up!</button>
-    <button id="bGallery">角色圖鑑 Gallery</button>
+  <div class="players">
+    <div class="player" id="pB"><span class="chip b"></span><span class="name" id="nB">黑方 Black</span><span class="adv" id="aB"></span><span class="caps" id="cB"></span></div>
+    <div class="player" id="pW"><span class="chip w"></span><span class="name" id="nW">白方 White</span><span class="adv" id="aW"></span><span class="caps" id="cW"></span></div>
+  </div>
+  <div id="status" role="status" aria-live="polite"></div>
+  <div class="tools">
+    <button id="bUndo" title="Undo"><b>↶</b>悔棋</button>
+    <button id="bFlip" title="Flip board"><b>⇅</b>翻轉</button>
+    <button id="bGallery" title="Character gallery"><b>◈</b>圖鑑</button>
+    <button id="bNew" title="Restart"><b>↻</b>重來</button>
   </div>
   <details id="settings">
     <summary>settings 設定</summary>
-    <label class="field">對手 Mode
-      <select id="mode">
-        <option value="ai-w">對電腦 · 執白 (vs AI, you are White)</option>
-        <option value="ai-b">對電腦 · 執黑 (vs AI, you are Black)</option>
-        <option value="pvp">雙人 · 2 players</option>
-      </select></label>
     <label class="field">電腦 AI
       <select id="level">
         <option value="1">易 Easy</option>
@@ -163,8 +253,12 @@
       <select id="sound"><option value="1">開 On</option><option value="0">關 Off</option></select></label>
   </details>
   <ol id="moves"></ol>
-  <div class="hint">tap a piece, then a glowing square · drag to orbit</div>
 </aside>
+
+<button id="fab" title="Transform the whole army">
+  <svg viewBox="0 0 100 100" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="9 7" d="M50 6a44 44 0 1 1 0 88a44 44 0 1 1 0-88"/></svg>
+  <span><b>變形</b>GEAR UP</span>
+</button>
 
 <div id="gallery" hidden>
   <div class="chips" id="gChips"></div>
@@ -175,7 +269,7 @@
     <button id="gGo" class="primary">變形！Transform</button>
     <button id="gTeam">白 / 黑 Team</button>
     <button id="gSpin">旋轉 Spin</button>
-    <button id="gClose">返回棋局 Back</button>
+    <button id="gClose">返回 Back</button>
   </div>
 </div>
 
@@ -249,7 +343,7 @@ function resize() {
   // keep the board clear of the side panel (desktop) or bottom sheet (phone)
   const wide = w > 760, gal = document.body.classList.contains('gallery');
   const sx = wide && !gal ? -Math.min(150, w * .11) : 0;
-  const sy = wide ? (gal ? h * .15 : 0) : h * (gal ? .2 : .14);
+  const sy = wide ? (gal ? h * .15 : 0) : h * (gal ? .2 : .07);
   if (sx || sy) camera.setViewOffset(w, h, sx, sy, w, h); else camera.clearViewOffset();
   camera.updateProjectionMatrix();
 }
@@ -383,7 +477,8 @@ class Rig {
     this.root.add(this.yaw);
     this.proc = new THREE.Group();          // hand-built chess form + unfolding mech
     this.yaw.add(this.proc);
-    this.model = null;                      // Higgsfield-generated robot (GLB)
+    this.chess = null; this.robot = null;   // Higgsfield-generated chess piece + mech (GLB)
+    this.lift = 0; this.prevT = 0;
     this.pAbove = new THREE.Plane(new V3(0, 1, 0), 1e4);   // keeps the procedural parts above the scan line
     this.pBelow = new THREE.Plane(new V3(0, -1, 0), -1e4); // keeps the model below it
     this.root.userData.rig = this;
@@ -398,9 +493,8 @@ class Rig {
   }
   grow(mesh, w) { this.growers.push({ mesh, w }); return mesh; }
   apply() {
-    // with a model: unfold in the first ~60%, then a scan line sweeps up and swaps in the model
-    const t = this.model ? clamp01(this.t / .62) : this.t;
-    if (this.model) this.scanSwap(clamp01((this.t - .55) / .45));
+    if (this.chess) { this.morphModels(); return; }
+    const t = this.t;
     for (const o of this.parts) {
       const { A, B, w, ease } = o.userData;
       const raw = clamp01((t - w[0]) / (w[1] - w[0]));
@@ -418,55 +512,66 @@ class Rig {
       g.mesh.visible = n > 0;
     }
   }
-  scanSwap(k) {
-    const m = this.model;
-    this.scanK = k;
-    if (k <= 0) {
-      m.visible = false; this.proc.visible = true; this.scanRing.visible = false;
-      this.pAbove.constant = 1e4; this.pBelow.constant = -1e4;
-      return;
-    }
-    if (k >= 1) {
-      m.visible = true; this.proc.visible = false; this.scanRing.visible = false;
-      this.pAbove.constant = 1e4; this.pBelow.constant = 1e4;
-      return;
-    }
-    m.visible = true; this.proc.visible = true; this.scanRing.visible = true;
-    const H = MODEL_SPEC[this.type].h + .2;
-    const hl = -.1 + H * k;                       // local height of the scan line
-    this.scanRing.position.y = hl;
-    this.scanRing.material.opacity = Math.sin(k * PI) * .9 + .1;
-    this.root.updateWorldMatrix(true, false);
-    const wy = new V3(0, hl, 0).applyMatrix4(this.root.matrixWorld).y;
-    this.pAbove.constant = -wy;                   // keep y > wy
-    this.pBelow.constant = wy;                    // keep y < wy
+  /* The transformation, driven by t (0 = chess piece, 1 = mech):
+       0.00-0.42  the chess piece unlocks: it splits into six rings that twist
+                  against each other, spread apart, and its seams glow
+       0.30-0.68  the chess shell burns away while the mech burns in
+       0.55-0.95  the mech's rings spin back and lock into place, with a final clank
+     Played backwards it folds the mech back into a chess piece. */
+  morphModels() {
+    const t = this.t, C = this.chess.userData.U, Rb = this.robot.userData.U;
+    const unlock = easeIO(clamp01(t / .42));
+    const visC = 1 - clamp01((t - .32) / .3);
+    const visR = clamp01((t - .26) / .3);
+    const lockK = clamp01((t - .55) / .4);
+    const relock = 1 - easeBack(lockK);
+    const glow = Math.sin(clamp01(t / .97) * PI);
+    C.uK.value = unlock; C.uVis.value = visC; C.uSeam.value = glow;
+    Rb.uK.value = Math.max(-.08, relock) * (t < .55 ? 1 : 1); Rb.uVis.value = visR; Rb.uSeam.value = glow;
+    this.chess.visible = visC > .001;
+    this.robot.visible = visR > .001;
+    const solidC = visC >= .999 && unlock < .001, solidR = visR >= .999 && Math.abs(relock) < .01;
+    this.chess.traverse(o => { if (o.isMesh && !o.userData.ol) o.castShadow = solidC; });
+    this.robot.traverse(o => { if (o.isMesh && !o.userData.ol) o.castShadow = solidR || (visR > .9 && t > .9); });
+    this.lift = Math.sin(clamp01(t) * PI) * .22;
+    if (this.fx.robotGlow) this.fx.robotGlow.visible = visR > .95;
   }
-  attachModel(src) {
-    if (this.model || !src) return;
-    const planes = [this.pBelow];
-    const g = new THREE.Group();
-    for (const part of src.parts) {
-      const mat = recolorMat(part.map, this.type, this.team, planes);
-      const mesh = new THREE.Mesh(part.geo, mat);
-      mesh.castShadow = true; mesh.receiveShadow = true;
-      if (!isMobile) { const ol = new THREE.Mesh(part.geo, this.olMats.OL_THIN); ol.raycast = () => {}; mesh.add(ol); }
-      g.add(mesh);
+  attachModels(src) {
+    if (this.chess || !src) return;
+    const mk = (part, which) => {
+      const spec = MODEL_SPEC[this.type];
+      const U = {
+        uK: { value: 0 }, uVis: { value: 1 }, uSeam: { value: 0 },
+        uH: { value: which === 'chess' ? spec.ch : spec.rh },
+        uDir: { value: which === 'chess' ? 1 : -1 },
+        uInvert: { value: (which === 'chess' ? spec.cn : spec.rn) !== this.team ? 1 : 0 },
+        uAccent: { value: ACCENT_SRGB[this.team] },
+      };
+      const g = new THREE.Group();
+      g.userData.U = U;
+      for (const pt of part.parts) {
+        const mesh = new THREE.Mesh(pt.geo, transformMat(pt.map, U));
+        mesh.receiveShadow = true;
+        if (!isMobile || which === 'chess') {
+          const ol = new THREE.Mesh(pt.geo, transformOutlineMat(U, which === 'chess' ? .012 : .007));
+          ol.raycast = () => {}; ol.userData.ol = true;
+          mesh.add(ol);
+        }
+        g.add(mesh);
+      }
+      return g;
+    };
+    this.chess = mk(src.chess, 'chess');
+    this.robot = mk(src.robot, 'robot');
+    this.yaw.add(this.chess, this.robot);
+    this.proc.visible = false;
+    const spec = MODEL_SPEC[this.type];
+    if (spec.eye) {
+      const glow = eyeGlow(0xff3018, .24);
+      glow.position.set(...spec.eye);
+      this.robot.add(glow);
+      this.fx.robotGlow = glow;
     }
-    if (this.type === 'P') {
-      const glow = eyeGlow(0xff3018, .22);
-      glow.position.set(0, MODEL_SPEC.P.eye, .17);
-      glow.material.clippingPlanes = planes;
-      g.add(glow);
-      this.fx.modelGlow = glow;
-    }
-    g.visible = false;
-    this.model = g;
-    this.yaw.add(g);
-    const ring = new THREE.Mesh(G('scanring', () => new THREE.TorusGeometry(.42, .018, 6, 48).rotateX(PI / 2)),
-      new THREE.MeshBasicMaterial({ color: this.team === 'w' ? 0x6f9bff : 0xffd23a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
-    ring.visible = false;
-    this.scanRing = ring;
-    this.yaw.add(ring);
     this.apply();
   }
   dispose() {
@@ -806,7 +911,7 @@ function makeRig(type, team) {
   BUILDERS[type](r, mats(team, above));
   CUR_OL = { OL, OL_THIN };
   r.apply();
-  if (MODELS[type]) r.attachModel(MODELS[type]);
+  if (MODELS[type]) r.attachModels(MODELS[type]);
   return r;
 }
 
@@ -816,50 +921,110 @@ function makeRig(type, team) {
    Each GLB is painted in its "native" team colours; the shader below
    flips neutrals (black ⇄ white) and swaps the accent to gold / blue.
    ================================================================ */
+// ch/rh: height of the chess piece / mech in board units; cn/rn: the team colours each GLB was painted in
 const MODEL_SPEC = {
-  P: { file: 'pawn', h: 1.95, native: 'b', eye: 1.58 },
-  B: { file: 'bishop', h: 2.4, native: 'w' },
-  K: { file: 'king', h: 2.65, native: 'b' },
-  Q: { file: 'queen', h: 2.6, native: 'b' },
+  P: { chess: 'pawn_chess', robot: 'pawn', ch: 1.05, rh: 1.95, cn: 'b', rn: 'b', eye: [0, 1.58, .17] },
+  B: { chess: 'bishop_chess', robot: 'bishop', ch: 1.25, rh: 2.4, cn: 'b', rn: 'w' },
+  Q: { chess: 'queen_chess', robot: 'queen', ch: 1.42, rh: 2.6, cn: 'b', rn: 'b' },
+  K: { chess: 'king_chess', robot: 'king', ch: 1.52, rh: 2.65, cn: 'b', rn: 'b' },
+  N: { chess: 'knight_chess', robot: 'knight', ch: 1.12, rh: 2.15, cn: 'b', rn: 'b' },
+  R: { chess: 'rook_chess', robot: 'rook', ch: 1.0, rh: 1.65, cn: 'b', rn: 'b', muzzle: [0, 1.5, .3] },
 };
 const MODELS = {};
 const ACCENT_SRGB = { w: new THREE.Vector3(.2, .42, .95), b: new THREE.Vector3(.96, .78, .12) };
 
-function recolorMat(map, type, team, planes) {
+/* ---------- transformation shaders ---------- */
+const TF_COMMON = `
+  uniform float uK; uniform float uH; uniform float uVis; uniform float uDir;
+  varying vec3 vLoc;
+  vec3 tfTwist( vec3 p, out float ang ) {
+    float h = clamp( p.y / uH, 0.0, 0.999 );
+    float band = floor( h * 6.0 );
+    float sgn = mod( band, 2.0 ) < 0.5 ? 1.0 : -1.0;
+    ang = sgn * uK * ( 1.3 + 0.45 * band );
+    float c = cos( ang ), s = sin( ang );
+    vec3 q = p;
+    q.xz = mat2( c, s, -s, c ) * q.xz;
+    q.xz *= 1.0 + uK * 0.4;
+    q.y += ( band - 2.5 ) * uK * 0.07 * uH + uK * 0.1 * uH;
+    return q;
+  }
+`;
+const TF_NOISE = `
+  float tfHash( vec3 p ) { p = fract( p * 0.3183099 + 0.1 ); p *= 17.0; return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) ); }
+  float tfNoise( vec3 x ) {
+    vec3 i = floor( x ), f = fract( x ); f = f * f * ( 3.0 - 2.0 * f );
+    return mix( mix( mix( tfHash( i ), tfHash( i + vec3( 1, 0, 0 ) ), f.x ), mix( tfHash( i + vec3( 0, 1, 0 ) ), tfHash( i + vec3( 1, 1, 0 ) ), f.x ), f.y ),
+                mix( mix( tfHash( i + vec3( 0, 0, 1 ) ), tfHash( i + vec3( 1, 0, 1 ) ), f.x ), mix( tfHash( i + vec3( 0, 1, 1 ) ), tfHash( i + vec3( 1, 1, 1 ) ), f.x ), f.y ), f.z );
+  }
+  float tfField() { return tfNoise( vLoc * vec3( 7.0, 9.0, 7.0 ) ) * 0.72 + ( uDir > 0.0 ? 1.0 - vLoc.y : vLoc.y ) * 0.28; }
+  float tfCut() { return uVis * 1.1 - 0.05; }
+`;
+
+function transformMat(map, U) {
   const m = new THREE.MeshToonMaterial({ map, gradientMap: grad });
-  m.clippingPlanes = planes; m.clipShadows = true;
-  const invert = MODEL_SPEC[type].native !== team ? 1 : 0;
   m.onBeforeCompile = sh => {
-    sh.uniforms.uAccent = { value: ACCENT_SRGB[team] };
-    sh.uniforms.uInvert = { value: invert };
-    sh.fragmentShader = 'uniform vec3 uAccent;\nuniform float uInvert;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
-      #ifdef USE_MAP
-        vec4 texel = texture2D( map, vMapUv );
-        vec3 s = pow( max( texel.rgb, vec3( 0.0 ) ), vec3( 1.0 / 2.2 ) );
-        float mx = max( s.r, max( s.g, s.b ) ), mn = min( s.r, min( s.g, s.b ) );
-        float sat = mx > 0.02 ? ( mx - mn ) / mx : 0.0;
-        float L = dot( s, vec3( 0.299, 0.587, 0.114 ) );
-        bool red  = s.r > s.g * 1.7 && s.r > s.b * 1.7 && sat > 0.45;
-        bool blue = s.b > s.r * 1.2 && s.b >= s.g * 0.95 && sat > 0.28 && mx > 0.12;
-        bool gold = s.r > s.b * 1.35 && s.g > s.b * 1.15 && !red && sat > 0.3 && mx > 0.18;
-        vec3 o = s;
-        if ( blue || gold ) o = uAccent * clamp( 0.3 + mx * 1.05, 0.0, 1.25 );
-        else if ( !red && uInvert > 0.5 ) o = vec3( clamp( 0.96 - L * 0.92, 0.0, 1.0 ) );
-        diffuseColor.rgb *= pow( o, vec3( 2.2 ) );
-      #endif`);
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = TF_COMMON + sh.vertexShader
+      .replace('#include <beginnormal_vertex>', `
+        vec3 objectNormal = vec3( normal );
+        { float a; tfTwist( position, a ); float c = cos( a ), s = sin( a ); objectNormal.xz = mat2( c, s, -s, c ) * objectNormal.xz; }`)
+      .replace('#include <begin_vertex>', `float tfA; vec3 transformed = tfTwist( position, tfA ); vLoc = position / uH;`);
+    sh.fragmentShader = TF_COMMON.replace(/vec3 tfTwist[\s\S]*$/, '\n') + `
+      uniform float uSeam; uniform vec3 uAccent; uniform float uInvert;` + TF_NOISE + sh.fragmentShader
+      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+        float tfN = tfField(), tfC = tfCut();
+        if ( tfN > tfC ) discard;
+        float tfEdge = uVis < 0.999 ? smoothstep( 0.08, 0.0, tfC - tfN ) : 0.0;
+        float tfB = fract( vLoc.y * 6.0 );
+        float tfSeam = ( 1.0 - smoothstep( 0.0, 0.035, min( tfB, 1.0 - tfB ) ) ) * uSeam;`)
+      .replace('#include <map_fragment>', `
+        #ifdef USE_MAP
+          vec4 texel = texture2D( map, vMapUv );
+          vec3 s = pow( max( texel.rgb, vec3( 0.0 ) ), vec3( 1.0 / 2.2 ) );
+          float mx = max( s.r, max( s.g, s.b ) ), mn = min( s.r, min( s.g, s.b ) );
+          float sat = mx > 0.02 ? ( mx - mn ) / mx : 0.0;
+          float L = dot( s, vec3( 0.299, 0.587, 0.114 ) );
+          bool red  = s.r > s.g * 1.7 && s.r > s.b * 1.7 && sat > 0.45;
+          bool blue = s.b > s.r * 1.2 && s.b >= s.g * 0.95 && sat > 0.28 && mx > 0.12;
+          bool gold = s.r > s.b * 1.35 && s.g > s.b * 1.1 && !red && sat > 0.28 && mx > 0.18;
+          vec3 o = s;
+          if ( blue || gold ) o = uAccent * clamp( 0.3 + mx * 1.05, 0.0, 1.25 );
+          else if ( !red && uInvert > 0.5 ) o = vec3( mix( 1.0 - L * 0.8, ( 1.0 - L ) * 0.38, smoothstep( 0.35, 0.6, L ) ) );
+          else if ( !red ) o = vec3( L * 0.9 );
+          diffuseColor.rgb *= pow( o, vec3( 2.2 ) );
+        #endif`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        vec3 tfHot = pow( mix( uAccent, vec3( 1.0 ), 0.35 ), vec3( 2.2 ) );
+        totalEmissiveRadiance += tfHot * ( tfEdge * 4.0 + tfSeam * 2.2 );`);
   };
-  m.customProgramCacheKey = () => 'recolor';
+  m.customProgramCacheKey = () => 'tf-toon';
+  return m;
+}
+function transformOutlineMat(U, th) {
+  const m = new THREE.MeshBasicMaterial({ color: 0x0c0c0e, side: THREE.BackSide });
+  m.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = TF_COMMON + sh.vertexShader.replace('#include <begin_vertex>', `
+      float tfA; vec3 transformed = tfTwist( position, tfA ); vLoc = position / uH;
+      vec3 tfN = normalize( normal ); float c = cos( tfA ), s = sin( tfA ); tfN.xz = mat2( c, s, -s, c ) * tfN.xz;
+      transformed += tfN * ${th.toFixed(4)};`);
+    sh.fragmentShader = TF_COMMON.replace(/vec3 tfTwist[\s\S]*$/, '\n') + TF_NOISE + sh.fragmentShader
+      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+        if ( tfField() > tfCut() - 0.02 ) discard;`);
+  };
+  m.customProgramCacheKey = () => 'tf-outline' + th;
   return m;
 }
 
 // bake each GLB into game units: facing +z, feet at y=0, given height, float attributes
-function normaliseModel(gltf, spec) {
+function normaliseModel(gltf, h) {
   const root = gltf.scene;
   root.rotation.y = -PI / 2;
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
   const size = box.getSize(new V3()), c = box.getCenter(new V3());
-  const k = spec.h / size.y;
+  const k = h / size.y;
   const fix = new THREE.Matrix4().makeScale(k, k, k).multiply(new THREE.Matrix4().makeTranslation(-c.x, -box.min.y, -c.z));
   const parts = [];
   root.traverse(o => {
@@ -881,14 +1046,23 @@ function normaliseModel(gltf, spec) {
   return { parts };
 }
 
+let modelsLoaded = 0;
+const MODEL_TOTAL = Object.keys(MODEL_SPEC).length * 2;
+function loadProgress() {
+  $('loadFill').style.width = (modelsLoaded / MODEL_TOTAL * 100) + '%';
+  $('loadText').textContent = modelsLoaded < MODEL_TOTAL
+    ? `assembling the army 組裝中… ${modelsLoaded}/${MODEL_TOTAL}`
+    : 'army assembled 全軍就緒 ✓';
+}
 async function loadModels() {
   const loader = new GLTFLoader();
+  const one = async (file, h) => { const g = await loader.loadAsync(`models/${file}.glb`); modelsLoaded++; loadProgress(); return normaliseModel(g, h); };
   await Promise.all(Object.entries(MODEL_SPEC).map(async ([type, spec]) => {
     try {
-      const gltf = await loader.loadAsync(`models/${spec.file}.glb`);
-      MODELS[type] = normaliseModel(gltf, spec);
-      for (const r of allRigs()) if (r.type === type) r.attachModel(MODELS[type]);
-      if (gRig && gRig.type === type) gRig.attachModel(MODELS[type]);
+      const [chess, robot] = await Promise.all([one(spec.chess, spec.ch), one(spec.robot, spec.rh)]);
+      MODELS[type] = { chess, robot };
+      for (const r of allRigs()) if (r.type === type) r.attachModels(MODELS[type]);
+      if (gRig && gRig.type === type) gRig.attachModels(MODELS[type]);
     } catch (e) { console.warn('model failed', type, e); }
   }));
 }
@@ -1090,7 +1264,7 @@ function zap() {
 /* ================================================================
    Piece animation primitives
    ================================================================ */
-function morph(rig, to, dur = .95) {
+function morph(rig, to, dur = 1.25) {
   const from = rig.t;
   if (Math.abs(from - to) < .001) return Promise.resolve();
   servo(to > from, .4);
@@ -1102,7 +1276,7 @@ function turn(rig, yaw, dur = .3) {
   if (Math.abs(d) < .01) return Promise.resolve();
   return tween(dur, k => { rig.yaw.rotation.y = from + d * easeIO(k); });
 }
-const homeYaw = (team, type) => (team === 'w' ? PI : 0) + (type === 'N' ? (team === 'w' ? -PI / 2 : PI / 2) : 0);
+const homeYaw = (team, type) => (team === 'w' ? PI : 0) + (type === 'N' && !MODELS.N ? (team === 'w' ? -PI / 2 : PI / 2) : 0);
 const yawFor = dir => Math.atan2(dir.x, dir.z);
 function glide(rig, to, { jump = 0, steps = 0, dur } = {}) {
   const from = rig.root.position.clone(), dist = from.distanceTo(to);
@@ -1154,14 +1328,96 @@ function flash(pos, color = 0xffffff, size = 1.4) {
 }
 function worldOf(obj) { obj.updateWorldMatrix(true, false); return obj.getWorldPosition(new V3()); }
 
+/* ---------- sparks: one pooled point cloud for every transformation ---------- */
+const PMAX = 900;
+const sparkGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(PMAX * 3).fill(-99), pCol = new Float32Array(PMAX * 3), pBase = new Float32Array(PMAX * 3);
+const pVel = new Float32Array(PMAX * 3), pLife = new Float32Array(PMAX), pMax = new Float32Array(PMAX);
+sparkGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+sparkGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
+const sparks = new THREE.Points(sparkGeo, new THREE.PointsMaterial({ size: .11, map: glowTex, vertexColors: true, transparent: true,
+  blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true }));
+sparks.frustumCulled = false;
+scene.add(sparks);
+let pNext = 0;
+const _c = new THREE.Color();
+function emitSpark(pos, vel, color, life = .6) {
+  const i = pNext; pNext = (pNext + 1) % PMAX;
+  pPos.set([pos.x, pos.y, pos.z], i * 3); pVel.set([vel.x, vel.y, vel.z], i * 3);
+  _c.set(color); pBase.set([_c.r, _c.g, _c.b], i * 3);
+  pLife[i] = pMax[i] = life;
+}
+function updateSparks(dt) {
+  for (let i = 0; i < PMAX; i++) {
+    if (pLife[i] <= 0) continue;
+    pLife[i] -= dt;
+    const k = Math.max(0, pLife[i] / pMax[i]), j = i * 3;
+    if (pLife[i] <= 0) { pPos[j + 1] = -99; pCol[j] = pCol[j + 1] = pCol[j + 2] = 0; continue; }
+    pVel[j + 1] -= 5.5 * dt;
+    pVel[j] *= .985; pVel[j + 2] *= .985;
+    pPos[j] += pVel[j] * dt; pPos[j + 1] += pVel[j + 1] * dt; pPos[j + 2] += pVel[j + 2] * dt;
+    if (pPos[j + 1] < .02) { pPos[j + 1] = .02; pVel[j + 1] *= -.35; }
+    pCol[j] = pBase[j] * k; pCol[j + 1] = pBase[j + 1] * k; pCol[j + 2] = pBase[j + 2] * k;
+  }
+  sparkGeo.attributes.position.needsUpdate = true;
+  sparkGeo.attributes.color.needsUpdate = true;
+}
+const sparkColor = team => (team === 'w' ? 0x7fa8ff : 0xffd23a);
+// sparks thrown off the glowing seams of a transforming piece
+function seamSparks(rig, n) {
+  const spec = MODEL_SPEC[rig.type], H = rig.t < .5 ? spec.ch : spec.rh;
+  rig.root.updateWorldMatrix(true, true);
+  for (let i = 0; i < n; i++) {
+    const band = 1 + Math.floor(Math.random() * 5), a = Math.random() * PI * 2, r = .14 + Math.random() * .16;
+    const local = new V3(Math.cos(a) * r, H * band / 6 * (1 + .25 * Math.sin(rig.t * PI)) + rig.lift, Math.sin(a) * r);
+    const p = rig.yaw.localToWorld(local);
+    const out = new V3(Math.cos(a), 0, Math.sin(a)).applyQuaternion(rig.yaw.getWorldQuaternion(new THREE.Quaternion()));
+    emitSpark(p, out.multiplyScalar(1 + Math.random() * 2.2).setY(.6 + Math.random() * 1.8), Math.random() < .25 ? 0xffffff : sparkColor(rig.team), .35 + Math.random() * .4);
+  }
+}
+function shockwave(pos, color, size = 2.4) {
+  const ring = flatSprite(ringTex, color, 1, 1);
+  ring.material.blending = THREE.AdditiveBlending;
+  ring.position.copy(pos).setY(.03);
+  fxGroup.add(ring);
+  tween(.55, k => { ring.scale.setScalar(.3 + easeIO(k) * size); ring.material.opacity = 1 - k; })
+    .then(() => { ring.material.dispose(); ring.removeFromParent(); });
+}
+function clank() {
+  if (!soundOn) return;
+  try {
+    const a = ac(), t = a.currentTime;
+    for (const [f, d] of [[620, .18], [930, .12], [1480, .08]]) {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = 'square'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * .7, t + d);
+      g.gain.setValueAtTime(.05, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
+      o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + .02);
+    }
+    click(t, .12);
+  } catch (e) { /* audio blocked */ }
+}
+// key moments of a transformation: the first unlock and the final lock
+function transformBeats(rig) {
+  const t = rig.t, p = rig.prevT;
+  if (!rig.chess || t === p) return;
+  const crossed = x => (p < x && t >= x) || (p > x && t <= x);
+  const pos = rig.root.getWorldPosition(new V3());
+  if (crossed(.04) || crossed(.93)) {
+    shockwave(pos, sparkColor(rig.team), rig.root.scale.x * 2.2);
+    seamSparks(rig, 26);
+    clank();
+  }
+  if (t > .04 && t < .93) seamSparks(rig, isMobile ? 1 : 2);
+}
+
 async function attack(att, vic) {
   const vp = vic.root.position.clone().setY(.9);
   if (att.type === 'P') {
     // eye laser, as in the sketch
     att.root.updateWorldMatrix(true, true);
-    const from = att.model && att.t > .99
-      ? att.yaw.localToWorld(new V3(0, MODEL_SPEC.P.eye, .17))
-      : worldOf(att.fx.head).add(new V3(0, 0, 0));
+    const from = att.chess
+      ? att.yaw.localToWorld(att.t > .5 ? new V3(...MODEL_SPEC.P.eye) : new V3(0, MODEL_SPEC.P.ch * .87, .12))
+      : worldOf(att.fx.head);
     const beam = new THREE.Mesh(G('beam', () => new THREE.CylinderGeometry(.018, .018, 1, 6).rotateX(PI / 2).translate(0, 0, .5)),
       new THREE.MeshBasicMaterial({ color: 0xff3018, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
     beam.position.copy(from); beam.lookAt(vp); beam.scale.z = from.distanceTo(vp);
@@ -1171,7 +1427,8 @@ async function attack(att, vic) {
     beam.material.dispose(); beam.removeFromParent();
     flash(vp, 0xff3018, 1.2);
   } else if (att.type === 'R') {
-    const from = worldOf(att.fx.muzzle);
+    att.root.updateWorldMatrix(true, true);
+    const from = att.chess ? att.yaw.localToWorld(new V3(...(att.t > .5 ? MODEL_SPEC.R.muzzle : [0, .9, .2]))) : worldOf(att.fx.muzzle);
     const shell = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffd23a, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
     shell.scale.setScalar(.35); fxGroup.add(shell);
     thud(); flash(from, 0xffd23a, .8);
@@ -1229,17 +1486,34 @@ function syncAll() {
 function allRigs() { return piecesGroup.children.map(c => c.userData.rig).filter(Boolean); }
 
 /* ---------- UI ---------- */
-const statusText = $('statusText'), turnDot = $('turnDot'), movesEl = $('moves');
+const statusEl = $('status'), movesEl = $('moves');
 let toastTimer;
 function toast(msg, ms = 2200) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
 const NAME = { w: '白方 White', b: '黑方 Black' };
-function setStatus(main, sub = '') { statusText.innerHTML = `${main}${sub ? `<small>${sub}</small>` : ''}`; }
+function setStatus(text, kind = '') { statusEl.textContent = text; statusEl.className = kind; }
+const GLYPH = { P: '♟', N: '♞', B: '♝', R: '♜', Q: '♛' };
+const PVAL = { P: 1, N: 3, B: 3, R: 5, Q: 9 };
 function updateTurnUI() {
-  turnDot.classList.toggle('b', state.turn === 'b');
   document.documentElement.style.setProperty('--band', state.turn === 'w' ? 'var(--blue)' : 'var(--gold)');
+  $('pW').classList.toggle('active', state.turn === 'w' && !gameOver);
+  $('pB').classList.toggle('active', state.turn === 'b' && !gameOver);
+  const who = c => settings.mode === 'pvp' ? '' : (isHuman(c) ? '你 You' : `電腦 AI · ${['', 'Easy', 'Normal', 'Hard'][settings.level]}`);
+  $('nW').innerHTML = `白方 White<small>${who('w')}</small>`;
+  $('nB').innerHTML = `黑方 Black<small>${who('b')}</small>`;
+  // captured material, worked out from what is missing from the board
+  const start = { P: 8, N: 2, B: 2, R: 2, Q: 1 };
+  const left = { w: {}, b: {} };
+  for (const p of state.board) if (p) { const c = E.colorOf(p), t = p.toUpperCase(); left[c][t] = (left[c][t] || 0) + 1; }
+  const lost = c => Object.keys(start).flatMap(t => Array(Math.max(0, start[t] - (left[c][t] || 0))).fill(t));
+  const mat = c => Object.keys(PVAL).reduce((a, t) => a + (left[c][t] || 0) * PVAL[t], 0);
+  $('cW').textContent = lost('b').map(t => GLYPH[t]).join('');
+  $('cB').textContent = lost('w').map(t => GLYPH[t]).join('');
+  const d = mat('w') - mat('b');
+  $('aW').textContent = d > 0 ? '+' + d : '';
+  $('aB').textContent = d < 0 ? '+' + -d : '';
 }
 function renderMoves() {
   movesEl.innerHTML = '';
@@ -1267,24 +1541,26 @@ function updateMarks() {
 const isHuman = color => settings.mode === 'pvp' || (settings.mode === 'ai-w' ? color === 'w' : color === 'b');
 
 function refreshStatus() {
-  updateTurnUI();
   updateMarks();
   const st = E.status(state);
   const who = NAME[state.turn];
   if (st === 'checkmate') {
     const win = state.turn === 'w' ? 'b' : 'w';
-    setStatus(`將死！${NAME[win]} 勝`, 'Checkmate');
+    gameOver = true;
+    setStatus(`將死 CHECKMATE — ${NAME[win]} 勝`, 'over');
     toast(`CHECKMATE — ${NAME[win]} wins!`, 4000);
     gameOver = true;
     victory(win);
   } else if (st === 'stalemate' || st === 'fifty' || st === 'insufficient') {
     const why = { stalemate: '逼和 Stalemate', fifty: '五十步和棋 50-move draw', insufficient: '子力不足 Insufficient material' }[st];
-    setStatus('和棋 Draw', why); toast('DRAW — ' + why.split(' ').slice(1).join(' '), 3200);
+    gameOver = true;
+    setStatus('和棋 Draw · ' + why, 'over'); toast('DRAW — ' + why.split(' ').slice(1).join(' '), 3200);
     gameOver = true;
   } else {
-    setStatus(`${who} 行棋`, st === 'check' ? '將軍！Check!' : (isHuman(state.turn) ? 'your move' : 'AI is plotting…'));
+    setStatus(st === 'check' ? `將軍！${who} in check` : `${who} 行棋 · ${isHuman(state.turn) ? 'your move' : 'AI is plotting…'}`, st === 'check' ? 'check' : '');
     if (st === 'check') toast('CHECK 將軍！', 1400);
   }
+  updateTurnUI();
 }
 
 async function victory(win) {
@@ -1382,7 +1658,7 @@ async function animateMove(m) {
     await Promise.all([
       glide(rig, stand, { jump: isKnight ? 1.2 : 0 }),
       turn(victim, yawFor(toV.clone().negate())),
-      doMorph ? morph(victim, 1, .6) : null,
+      doMorph ? morph(victim, 1, .95) : null,
     ]);
     await turn(rig, yawFor(vp.clone().sub(rig.root.position)), .15);
     await attack(rig, victim);
@@ -1398,10 +1674,10 @@ async function animateMove(m) {
     const rook = rigs[m.rookFrom];
     const rto = sqPos(m.rookTo);
     const rdir = rto.clone().sub(rook.root.position).normalize();
-    await Promise.all([turn(rook, yawFor(rdir)), doMorph ? morph(rook, 1, .6) : null]);
+    await Promise.all([turn(rook, yawFor(rdir)), doMorph ? morph(rook, 1, .95) : null]);
     await glide(rook, rto);
     rigs[m.rookTo] = rook; rigs[m.rookFrom] = null;
-    await Promise.all([turn(rook, homeYaw(rook.team, 'R')), tm === 'always' ? null : morph(rook, 0, .6)]);
+    await Promise.all([turn(rook, homeYaw(rook.team, 'R')), tm === 'always' ? null : morph(rook, 0, .95)]);
   }
 
   if (m.promo) {
@@ -1422,14 +1698,14 @@ async function animateMove(m) {
     return;
   }
 
-  await Promise.all([turn(rig, homeYaw(rig.team, rig.type)), tm === 'always' ? null : morph(rig, 0, .6)]);
+  await Promise.all([turn(rig, homeYaw(rig.team, rig.type)), tm === 'always' ? null : morph(rig, 0, .95)]);
 }
 
 /* ---------- AI ---------- */
 async function aiTurn() {
   if (gameOver || isHuman(state.turn) || busy) return;
   busy = true;
-  setStatus(`${NAME[state.turn]} 思考中…`, 'AI thinking');
+  setStatus(`${NAME[state.turn]} 思考中… AI thinking`);
   await new Promise(r => setTimeout(r, 30));
   const depth = settings.level;
   const m = E.bestMove(state, depth, depth === 1 ? 90 : 6);
@@ -1480,7 +1756,7 @@ let geared = false;
 async function gearUp() {
   if (busy || galleryOn) return;
   geared = !geared;
-  $('bGear').textContent = geared ? '變回棋子 Stand down' : '全軍變形 Gear up!';
+  setFab();
   const list = allRigs().sort((a, b) => a.root.position.z - b.root.position.z);
   list.forEach((r, i) => setTimeout(() => morph(r, geared ? 1 : 0, .9), i * 45));
   if (geared) toast('GEAR UP! 全軍變形', 1500);
@@ -1489,16 +1765,41 @@ async function gearUp() {
 $('bNew').onclick = newGame;
 $('bUndo').onclick = undo;
 $('bFlip').onclick = () => setCameraForSide(flipped ? 'w' : 'b');
-$('bGear').onclick = gearUp;
-$('mode').onchange = e => { settings.mode = e.target.value; newGame(); };
-$('level').onchange = e => { settings.level = +e.target.value; };
+$('fab').onclick = gearUp;
+function setFab() {
+  $('fab').classList.toggle('on', geared);
+  $('fab').querySelector('span').innerHTML = geared ? '<b>還原</b>STAND DOWN' : '<b>變形</b>GEAR UP';
+}
+$('level').onchange = e => { settings.level = +e.target.value; syncLevelUI(); updateTurnUI(); };
+function syncLevelUI() {
+  $('level').value = settings.level;
+  document.querySelectorAll('#tLevel button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.l === settings.level));
+}
+document.querySelectorAll('#tLevel button').forEach(b => b.onclick = () => { settings.level = +b.dataset.l; syncLevelUI(); });
+// title screen
+function startGame(mode) {
+  settings.mode = mode;
+  document.body.classList.remove('intro');
+  $('title').classList.add('hide');
+  geared = settings.tmode === 'always'; setFab();
+  newGame();
+  servo(true, .5);
+}
+document.querySelectorAll('#title .modes button').forEach(b => b.onclick = () => startGame(b.dataset.mode));
+$('tGallery').onclick = () => { document.body.classList.remove('intro'); $('title').classList.add('hide'); openGallery(true); };
+$('bMenu').onclick = () => {
+  if (busy) return;
+  if (galleryOn) closeGallery();
+  document.body.classList.add('intro');
+  $('title').classList.remove('hide');
+};
 $('speed').onchange = e => { SPEED = +e.target.value; };
 $('sound').onchange = e => { soundOn = e.target.value === '1'; };
 $('tmode').onchange = e => {
   settings.tmode = e.target.value;
   const target = settings.tmode === 'always' ? 1 : 0;
   geared = target === 1;
-  $('bGear').textContent = geared ? '變回棋子 Stand down' : '全軍變形 Gear up!';
+  setFab();
   allRigs().forEach((r, i) => setTimeout(() => morph(r, target, .8), i * 30));
 };
 if (!isMobile) $('settings').open = true;
@@ -1547,8 +1848,8 @@ const CHARS = [
   { type: 'B', name: 'Bishop 2.0', zh: '象', note: '“Transform! — Gear up!” — concept sketch 6 · 3D via Higgsfield' },
   { type: 'Q', name: 'Queen', zh: '后', note: '“King & Queen” — concept sketch 4 · 3D via Higgsfield' },
   { type: 'K', name: 'King', zh: '王', note: 'the robed spire — concept sketch 4 · 3D via Higgsfield' },
-  { type: 'N', name: 'Knight', zh: '馬', note: 'extra · drawn in the same language' },
-  { type: 'R', name: 'Rook', zh: '車', note: 'extra · tower opens, the sketch-sheet cannon rises' },
+  { type: 'N', name: 'Knight', zh: '馬', note: 'extra · designed in the same language · 3D via Higgsfield' },
+  { type: 'R', name: 'Rook', zh: '車', note: 'extra · tower on spider legs, the sketch-sheet cannon · 3D via Higgsfield' },
 ];
 let galleryOn = false, gIdx = 0, gTeam = 'b', gRig = null, gSaved = null, gAnimating = false;
 const gChips = $('gChips');
@@ -1577,11 +1878,11 @@ function buildGalleryRig(keepT = false) {
 async function galleryGo() {
   if (!gRig || gAnimating) return;
   gAnimating = true;
-  await morph(gRig, gRig.t > .5 ? 0 : 1, 1.3);
+  await morph(gRig, gRig.t > .5 ? 0 : 1, 2.4);
   $('gT').value = gRig.t;
   gAnimating = false;
 }
-const G_HEIGHT = { P: 1.9, B: 2.35, Q: 2.6, K: 2.65, N: 1.8, R: 1.5 };
+const G_HEIGHT = { P: 2.05, B: 2.45, Q: 2.65, K: 2.7, N: 2.25, R: 1.85 };
 function frameGallery() {
   const h = G_HEIGHT[CHARS[gIdx].type] * 1.3;
   controls.target.set(0, h * .5, 0);
@@ -1591,8 +1892,10 @@ function frameGallery() {
   dir.setLength(d);
   camera.position.set(dir.x, h * .62, dir.z);
 }
-function openGallery() {
+let galleryFromTitle = false;
+function openGallery(fromTitle = false) {
   if (busy) return;
+  galleryFromTitle = fromTitle === true;
   galleryOn = true;
   document.body.classList.add('gallery');
   boardGroup.visible = false; fxGroup.visible = false; ground.position.y = -.37;
@@ -1615,8 +1918,9 @@ function closeGallery() {
   camera.position.copy(gSaved.pos); controls.target.copy(gSaved.target);
   resize();
   updateTurnUI();
+  if (galleryFromTitle) { document.body.classList.add('intro'); $('title').classList.remove('hide'); }
 }
-$('bGallery').onclick = openGallery;
+$('bGallery').onclick = () => openGallery(false);
 $('gClose').onclick = closeGallery;
 $('gGo').onclick = galleryGo;
 $('gTeam').onclick = () => { gTeam = gTeam === 'w' ? 'b' : 'w'; buildGalleryRig(true); };
@@ -1631,7 +1935,9 @@ addEventListener('keydown', e => {
    Loop
    ================================================================ */
 const clock = new THREE.Clock();
+let lastFrame = performance.now();
 function frame() {
+  const dt = Math.min(.05, (performance.now() - lastFrame) / 1000); lastFrame = performance.now();
   const now = performance.now();
   for (const tw of [...tweens]) {
     const k = Math.min(1, (now - tw.t0) / tw.dur);
@@ -1644,10 +1950,12 @@ function frame() {
     if (r.t > 0 || r._lastT !== r.t) {
       r.apply();
       r.idle?.(time);
-      r.yaw.position.y = Math.sin(time * 2.2 + r.phase) * .018 * r.t;
-      r._lastT = r.t;
+      r.yaw.position.y = Math.sin(time * 2.2 + r.phase) * .018 * r.t + (r.lift || 0);
+      transformBeats(r);
+      r._lastT = r.prevT = r.t;
     }
   }
+  updateSparks(dt);
   for (const d of moveDots) {
     const k = .85 + Math.sin(time * 4 + d.userData.pulse) * .12;
     d.scale.setScalar(k);
