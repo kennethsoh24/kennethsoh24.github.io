@@ -299,6 +299,27 @@
   body.moon #boot .bg { background: url(assets/keyart_moon.jpg) center / cover; opacity: .25; filter: blur(2px); }
   body.moon #boot .mono-only { display: none; }
   body.moon #boot .moon-only { display: block; }
+  /* studio card */
+  #studio { position: fixed; inset: 0; z-index: 58; display: grid; place-items: center; background: #0d0d0d; color: #fff; transition: opacity .5s; }
+  #studio[hidden] { display: none; }
+  #studio.gone { opacity: 0; }
+  #studio .st { display: grid; justify-items: center; gap: 12px; text-align: center; }
+  #studio .a { opacity: 0; animation: stIn .6s ease-out .2s both; letter-spacing: .5em; }
+  #studio .n { font-weight: 800; font-stretch: 75%; font-size: clamp(44px, 8vw, 110px); line-height: .9; text-transform: uppercase; letter-spacing: .04em;
+    clip-path: inset(0 100% 0 0); animation: stWipe .9s cubic-bezier(.7,0,.2,1) .35s both; }
+  #studio .rule { display: block; height: 1px; width: min(420px, 60vw); background: #fff; transform: scaleX(0); animation: stLine .8s cubic-bezier(.7,0,.2,1) .9s both; }
+  #studio .p { opacity: 0; letter-spacing: .6em; animation: stIn .6s ease-out 1.25s both; }
+  @keyframes stIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes stWipe { to { clip-path: inset(0 0 0 0); } }
+  @keyframes stLine { to { transform: scaleX(1); } }
+  body.moon #studio { background: radial-gradient(ellipse 60% 50% at 50% 50%, #0b3a8c 0%, #030b1f 75%); color: var(--ice); }
+  body.moon #studio .n { font-family: var(--it); font-style: italic; font-weight: 900; font-stretch: 100%; text-shadow: 0 0 24px rgba(79,224,255,.7); }
+  body.moon #studio .rule { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+  body.moon #studio .a, body.moon #studio .p { color: var(--cyan); }
+  .bootcredit { position: absolute; left: 0; right: 0; bottom: 28px; text-align: center; color: var(--grey); letter-spacing: .3em; }
+  body.moon .bootcredit { color: var(--cyan); }
+  #intro .end .kp { position: absolute; top: 22%; left: 0; right: 0; text-align: center; letter-spacing: .4em; }
+  body.moon #intro .end .kp { color: var(--cyan); }
   /* opening movie overlays */
   #intro .scan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
   #intro .ov { position: absolute; z-index: 2; pointer-events: none; color: #fff; }
@@ -504,7 +525,7 @@
   <div class="right">
     <div class="meta mono"><span>Cast — 4</span><span>Pawn 2 / Bishop 2.0 / King / Queen</span></div>
     <div class="screen" id="screen"><div class="castbg"></div><img class="castimg" alt=""><span class="castname mono"></span><span class="ch" id="chNum">01</span><span class="tc mono" id="tcode">REC 00:00:00:00</span></div>
-    <div class="credits mono"><span>Concept sketches 4–6</span><span>3D via Higgsfield</span></div>
+    <div class="credits mono"><span>A Kenneth So Production</span><span>3D via Higgsfield</span></div>
   </div>
 </section>
 
@@ -595,6 +616,10 @@
     <img class="moon-only" src="assets/logo_moon.webp" alt="Chess Fantasia">
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
+  <div class="bootcredit mono">A Kenneth So Production</div>
+</section>
+<section id="studio" aria-label="A Kenneth So Production" hidden>
+  <div class="st"><span class="a mono">A</span><span class="n">Kenneth So</span><i class="rule"></i><span class="p mono">Production</span></div>
 </section>
 <section id="intro" aria-label="Opening movie" hidden>
   <video id="introVid" playsinline preload="auto"></video>
@@ -603,7 +628,7 @@
   <div class="ov tl mono"><span class="live">On air</span> — Channel 01</div>
   <div class="ov tc mono" id="introTc">REC 00:00:00:00</div>
   <div class="ov card" id="introCard"><span></span></div>
-  <div class="ov end" id="introEnd"><div class="bw"><span>Chess</span><span>Fantasia</span></div><img src="assets/logo_moon.webp" alt=""></div>
+  <div class="ov end" id="introEnd"><div class="kp mono">A Kenneth So Production</div><div class="bw"><span>Chess</span><span>Fantasia</span></div><img src="assets/logo_moon.webp" alt=""></div>
   <button id="soundOn" class="mono" hidden>♪ Sound on</button>
   <button id="skip" class="mono">Skip ›</button>
 </section>
@@ -2859,9 +2884,16 @@ const modelsReady = loadModels();
     }
     if (!endShown && t >= d - .85) { endShown = true; $('introEnd').classList.add('on'); }
   }
-  const play = async () => {
+  const studio = () => new Promise(res => {
+    const st = $('studio');
+    st.hidden = false;
     boot.classList.add('gone');
     setTimeout(() => boot.remove(), 450);
+    if (soundOn) try { thud(); } catch (e) { /* audio blocked */ }
+    setTimeout(() => { st.classList.add('gone'); setTimeout(() => { st.hidden = true; res(); }, 500); }, 2600);
+  });
+  const play = async () => {
+    await studio();
     intro.hidden = false;
     vid.volume = .85;
     vid.onended = () => setTimeout(toTitle, 900);
