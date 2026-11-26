@@ -12,7 +12,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111'/%3E%3Crect x='16' y='16' width='16' height='16' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,600;1,600;1,800;1,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=IBM+Plex+Mono:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,500;0,600;1,600;1,800;1,900&display=swap" rel="stylesheet">
 <style>
   :root {
     --paper: #f2f1ed;
@@ -598,129 +598,131 @@
   }
 
 
-  /* =================== RED EDITION (red / black / white, jagged, ransom-note) =================== */
-  body.red { --r: #d7141e; --rk: #0d0d0d; --rw: #f6f2ec; color: var(--rw);
-    background: var(--r) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='900'><polygon points='0,0 380,0 140,520 0,700' fill='%230d0d0d' opacity='.92'/><polygon points='900,900 560,900 820,300 900,180' fill='%230d0d0d' opacity='.9'/><polygon points='520,0 610,0 330,900 250,900' fill='%23000' opacity='.18'/></svg>") center / cover; }
-  body.red #grid, body.red #scan, body.red #sea, body.red .streaks { display: none !important; }
-  body.red .mono { font-weight: 700; letter-spacing: .1em; }
-  body.red .live::before { background: var(--r); }
-  body.red .btn { background: var(--rk); color: var(--rw); border: 0; transform: skewX(-12deg); font-weight: 700; margin-left: 3px !important; }
-  body.red .btn::before { background: var(--rw); }
-  body.red .btn:hover, body.red .btn[aria-pressed="true"] { color: var(--rk); box-shadow: 4px 4px 0 var(--r); }
-  body.red select { background: var(--rk); color: var(--rw); border: 2px solid var(--rw); font-weight: 700; }
-  body.red :focus-visible { outline: 3px solid var(--rw); }
-  /* ransom-note letters */
-  i.rl { display: inline-block; font-style: normal; padding: .02em .1em; margin: 0 .02em; line-height: 1; }
-  body.red .wordmark, body.red #boot .bw, body.red #press .bw, body.red #intro .end .bw { font-stretch: 100%; font-weight: 900; letter-spacing: 0; line-height: 1.05; }
-  body.red .wordmark span + span, body.red #boot .bw span + span, body.red #press .bw span + span, body.red #intro .end .bw span + span { font-weight: 900; font-size: .62em; margin-top: .15em; letter-spacing: 0; color: inherit; }
-  body.red .brand::after { display: none; }
-  /* title */
-  body.red #title { display: block; background: var(--r); }
-  body.red #title .right { position: absolute; inset: 0; padding: 0; background: none; display: block; }
-  body.red #title .right .meta, body.red #title .right .credits { display: none; }
-  body.red .screen { position: absolute; inset: 0; border: 0; background: var(--r) url(assets/keyart_red.jpg) 70% 50% / cover no-repeat; animation: none; }
-  body.red .screen::before { background: linear-gradient(100deg, rgba(13,13,13,.0) 0%, transparent 100%); }
-  body.red .screen::after { display: none; }
-  body.red .screen .ch, body.red .screen .tc, body.red .screen .castimg, body.red .screen .castname, body.red .screen .castbg { display: none !important; }
-  body.red #title .left { position: absolute; z-index: 1; inset: 0 auto 0 0; width: min(620px, 58vw); border: 0; background: none; padding: 5vh 4vw 54px; }
-  body.red #title .left::before { content: ""; position: absolute; z-index: -1; inset: 0 -12% 0 -20%; background: var(--rk); clip-path: polygon(0 0, 100% 0, 78% 38%, 92% 52%, 64% 100%, 0 100%); }
-  body.red #title .left .meta { border: 0; color: var(--r); }
-  body.red .wordmark { font-size: clamp(46px, 6.6vw, 104px); transform: rotate(-4deg); transform-origin: left; }
-  body.red .tagline { color: var(--rw); } body.red .tagline b { background: var(--r); }
-  body.red #title nav { border-top: 0; display: grid; gap: 6px; }
-  body.red .mi { border: 0; color: var(--rw); padding: 4px 18px 4px 10px; transform: rotate(var(--rot, -3deg)); transition: transform .15s steps(2), color .1s; }
-  body.red .mi:nth-child(odd) { --rot: -4deg; } body.red .mi:nth-child(even) { --rot: 2deg; margin-left: 18px; }
-  body.red .mi::before { background: var(--rw); transform: scaleX(0) skewX(-14deg); transform-origin: left; transition: transform .14s steps(3); box-shadow: 6px 6px 0 var(--r); }
-  body.red .mi .n { color: var(--r); font-weight: 900; font-size: 14px; }
-  body.red .mi .t { font-weight: 900; font-stretch: 100%; font-size: clamp(28px, 3.6vw, 52px); transform: skewX(-10deg); letter-spacing: -.01em; }
-  body.red .mi .a { color: var(--r); font-size: 26px; }
-  body.red .mi:hover, body.red .mi:focus-visible { color: var(--rk); transform: rotate(0deg) scale(1.06); }
-  body.red .mi:hover::before, body.red .mi:focus-visible::before { transform: scaleX(1) skewX(-14deg); }
-  body.red .opts, body.red .loadbar { color: var(--rw); }
-  body.red .loadbar .track { background: rgba(255,255,255,.25); } body.red .loadbar .fill { background: var(--r); height: 4px; }
-  body.red .ticker { background: var(--rk); color: var(--rw); border-top: 3px solid var(--r); transform: rotate(-1deg) scaleX(1.05); }
-  body.red #tfx { opacity: 0; }
-  /* HUD */
-  body.red header .wm { color: var(--rw); background: var(--rk); padding: 4px 10px; transform: rotate(-3deg); font-stretch: 100%; }
-  body.red header .wm em { color: var(--r); }
-  body.red header .mono { color: var(--rk); }
-  body.red #hudtop .tcode { background: var(--rk); color: var(--rw); transform: skewX(-12deg); }
-  body.red #hudtop { color: var(--rk); }
-  body.red #panel { background: var(--rk); color: var(--rw); border: 0; transform: rotate(-1deg);
-    clip-path: polygon(0 0, 100% 0, 100% 92%, 94% 100%, 0 100%); box-shadow: none; }
-  body.red #panel section { border-bottom: 2px solid rgba(255,255,255,.15); }
-  body.red .sec { color: var(--r); font-weight: 900; }
-  body.red .player { border: 0; background: rgba(255,255,255,.06); transform: skewX(-8deg); margin-bottom: 4px; }
-  body.red .player .name { font-weight: 900; font-stretch: 100%; transform: skewX(8deg); }
-  body.red .player .name small { color: #b9b4ad; }
-  body.red .player.active { background: var(--r); color: var(--rw); box-shadow: 5px 5px 0 var(--rw); }
-  body.red .player.active .name small { color: var(--rw); }
-  body.red #status { color: var(--rw); font-weight: 700; }
-  body.red #status.check, body.red #status.over { background: var(--rw); color: var(--r); }
-  body.red #moves li::marker { color: var(--r); }
-  body.red #moves li span.last { background: var(--r); color: var(--rw); transform: skewX(-12deg); }
-  body.red #fab { width: 132px; height: 132px; border: 0; padding: 0; background: var(--rk); color: var(--rw); place-items: center; align-content: center; text-align: center;
-    clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); transition: transform .2s steps(3), background .1s; }
-  body.red #fab:hover { background: var(--rw); color: var(--rk); transform: rotate(-12deg) scale(1.08); }
-  body.red #fab.on { background: var(--rw); color: var(--r); animation: wob .5s steps(2) infinite; }
-  @keyframes wob { 50% { transform: rotate(8deg) scale(1.05); } }
-  body.red #fab .t { font-size: 20px; font-stretch: 100%; transform: rotate(-8deg) translateY(6px); }
-  body.red #fab .mono { display: none; }
-  /* banner */
-  body.red #toast .bar { background: var(--rk); transform: rotate(-5deg) scaleX(1.1); box-shadow: 0 10px 0 var(--r), 0 -10px 0 var(--rw); }
-  body.red #toast .txt { color: var(--rw); font-stretch: 100%; font-weight: 900; transform: rotate(-5deg) skewX(-12deg); text-shadow: 5px 5px 0 var(--r); }
-  body.red #toast .sub { color: var(--r); }
-  /* cut-in */
-  body.red #cutin .panel { background: var(--r) repeating-conic-gradient(from 0deg at 75% 50%, rgba(0,0,0,.95) 0deg 4deg, transparent 4deg 13deg); border: 0;
-    transform: rotate(-6deg) scaleX(1.15); clip-path: none; }
-  body.red #cutin.go .panel { animation: rwipe 1.05s steps(14) both; }
-  @keyframes rwipe { 0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); } 18%, 80% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); } 100% { clip-path: polygon(100% 0, 100% 0, 100% 100%, 100% 100%); } }
-  body.red #cutin .panel::before, body.red #cutin .panel::after { display: none; }
-  body.red #cutin .stripe { background: var(--rk); height: 34%; }
-  body.red #cutin img { filter: drop-shadow(-10px 10px 0 var(--rk)) drop-shadow(10px -6px 0 var(--rw)); transform: rotate(6deg); }
-  body.red #cutin .word { color: var(--rw); font-stretch: 100%; font-weight: 900; transform: translateY(-50%) skewX(-14deg); -webkit-text-stroke: 3px var(--rk); text-shadow: 8px 8px 0 var(--rk); }
-  body.red #cutin .label, body.red #cutin .label2 { color: var(--rw); background: var(--rk); padding: 2px 8px; }
-  body.red #flash { background: var(--r); mix-blend-mode: normal; }
-  body.red #flash.on { animation: rflash .16s steps(2) both; }
-  @keyframes rflash { 0% { opacity: .55; } 100% { opacity: 0; } }
-  body.red #lines { background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(13,13,13,.85) 0deg 1.2deg, transparent 1.2deg 8deg); }
-  body.red #tag { background: var(--rk); border-left: 4px solid var(--r); transform-origin: left; }
-  body.red .modal { background: rgba(13,13,13,.55); }
-  body.red .card { background: var(--rk); color: var(--rw); border: 0; transform: rotate(-2deg); box-shadow: 10px 10px 0 var(--r); }
-  body.red .card h2 { font-stretch: 100%; color: var(--rw); }
-  body.red #gName { color: var(--rw); font-stretch: 100%; text-shadow: 6px 6px 0 var(--rk); transform: rotate(-4deg); }
-  body.red #gName small { color: var(--rk); }
-  body.red #gallery { background: var(--rk); border: 0; transform: translateX(-50%) rotate(-1deg); }
-  body.red #gNote { color: #c9c3bb; }
-  /* boot / studio / press / movie */
-  body.red #boot, body.red #press { background: var(--r); color: var(--rw); }
-  body.red #boot .bg, body.red #press .bg { background: url(assets/keyart_red.jpg) center / cover; opacity: .3; }
-  body.red .bootload .track { background: rgba(255,255,255,.3); } body.red .bootload .fill { background: var(--rk); height: 4px; }
-  body.red .bootcredit, body.red #press .kp, body.red .build, body.red #press .hint { color: var(--rk); font-weight: 700; }
-  body.red #pressBtn { background: var(--rk); color: var(--rw); border: 0; transform: rotate(-3deg) skewX(-12deg); font-size: 20px; padding: 14px 34px; animation: none; box-shadow: 6px 6px 0 var(--rw); }
-  body.red #pressBtn:hover { background: var(--rw); color: var(--rk); }
-  body.red #studio { background: var(--rk); }
-  body.red #studio .n { font-stretch: 100%; font-weight: 900; transform: skewX(-12deg); }
-  body.red #studio .rule { background: var(--r); height: 4px; }
-  body.red #studio .a, body.red #studio .p { color: var(--r); }
-  body.red #intro { background: var(--rk); }
-  body.red #intro video { filter: grayscale(1) contrast(1.5); }
-  body.red #intro::after { content: ""; position: absolute; inset: 0; z-index: 1; background: var(--r); mix-blend-mode: multiply; pointer-events: none; opacity: .85; }
-  body.red #intro .scan, body.red #intro .tl, body.red #intro .tc { display: none !important; }
-  body.red #intro .card { background: var(--rk); z-index: 2; }
-  body.red #intro .card span { color: var(--rw); transform: rotate(-6deg) skewX(-12deg); text-shadow: 10px 10px 0 var(--r); }
-  body.red #intro .end { background: var(--r); color: var(--rw); z-index: 2; }
-  body.red #intro .end .kp { color: var(--rk); font-weight: 700; }
-  body.red #skip { background: var(--rk); color: var(--rw); border: 0; z-index: 3; }
-  body.red #soundOn { z-index: 3; }
-  @media (max-width: 760px) {
-    body.red #title .left { width: 100%; top: auto; padding: 16px 18px 40px; }
-    body.red #title .left::before { inset: 0 -20% 0 -20%; clip-path: polygon(0 8%, 100% 0, 100% 100%, 0 100%); }
-    body.red .screen { background-position: 75% 20%; }
-    body.red #fab { width: 92px; height: 92px; } body.red #fab .t { font-size: 14px; }
-    body.red #panel { transform: none; clip-path: none; }
-  }
 
+  /* =================== TACTICAL EDITION (dusk desert, amber holographic UI) =================== */
+  body.ops { --o: #f39c32; --o2: rgba(243,156,50,.35); --o3: rgba(243,156,50,.12); --od: #14120e; --ot: #f1e4cc; --ogl: rgba(18,16,12,.74);
+    --cond: "Barlow Condensed", "Archivo", sans-serif; color: var(--ot); background: radial-gradient(ellipse at 30% 40%, #5a4a36 0%, #2a241c 55%, #14120e 100%); }
+  body.ops #grid, body.ops #scan, body.ops #sea, body.ops .streaks { display: none !important; }
+  body.ops .mono { color: inherit; letter-spacing: .18em; }
+  body.ops .live::before { background: var(--o); box-shadow: 0 0 8px var(--o); }
+  body.ops .btn { background: var(--o3); color: var(--o); border: 1px solid var(--o2); font-family: var(--cond); font-weight: 600; font-size: 13px; letter-spacing: .2em; }
+  body.ops .btn::before { background: var(--o); }
+  body.ops .btn:hover, body.ops .btn[aria-pressed="true"] { color: var(--od); }
+  body.ops select { background: rgba(0,0,0,.4); color: var(--o); border: 1px solid var(--o2); font-family: var(--cond); font-size: 13px; letter-spacing: .08em; }
+  body.ops :focus-visible { outline-color: var(--o); }
+  /* holographic panel texture: scanlines + faint grid */
+  body.ops .holo, body.ops #panel, body.ops #gallery, body.ops .card, body.ops #tag {
+    background: linear-gradient(rgba(243,156,50,.05) 1px, transparent 1px) 0 0 / 100% 3px, var(--ogl); backdrop-filter: blur(6px); }
+  /* title */
+  body.ops #title { display: block; background: var(--od); }
+  body.ops #title .right { position: absolute; inset: 0; padding: 0; background: none; display: block; }
+  body.ops #title .right .meta, body.ops #title .right .credits { display: none; }
+  body.ops .screen { position: absolute; inset: 0; border: 0; background: var(--od) url(assets/keyart_ops.jpg) 70% 50% / cover no-repeat; animation: slowpush 40s ease-in-out infinite alternate; }
+  body.ops .screen::before { background: linear-gradient(90deg, rgba(14,12,9,.88) 0%, rgba(14,12,9,.6) 36%, rgba(14,12,9,0) 66%), linear-gradient(0deg, rgba(14,12,9,.55), transparent 30%); }
+  body.ops .screen::after { box-shadow: inset 0 0 200px rgba(0,0,0,.5); }
+  body.ops .screen .ch, body.ops .screen .tc, body.ops .screen .castimg, body.ops .screen .castname, body.ops .screen .castbg { display: none !important; }
+  body.ops #title .left { position: absolute; z-index: 1; inset: 0 auto 0 0; width: min(600px, 58vw); border: 0; background: none; padding: 6vh 4.5vw 56px; }
+  body.ops #title .left .meta { border-bottom: 1px solid var(--o2); color: var(--o); }
+  body.ops .wordmark { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .12em; font-size: clamp(52px, 7vw, 104px); line-height: .9; color: var(--ot); }
+  body.ops .wordmark span + span { font-family: var(--cond); font-weight: 600; font-stretch: 100%; font-size: .44em; letter-spacing: .62em; color: var(--o); margin-top: .25em; }
+  body.ops .brand::after { display: none; }
+  body.ops .wordmark.glitch span { animation: none; }
+  body.ops .tagline { color: rgba(241,228,204,.65); } body.ops .tagline b { background: var(--o); width: 28px; height: 2px; }
+  body.ops #title nav { border-top: 1px solid var(--o2); }
+  body.ops .mi { border-bottom: 1px solid rgba(243,156,50,.14); grid-template-columns: 48px 1fr auto; color: rgba(241,228,204,.78); padding: 1.1vh 6px; transition: color .15s, background .15s; }
+  body.ops .mi::before { background: var(--o3); transform: scaleX(0); transform-origin: left; transition: transform .2s steps(4); border-left: 3px solid var(--o); }
+  body.ops .mi .n { color: var(--o); font-family: var(--cond); letter-spacing: .1em; }
+  body.ops .mi .t { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .14em; font-size: clamp(22px, 2.6vw, 36px); }
+  body.ops .mi .a { color: var(--o); opacity: 0; }
+  body.ops .mi:hover, body.ops .mi:focus-visible { color: var(--o); }
+  body.ops .mi:hover::before, body.ops .mi:focus-visible::before { transform: scaleX(1); }
+  body.ops .mi:hover .a, body.ops .mi:focus-visible .a { opacity: 1; }
+  body.ops .mi:hover .t::before { content: "[ "; } body.ops .mi:hover .t::after { content: " ]"; }
+  body.ops .opts, body.ops .loadbar { color: var(--o); }
+  body.ops .loadbar .track { background: var(--o2); } body.ops .loadbar .fill { background: var(--o); height: 2px; }
+  body.ops .ticker { background: rgba(14,12,9,.75); color: var(--o); border-top: 1px solid var(--o2); }
+  body.ops #tfx { opacity: .35; }
+  /* HUD */
+  body.ops header .wm { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .14em; color: var(--ot); }
+  body.ops header .wm em { color: var(--o); letter-spacing: .4em; }
+  body.ops header .mono, body.ops #hudtop { color: var(--o); }
+  body.ops #hudtop .tcode { background: transparent; border: 1px solid var(--o2); color: var(--o); }
+  body.ops #panel { border: 1px solid var(--o2); color: var(--ot); }
+  body.ops #panel::before, body.ops #panel::after { content: ""; position: absolute; width: 14px; height: 14px; border: 2px solid var(--o); pointer-events: none; }
+  body.ops #panel::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+  body.ops #panel::after { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+  body.ops #panel section { border-bottom: 1px solid var(--o2); }
+  body.ops .sec { color: var(--o); }
+  body.ops .player { border: 1px solid rgba(243,156,50,.2); background: transparent; }
+  body.ops .player .name { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .16em; }
+  body.ops .player .name small { color: rgba(241,228,204,.55); }
+  body.ops .player.active { background: var(--o3); color: var(--o); box-shadow: inset 3px 0 0 var(--o); }
+  body.ops .player.active .name::after { color: var(--o); }
+  body.ops #status { color: var(--o); }
+  body.ops #status.check, body.ops #status.over { background: var(--o); color: var(--od); }
+  body.ops #moves { color: rgba(241,228,204,.8); } body.ops #moves li::marker { color: var(--o); }
+  body.ops #moves li span.last { background: var(--o); color: var(--od); }
+  body.ops #fab { background: rgba(14,12,9,.7); color: var(--o); border: 1px solid var(--o); width: 120px; height: 120px; place-items: center; align-content: center; text-align: center;
+    clip-path: polygon(14% 0, 86% 0, 100% 14%, 100% 86%, 86% 100%, 14% 100%, 0 86%, 0 14%); }
+  body.ops #fab::after { content: ""; position: absolute; inset: 8px; border: 1px dashed var(--o2); clip-path: inherit; }
+  body.ops #fab .t { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .2em; font-size: 22px; line-height: 1.05; }
+  body.ops #fab .mono { display: none; }
+  body.ops #fab:hover { background: var(--o3); }
+  body.ops #fab.on { background: var(--o); color: var(--od); }
+  /* banner: radio-style alert line */
+  body.ops #toast .bar { background: linear-gradient(90deg, transparent, rgba(14,12,9,.8) 25%, rgba(14,12,9,.8) 75%, transparent); border-top: 1px solid var(--o2); border-bottom: 1px solid var(--o2); }
+  body.ops #toast.show .bar { height: 88px; }
+  body.ops #toast .txt { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .3em; color: var(--o); font-size: clamp(28px, 4vw, 54px); }
+  body.ops #toast .sub { color: var(--ot); }
+  /* cut-in: amber monochrome target feed */
+  body.ops #cutin .panel { background: linear-gradient(rgba(243,156,50,.08) 1px, transparent 1px) 0 0 / 100% 3px, rgba(14,12,9,.88); border-color: var(--o2); }
+  body.ops #cutin .panel::before { background: linear-gradient(90deg, transparent 0 49.8%, var(--o2) 49.8% 50.2%, transparent 50.2%), linear-gradient(0deg, transparent 0 49.6%, var(--o2) 49.6% 50.4%, transparent 50.4%); }
+  body.ops #cutin .panel::after { display: none; }
+  body.ops #cutin .stripe { background: transparent; border-top: 1px solid var(--o); border-bottom: 1px solid var(--o); height: 24%; }
+  body.ops #cutin img { filter: grayscale(1) sepia(1) hue-rotate(-8deg) saturate(2.2) brightness(.85) contrast(1.15); }
+  body.ops #cutin .word { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .2em; color: var(--o); }
+  body.ops #cutin .label, body.ops #cutin .label2 { color: var(--o); }
+  body.ops #flash { background: #ffd9a0; mix-blend-mode: soft-light; }
+  body.ops #lines { display: none; }
+  body.ops #tag { border: 1px solid var(--o2); border-left: 3px solid var(--o); color: var(--o); }
+  body.ops #tag span { color: rgba(241,228,204,.7); }
+  body.ops .modal { background: rgba(14,12,9,.55); }
+  body.ops .card { border: 1px solid var(--o2); color: var(--ot); }
+  body.ops .card h2 { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .2em; color: var(--o); }
+  body.ops #gName { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .12em; color: var(--ot); }
+  body.ops #gName small { color: var(--o); }
+  body.ops #gallery { border: 1px solid var(--o2); }
+  body.ops #gNote { color: rgba(241,228,204,.6); }
+  /* boot / studio / press / movie */
+  body.ops #boot, body.ops #press { background: var(--od); color: var(--ot); }
+  body.ops #boot .bg, body.ops #press .bg { background: var(--od) url(assets/keyart_ops.jpg) center / cover; opacity: .3; filter: blur(2px) saturate(.7); }
+  body.ops #boot .bw, body.ops #press .bw, body.ops #intro .end .bw { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .14em; }
+  body.ops #boot .bw span + span, body.ops #press .bw span + span, body.ops #intro .end .bw span + span { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .6em; color: var(--o); font-size: .44em; }
+  body.ops .bootload { color: var(--o); } body.ops .bootload .track { background: var(--o2); } body.ops .bootload .fill { background: var(--o); height: 2px; margin: 0; }
+  body.ops .bootcredit, body.ops #press .kp, body.ops .build, body.ops #press .hint { color: rgba(243,156,50,.75); }
+  body.ops #pressBtn { background: transparent; color: var(--o); border: 1px solid var(--o); letter-spacing: .4em; animation: blink 1.4s steps(1) infinite; }
+  body.ops #studio { background: #0e0c09; }
+  body.ops #studio .n { font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .2em; }
+  body.ops #studio .rule { background: var(--o); }
+  body.ops #studio .a, body.ops #studio .p { color: var(--o); }
+  body.ops #intro { background: #0e0c09; }
+  body.ops #intro video { filter: sepia(.75) saturate(1.3) hue-rotate(-12deg) contrast(1.08) brightness(.92); }
+  body.ops #intro .scan { display: block; background: repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 3px); }
+  body.ops #intro .tl, body.ops #intro .tc { color: var(--o); }
+  body.ops #intro .tc { background: transparent; border: 1px solid var(--o); }
+  body.ops #intro .card { background: rgba(14,12,9,.55); }
+  body.ops #intro .card::after { display: none; }
+  body.ops #intro .card span { color: var(--o); font-family: var(--cond); font-weight: 600; font-stretch: 100%; letter-spacing: .25em; font-size: clamp(42px, 9vw, 130px);
+    border-top: 2px solid var(--o); border-bottom: 2px solid var(--o); padding: .1em .4em; width: auto; }
+  body.ops #intro .end { background: #0e0c09; color: var(--ot); }
+  body.ops #intro .end .kp { color: var(--o); }
+  body.ops #skip { background: transparent; color: var(--o); border: 1px solid var(--o); }
+  @media (max-width: 760px) {
+    body.ops #title .left { width: 100%; top: auto; padding: 16px 18px 42px; background: linear-gradient(0deg, rgba(14,12,9,.95) 65%, transparent); }
+    body.ops .screen { background-position: 72% 40%; }
+    body.ops #panel { border-left: 0; border-right: 0; border-bottom: 0; }
+    body.ops #fab { width: 84px; height: 84px; } body.ops #fab .t { font-size: 15px; }
+  }
   /* =================== MOONLIT THEME =================== */
   #sea, .streaks, .moonlogo { display: none; }
   body.moon { --cyan: #4fe0ff; --navy: #071d4a; --deep: #0b3a8c; --blue: #1d6cff; --ice: #eaf8ff; --gold: #f5c518; --abyss: #030b1f; --red: #ff3b5c;
@@ -872,7 +874,7 @@
     if (t === 'moon') { document.body.classList.add('moon'); document.querySelector('meta[name=theme-color]').setAttribute('content', '#030b1f'); }
     if (e) document.body.classList.add('locked');
     if (e === 'dc') { document.body.classList.add('dc'); document.title = "Chess Fantasia — Director's Cut"; }
-    if (t === 'red') { document.body.classList.add('red'); document.querySelector('meta[name=theme-color]').setAttribute('content', '#d7141e'); document.title = 'Chess Fantasia — Red'; }
+    if (t === 'ops') { document.body.classList.add('ops'); document.querySelector('meta[name=theme-color]').setAttribute('content', '#14120e'); document.title = 'Chess Fantasia — Tactical'; }
     else if (t !== 'moon') document.body.classList.add('strand');
   })();
 </script>
@@ -884,7 +886,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 26</div>
+  <div class="build mono">Build 27</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1085,7 +1087,8 @@ try { GFX = localStorage.getItem('cf-gfx') || 'cinema'; } catch (e) { /* storage
 if (GFX === 'ink') GFX = 'cinema';
 const HIGH = () => GFX === 'high' || GFX === 'cinema';
 const INK = () => false;
-const CINE = () => GFX === 'cinema' && THEME === 'mono';
+const CINE = () => GFX === 'cinema' && (THEME === 'mono' || THEME === 'ops');
+const OPS = () => THEME === 'ops';
 const pmrem = new THREE.PMREMGenerator(renderer);
 const envTex = pmrem.fromScene(new RoomEnvironment(), .04).texture;
 let composer = null, inkPass = null, gradePass = null, bloomPass = null;
@@ -1905,10 +1908,10 @@ const SCENE = {
     lightBlot: 'rgba(60,120,220,.07)', grid: 'rgba(79,224,255,.95)', gridW: 4, coord: '#4fe0ff', font: cs => `italic 800 ${cs * .38}px "Barlow Condensed", sans-serif`,
     side: 0x061536, hemi: [0xe2f0ff, 0x1a2c55, 1.65], rim: [0x4fe0ff, 1.4], shadow: .5, mark: 0x4fe0ff, last: [0xf5c518, .32],
     plinthTop: '#0d2c66', plinthRing: '#4fe0ff', fx: 0xeaf8ff, spark: () => (Math.random() < .4 ? 0xffffff : 0x4fe0ff), ink: 0x0b1d45, ring: 0x4fe0ff },
-  red: { frame: '#0d0d0d', light: '#f4efe8', dark: 'rgba(214,18,28,.97)', blot: (c, a) => `rgba(${120 + c},${c * .2 | 0},${c * .2 | 0},${a * .5})`,
-    lightBlot: 'rgba(0,0,0,.03)', grid: '#0d0d0d', gridW: 5, coord: '#f4efe8', font: cs => `italic 900 ${cs * .36}px Archivo, sans-serif`,
-    side: 0x0d0d0d, hemi: [0xffffff, 0x3a1010, 1.55], rim: [0xff3a3a, 1.2], shadow: .45, mark: 0x0d0d0d, last: [0x0d0d0d, .3],
-    plinthTop: '#d7141e', plinthRing: '#0d0d0d', fx: 0x0d0d0d, spark: () => [0xffffff, 0xd7141e, 0x111111][Math.random() * 3 | 0], ink: 0x0d0d0d, ring: 0xffffff },
+  ops: { frame: '#1f1d18', light: '#a2967b', dark: 'rgba(48,45,38,.97)', blot: (c, a) => `rgba(${c + 20},${c + 14},${c},${a * .45})`,
+    lightBlot: 'rgba(90,70,40,.06)', grid: '#14120e', gridW: 4, coord: '#f39c32', font: cs => `600 ${cs * .3}px "Barlow Condensed", sans-serif`,
+    side: 0x1f1d18, hemi: [0xd9c4a0, 0x4a3f30, 1.2], rim: [0x9fb3c8, .5], shadow: .5, mark: 0xf39c32, last: [0xf39c32, .22],
+    plinthTop: '#2a2720', plinthRing: '#f39c32', fx: 0x2a2620, spark: () => (Math.random() < .5 ? 0xffc27a : 0xf39c32), ink: 0x3a3226, ring: 0xf39c32 },
 };
 let THEME = 'mono';
 // ?edition=mono|moon locks the page to one look (the two separate editions)
@@ -1917,7 +1920,7 @@ const DC = EDITION === 'dc';   // Director's Cut: the cinematic, story-driven ed
 try { THEME = (DC ? 'mono' : EDITION) || new URLSearchParams(location.search).get('theme') || localStorage.getItem('cf-theme') || 'mono'; } catch (e) { /* storage blocked */ }
 if (EDITION) document.body.classList.add('locked');
 if (!SCENE[THEME]) THEME = 'mono';
-if (THEME === 'red') { ACCENT_SRGB.w.set(.9, .07, .1); ACCENT_SRGB.b.set(.95, .12, .14); }
+if (THEME === 'ops') { ACCENT_SRGB.w.set(.95, .52, .14); ACCENT_SRGB.b.set(.86, .8, .66); }
 const SC = () => SCENE[THEME];
 
 function boardTexture() {
@@ -2071,7 +2074,7 @@ const wait = d => tween(d, () => {});
 let actx = null, soundOn = true;
 function ac() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; }
 /* sound profile: the Cinema look gets soft, organic, reverberant effects; Red / Moonlit stay punchy */
-const SOFT = () => THEME === 'mono';
+const SOFT = () => THEME === 'mono' || THEME === 'ops';
 let sfxBus = null;
 function out() {
   const a = ac();
@@ -2105,8 +2108,8 @@ function ambience(on) {
       for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); let last = 0;
         for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + .02 * w) / 1.02; d[i] = last * 3 + w * .08 + (Math.random() < .0009 ? (Math.random() - .5) * .9 : 0); } }
       const src = a.createBufferSource(); src.buffer = b; src.loop = true;
-      const hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 350;
-      const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5200;
+      const hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = OPS() ? 90 : 350;
+      const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = OPS() ? 900 : 5200;
       const g = a.createGain(); g.gain.value = 0;
       src.connect(hp).connect(lp).connect(g).connect(a.destination); src.start();
       g.gain.linearRampToValueAtTime(.11, a.currentTime + 3);
@@ -2604,7 +2607,7 @@ async function finish(vic, dir, style) {
 const MUSIC = {
   mono: { title: 'music/mono_title.mp3', game: 'music/mono_game.mp3' },
   moon: { title: 'music/moon_title.mp3', game: 'music/moon_game.mp3' },
-  red: { title: 'music/red_title.mp3', game: 'music/red_game.mp3' },
+  ops: { title: 'music/ops_title.mp3', game: 'music/ops_game.mp3' },
 };
 let musicOn = true, musicKind = 'title', musicEl = null, musicUnlocked = false;
 try { musicOn = localStorage.getItem('cf-music') !== '0'; } catch (e) { /* storage blocked */ }
@@ -3364,6 +3367,22 @@ const skyTex = canvasTex(512, (g, s) => {
   g.fillStyle = r; g.fillRect(0, 0, s, s);
 });
 skyTex.mapping = THREE.EquirectangularReflectionMapping;
+const skyOps = canvasTex(512, (g, s) => {
+  const gr = g.createLinearGradient(0, 0, 0, s);
+  gr.addColorStop(0, '#4a5258'); gr.addColorStop(.4, '#9a8f7c'); gr.addColorStop(.6, '#d6a36a'); gr.addColorStop(.68, '#b78f62'); gr.addColorStop(1, '#3a3127');
+  g.fillStyle = gr; g.fillRect(0, 0, s, s);
+  const r = g.createRadialGradient(s * .2, s * .6, 0, s * .2, s * .6, s * .5);
+  r.addColorStop(0, 'rgba(255,190,110,.55)'); r.addColorStop(1, 'rgba(255,190,110,0)');
+  g.fillStyle = r; g.fillRect(0, 0, s, s);
+});
+skyOps.mapping = THREE.EquirectangularReflectionMapping;
+const opsFog = new THREE.FogExp2(0x7d6c52, .026);
+const sandCol = canvasTex(512, (g, s) => {
+  g.fillStyle = '#6b5b45'; g.fillRect(0, 0, s, s);
+  for (let i = 0; i < 12000; i++) { const v = 70 + Math.random() * 60 | 0; g.fillStyle = `rgba(${v + 20},${v + 6},${v - 14},.3)`; g.fillRect(Math.random() * s, Math.random() * s, 1 + Math.random() * 2, 1 + Math.random() * 2); }
+  for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(40,34,26,${.15 + Math.random() * .2})`; g.beginPath(); g.ellipse(Math.random() * s, Math.random() * s, 3 + Math.random() * 14, 2 + Math.random() * 8, Math.random() * 3, 0, PI * 2); g.fill(); }
+});
+sandCol.wrapS = sandCol.wrapT = THREE.RepeatWrapping; sandCol.repeat.set(5, 5);
 const cineFog = new THREE.FogExp2(0x535a5e, .03);
 // wet terrain: dark stone with puddles (low roughness patches)
 const terrainRough = canvasTex(512, (g, s) => {
@@ -3399,6 +3418,22 @@ rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
 const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xd9dee0, transparent: true, opacity: .32, depthWrite: false }));
 rain.frustumCulled = false; rain.visible = false;
 scene.add(rain);
+// drifting dust for the desert (Tactical)
+const DUST = isMobile ? 250 : 700;
+const dustGeo = new THREE.BufferGeometry(), dustPos = new Float32Array(DUST * 3);
+for (let i = 0; i < DUST; i++) dustPos.set([(Math.random() - .5) * 30, Math.random() * 5, (Math.random() - .5) * 30], i * 3);
+dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ size: .05, map: dotTex, color: 0xe8c99a, transparent: true, opacity: .55, depthWrite: false }));
+dust.frustumCulled = false; dust.visible = false; scene.add(dust);
+function updateDust(dt, time) {
+  if (!dust.visible) return;
+  for (let i = 0; i < DUST; i++) {
+    const j = i * 3;
+    dustPos[j] += (1.2 + Math.sin(time * .7 + i) * .4) * dt; dustPos[j + 1] += Math.sin(time * 1.3 + i * .37) * .12 * dt;
+    if (dustPos[j] > 15) { dustPos[j] = -15; dustPos[j + 1] = Math.random() * 5; dustPos[j + 2] = (Math.random() - .5) * 30; }
+  }
+  dustGeo.attributes.position.needsUpdate = true;
+}
 function updateRain(dt) {
   if (!rain.visible) return;
   for (let i = 0; i < RAIN; i++) {
@@ -3427,19 +3462,27 @@ function updateMist(dt) {
 }
 // film grade: muted palette, teal shadows / warm highlights, lifted blacks, vignette, grain, chromatic aberration on impact
 const GradeShader = {
-  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uImpact: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } },
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uImpact: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uOps: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uTime; uniform float uImpact; uniform vec2 uRes; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float uTime; uniform float uImpact; uniform vec2 uRes; uniform float uOps; varying vec2 vUv;
     float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main() {
       vec2 c = vUv - .5;
       float ca = .0012 + uImpact * .006;
       vec3 col = vec3(texture2D(tDiffuse, vUv + c * ca).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - c * ca).b);
       float l = dot(col, vec3(.299, .587, .114));
-      col = mix(vec3(l), col, .62);                                    // desaturate
-      col += mix(vec3(-.012, .006, .02), vec3(.03, .012, -.02), smoothstep(.2, .8, l));   // teal shadows, warm highs
-      col = col * .94 + .035;                                          // lifted blacks
+      if (uOps > .5) {
+        // Tactical: sun-bleached, warm highlights, olive shadows, harder contrast
+        col = mix(vec3(l), col, .7);
+        col += mix(vec3(-.01, .0, -.025), vec3(.06, .025, -.04), smoothstep(.25, .85, l));
+        col = (col - .5) * 1.12 + .5;
+        col = col * .96 + .02;
+      } else {
+        col = mix(vec3(l), col, .62);                                  // desaturate
+        col += mix(vec3(-.012, .006, .02), vec3(.03, .012, -.02), smoothstep(.2, .8, l));   // teal shadows, warm highs
+        col = col * .94 + .035;                                        // lifted blacks
+      }
       col = mix(col, vec3(1.0), uImpact * .45);                        // impact exposure flash
       col *= 1.0 - smoothstep(.45, .95, length(c * vec2(1.25, 1.0))) * .55;  // vignette
       col += (hash(vUv * uRes + uTime) - .5) * .045;                   // grain
@@ -3478,7 +3521,7 @@ function buildComposer() {
   inkPass.enabled = INK();
   composer.addPass(inkPass);
 }
-function usePost() { return HIGH() && THEME === 'mono'; }
+function usePost() { return HIGH() && (THEME === 'mono' || THEME === 'ops'); }
 function applyGfx(rebuild = true) {
   const hi = HIGH();
   renderer.toneMapping = hi ? THREE.NeutralToneMapping : THREE.NoToneMapping;
@@ -3509,10 +3552,22 @@ function applyGfx(rebuild = true) {
   const cine = CINE();
   if (gradePass) gradePass.enabled = cine;
   if (bloomPass) bloomPass.enabled = false;   // bloom hazes the pale board; the grade carries the mood
-  terrain.visible = rain.visible = mist.visible = cine;
+  terrain.visible = cine; rain.visible = mist.visible = cine && !OPS(); dust.visible = cine && OPS();
+  if (gradePass) gradePass.uniforms.uOps.value = OPS() ? 1 : 0;
+  terrain.material.map = OPS() ? sandCol : terrainCol; terrain.material.clearcoat = OPS() ? 0 : .4;
+  terrain.material.roughnessMap = OPS() ? null : terrainRough; terrain.material.roughness = 1; terrain.material.needsUpdate = true;
   ground.visible = !cine;
-  scene.fog = cine ? cineFog : null;
-  if (cine) {
+  scene.fog = cine ? (OPS() ? opsFog : cineFog) : null;
+  if (cine && OPS()) {
+    scene.background = skyOps;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .8;
+    hemi.color.setHex(0xc9b48f); hemi.groundColor.setHex(0x2e261c); hemi.intensity = .5;
+    sun.color.setHex(0xffb766); sun.intensity = 3.4; sun.position.set(-11, 5, 2.5);   // low, hard, warm: long shadows
+    rim.color.setHex(0x9fb3c8); rim.intensity = .5;
+    boardMatHi.color.setHex(0xa39886); boardMatHi.roughness = .92; boardMatHi.clearcoat = 0; boardMatHi.envMapIntensity = .2;
+    boardSideHi.color.setHex(0x2a2720); boardSideHi.roughness = .9; boardSideHi.clearcoat = 0;
+    boardMatHi.needsUpdate = boardSideHi.needsUpdate = true;
+  } else if (cine) {
     scene.background = skyTex;
     renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .78;
     hemi.color.setHex(0xb9c4ca); hemi.groundColor.setHex(0x2f3434); hemi.intensity = 1.05;
@@ -3539,8 +3594,8 @@ function applyTheme(name) {
   THEME = SCENE[name] ? name : 'mono';
   const P = SC();
   document.body.classList.toggle('moon', THEME === 'moon');
-  document.body.classList.toggle('red', THEME === 'red');
-  document.querySelector('meta[name=theme-color]').setAttribute('content', THEME === 'moon' ? '#030b1f' : THEME === 'red' ? '#d7141e' : '#f2f1ed');
+  document.body.classList.toggle('ops', THEME === 'ops');
+  document.querySelector('meta[name=theme-color]').setAttribute('content', THEME === 'moon' ? '#030b1f' : THEME === 'ops' ? '#14120e' : '#f2f1ed');
   if (!EDITION) try { localStorage.setItem('cf-theme', THEME); } catch (e) { /* storage blocked */ }
   const t = boardTexture(); t.anisotropy = renderer.capabilities.getMaxAnisotropy();
   boardMat.map?.dispose(); boardMat.map = t; boardMat.needsUpdate = true;
@@ -3686,7 +3741,7 @@ function frame() {
     }
   }
   updateSparks(dt);
-  updateRain(dt); updateMist(dt);
+  updateRain(dt); updateMist(dt); updateDust(dt, time);
   if (gradePass) gradePass.uniforms.uTime.value = time % 100;
   placeTag();
   if (inkPass) inkPass.uniforms.uTime.value = Math.floor(time * 8) / 8;
@@ -3898,19 +3953,6 @@ function rollCredits() {
   $('creditsSkip').onclick = end;
 }
 
-/* Red edition: cut-out ransom-note lettering on every wordmark */
-if (THEME === 'red') {
-  const looks = [['#f6f2ec', '#0d0d0d', 'Archivo'], ['#0d0d0d', '#f6f2ec', 'Georgia, serif'], ['#d7141e', '#f6f2ec', 'Archivo'], ['#f6f2ec', '#d7141e', '"IBM Plex Mono", monospace'], ['#0d0d0d', '#d7141e', 'Georgia, serif']];
-  document.querySelectorAll('.wordmark span, #boot .bw span, #press .bw span, #intro .end .bw span').forEach(span => {
-    const txt = span.textContent; span.textContent = '';
-    [...txt].forEach((ch, i) => {
-      const l = document.createElement('i'), k = looks[(i * 7 + txt.length * 3 + (Math.random() * 2 | 0)) % looks.length];
-      l.className = 'rl'; l.textContent = ch;
-      l.style.cssText = `background:${k[0]};color:${k[1]};font-family:${k[2]};transform:rotate(${(Math.random() * 14 - 7).toFixed(1)}deg) translateY(${(Math.random() * 6 - 3).toFixed(0)}px);font-size:${(.85 + Math.random() * .3).toFixed(2)}em`;
-      span.append(l);
-    });
-  });
-}
 const modelsReady = loadModels();
 /* ---------- loading → opening movie (auto) → title ---------- */
 {
@@ -3933,7 +3975,7 @@ const modelsReady = loadModels();
     }, 950);
   };
   // broadcast-style overlays timed against the movie (Mono)
-  const CUES = THEME === 'red' ? [[.2, 'Showtime'], [2.0, 'Break'], [4.0, 'The'], [6.0, 'Rules']] : [[.2, 'Channel 01'], [2.0, 'Every'], [4.0, 'Piece'], [6.0, 'Transforms']];
+  const CUES = THEME === 'ops' ? [[.2, 'Op. Gambit'], [2.0, 'Deploy'], [4.0, 'Engage'], [6.0, 'Transform']] : [[.2, 'Channel 01'], [2.0, 'Every'], [4.0, 'Piece'], [6.0, 'Transforms']];
   // Director's Cut: film-style opening credits instead of impact cards
   const DC_CREDITS = [[.4, 'A Kenneth So Game'], [2.6, 'Chess Fantasia'], [4.6, "Director's Cut"], [6.4, 'Starring — Pawn 2 · Bishop 2.0 · King · Queen']];
   let cueI = 0, endShown = false;
@@ -4010,7 +4052,7 @@ const modelsReady = loadModels();
     addEventListener('keydown', e => { if (!$('press').hidden && !['Tab', 'Shift', 'Alt', 'Control', 'Meta'].includes(e.key)) { e.preventDefault(); startMovie(); } });
     $('pressBtn').focus({ preventScroll: true });
   };
-  vid.src = `assets/intro_${THEME === 'red' ? 'mono' : THEME}.mp4`;
+  vid.src = `assets/intro_${THEME === 'ops' ? 'mono' : THEME}.mp4`;
   const videoReady = new Promise(res => { vid.addEventListener('canplaythrough', res, { once: true }); vid.addEventListener('error', res, { once: true }); setTimeout(res, 8000); });
   Promise.all([modelsReady, videoReady]).then(() => setTimeout(play, 350));
   $('soundOn').onclick = e => { e.stopPropagation(); vid.muted = false; vid.play().catch(() => {}); $('soundOn').hidden = true; };
