@@ -2590,7 +2590,7 @@ async function animateMoveInner(m) {
 /* ---------- AI ---------- */
 async function aiTurn() {
   if (gameOver || isHuman(state.turn) || busy) return;
-  if (DC && (dcHolding || txBusy)) { setTimeout(aiTurn, 400); return; }
+  if (DC && dcHolding) { setTimeout(aiTurn, 400); return; }
   busy = true;
   setStatus(`${NAME[state.turn]} is thinking…`);
   await new Promise(r => setTimeout(r, 30));
@@ -3084,7 +3084,7 @@ async function runTx() {
     for (const [k, text] of lines) {
       L.classList.toggle('on', k === who[0]); Rr.classList.toggle('on', k === who[1]);
       await typeLine($('txText'), text);
-      await waitClickOr(Math.max(1700, text.length * 55));
+      await waitClickOr(Math.max(1400, text.length * 42));
     }
     tx.hidden = true;
     await wait(.2);
