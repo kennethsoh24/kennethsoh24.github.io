@@ -355,9 +355,11 @@
   #intro .ov { position: absolute; z-index: 2; pointer-events: none; color: #fff; }
   #intro .tl { left: 22px; top: calc(9vh + 14px); }
   #intro .tc { left: 22px; bottom: calc(9vh + 14px); background: #fff; color: #000; padding: 3px 8px; }
-  #intro .card { inset: 0; display: grid; place-items: center; opacity: 0; }
-  #intro .card span { display: block; width: 100%; text-align: center; background: #fff; color: #000; font-weight: 900; font-stretch: 62%; text-transform: uppercase;
-    font-size: clamp(70px, 15vw, 220px); line-height: .9; padding: .06em 0 0; }
+  #intro .card { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; display: grid; place-items: center;
+    background: #fff; opacity: 0; overflow: hidden; max-width: none; padding: 0; border: 0; box-shadow: none; border-radius: 0; }
+  #intro .card span { display: block; max-width: 96vw; text-align: center; color: #000; font-weight: 900; font-stretch: 62%; text-transform: uppercase;
+    font-size: clamp(56px, 15vw, 220px); line-height: .9; padding: .06em 0 0; white-space: nowrap; }
+  #intro .card::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.06) 0 1px, transparent 1px 3px); pointer-events: none; }
   #intro .card.on { animation: card .62s steps(1) both; }
   @keyframes card { 0% { opacity: 1; filter: invert(1); } 12% { opacity: 1; filter: none; } 88% { opacity: 1; } 100% { opacity: 0; } }
   #intro .end { inset: 0; display: grid; place-items: center; background: #fff; color: #000; opacity: 0; }
@@ -373,13 +375,13 @@
   body.moon #intro .end .bw { display: none; }
   body.moon #intro .end img { display: block; filter: drop-shadow(0 0 30px rgba(79,224,255,.8)); }
   body.moon #soundOn { background: var(--cyan); color: var(--abyss); }
-  #intro { position: fixed; inset: 0; z-index: 55; background: var(--paper); display: grid; place-items: center; transition: opacity .8s ease; }
+  #intro { position: fixed; inset: 0; z-index: 55; background: var(--paper); display: block; overflow: hidden; transition: opacity .8s ease; }
   #intro > * { transition: opacity .9s ease; }
   #intro.fadeout > * { opacity: 0 !important; }
   #intro video { background: #000; }
   body.moon #intro { background: #030b1f; }
   #intro[hidden] { display: none; }
-  #intro video { width: 100%; height: 100%; object-fit: cover; }
+  #intro video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   #intro .bars { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 9vh 0 #000, inset 0 -9vh 0 #000; }
   #skip { position: absolute; right: 22px; bottom: calc(9vh + 14px); z-index: 2; background: rgba(0,0,0,.5); color: #fff; border: 1px solid #fff; padding: 8px 16px; }
   #skip:hover { background: #fff; color: #000; }
@@ -537,6 +539,16 @@
     if (e) document.body.classList.add('locked');
   })();
 </script>
+<section id="boot" aria-label="Loading">
+  <div class="bg" aria-hidden="true"></div>
+  <div class="inner">
+    <div class="bw mono-only"><span>Chess</span><span>Fantasia</span></div>
+    <img class="moon-only" src="assets/logo_moon.webp" alt="Chess Fantasia">
+    <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
+  </div>
+  <div class="bootcredit mono">A Kenneth So Production</div>
+  <div class="build mono">Build 21</div>
+</section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
 <div class="streaks" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -653,16 +665,6 @@
 <div id="flash"></div>
 <div id="scan"></div>
 <canvas id="static" width="160" height="90"></canvas>
-<section id="boot" aria-label="Loading">
-  <div class="bg" aria-hidden="true"></div>
-  <div class="inner">
-    <div class="bw mono-only"><span>Chess</span><span>Fantasia</span></div>
-    <img class="moon-only" src="assets/logo_moon.webp" alt="Chess Fantasia">
-    <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
-  </div>
-  <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 20</div>
-</section>
 <section id="studio" aria-label="A Kenneth So Production" hidden>
   <div class="st"><span class="a mono">A</span><span class="n">Kenneth So</span><i class="rule"></i><span class="p mono">Production</span></div>
 </section>
@@ -2962,7 +2964,13 @@ const modelsReady = loadModels();
     $('introTc').textContent = `REC 00:00:${pad(t)}:${pad(t * 30 % 30)}`;
     if (THEME === 'mono' && cueI < CUES.length && t >= CUES[cueI][0]) {
       const c = $('introCard');
-      c.querySelector('span').textContent = CUES[cueI][1];
+      const sp = c.querySelector('span');
+      sp.textContent = CUES[cueI][1];
+      sp.style.fontSize = '';
+      c.style.opacity = 1;
+      const fit = innerWidth * .9 / sp.scrollWidth;   // shrink long words so they never run off the frame
+      if (fit < 1) sp.style.fontSize = (parseFloat(getComputedStyle(sp).fontSize) * fit) + 'px';
+      c.style.opacity = '';
       c.classList.remove('on'); void c.offsetWidth; c.classList.add('on');
       if (soundOn && !vid.muted) try { click(ac().currentTime, .1); } catch (e) { /* audio blocked */ }
       cueI++;
@@ -2975,7 +2983,7 @@ const modelsReady = loadModels();
     boot.classList.add('gone');
     setTimeout(() => boot.remove(), 450);
     if (soundOn) try { thud(); } catch (e) { /* audio blocked */ }
-    setTimeout(() => { st.classList.add('gone'); setTimeout(() => { st.hidden = true; res(); }, 500); }, 2600);
+    setTimeout(() => { res(); st.classList.add('gone'); setTimeout(() => { st.hidden = true; }, 520); }, 2600);
   });
   // called synchronously inside the tap, so the movie is allowed to start with sound
   const startMovie = () => {
