@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Chess Fantasia</title>
 <meta name="description" content="Chess Fantasia — 3D chess where every piece transforms into a mech.">
@@ -318,6 +319,8 @@
   #press .moonlogo-p { display: none; width: min(560px, 80vw); filter: drop-shadow(0 0 24px rgba(79,224,255,.6)); }
   #pressBtn { border: 1px solid var(--ink); background: var(--ink); color: var(--white); padding: 14px 30px; font-size: 15px; animation: blink 1.1s steps(1) infinite; }
   #press .hint { color: var(--grey); }
+  .build { position: absolute; right: 16px; bottom: 14px; font-size: 10px; color: var(--grey); opacity: .8; }
+  body.moon .build { color: var(--cyan); }
   #press .kp { position: absolute; bottom: 28px; left: 0; right: 0; text-align: center; color: var(--grey); letter-spacing: .3em; }
   body.moon #press { background: radial-gradient(ellipse 70% 55% at 50% 30%, #123f8f 0%, #071d4a 55%, #030b1f 100%); }
   body.moon #press .bg { background: url(assets/keyart_moon.jpg) center / cover; opacity: .25; filter: blur(2px); }
@@ -658,6 +661,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
+  <div class="build mono">Build 20</div>
 </section>
 <section id="studio" aria-label="A Kenneth So Production" hidden>
   <div class="st"><span class="a mono">A</span><span class="n">Kenneth So</span><i class="rule"></i><span class="p mono">Production</span></div>
@@ -2987,6 +2991,17 @@ const modelsReady = loadModels();
     vid.onended = () => setTimeout(toTitle, 900);
     vid.onerror = toTitle;
     vid.dataset.started = '1';
+    // a movie that gets paused by anything other than us resumes (muted if the browser insists)
+    vid.addEventListener('pause', () => {
+      if (done || vid.ended) return;
+      vid.play().catch(() => { vid.muted = true; vid.play().then(() => { $('soundOn').hidden = false; }, () => toTitle()); });
+    });
+    let lastT = -1, still = 0;
+    const dog = setInterval(() => {
+      if (done) { clearInterval(dog); return; }
+      if (vid.currentTime === lastT) { if (++still >= 4) { clearInterval(dog); toTitle(); } } else still = 0;
+      lastT = vid.currentTime;
+    }, 1000);
     const p = vid.play();
     if (p) p.catch(() => {
       // the browser still refused sound: play silently with a sound button rather than not at all
