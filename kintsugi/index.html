@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>金繼 · Kintsugi</title>
+<meta name="description" content="一個關於日本金繼工藝嘅小遊戲：親手修補碎咗嘅器物，再諗吓一剎那同永恆。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&family=Shippori+Mincho:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14110e; --paper:#efe7d8; --muted:#a89a85;
+  --gold:#d8b25a; --gold2:#f3d98b; --urushi:#6b2418;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--ink);color:var(--paper);overflow:hidden;
+  font-family:'Noto Serif TC','Shippori Mincho',serif;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent}
+canvas{position:fixed;inset:0;display:block;touch-action:none}
+.hidden{display:none!important}
+
+/* HUD */
+#hudTop{position:fixed;top:0;left:0;right:0;padding:14px 16px 0;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none}
+#vname{font-size:13px;letter-spacing:.25em;color:var(--muted)}
+#vname b{color:var(--paper);font-weight:500}
+.steps{display:flex;gap:8px}
+.step{width:34px;height:34px;border:1px solid rgba(216,178,90,.22);border-radius:50%;display:grid;place-items:center;
+  font-family:'Shippori Mincho','Noto Serif TC',serif;font-size:15px;color:rgba(239,231,216,.3);transition:all .5s}
+.step.done{color:var(--gold);border-color:rgba(216,178,90,.55)}
+.step.now{color:#1a140c;background:var(--gold);border-color:var(--gold);box-shadow:0 0 18px rgba(216,178,90,.45)}
+#hudBot{position:fixed;left:0;right:0;bottom:0;padding:0 16px calc(20px + env(safe-area-inset-bottom));text-align:center;pointer-events:none}
+#sTitle{font-family:'Shippori Mincho','Noto Serif TC',serif;font-size:24px;letter-spacing:.18em;color:var(--gold2)}
+#sTitle small{font-size:12px;color:var(--muted);letter-spacing:.12em;margin-left:6px;font-family:'Noto Serif TC',serif}
+#sQuote{margin-top:6px;font-size:15px;line-height:1.6}
+#sHint{margin-top:2px;font-size:13px;color:var(--muted);line-height:1.6}
+.bar{margin:10px auto 0;width:min(260px,70vw);height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#a8822f,#f3d98b);transition:width .25s}
+
+#mute{position:fixed;top:10px;right:10px;width:38px;height:38px;border-radius:50%;border:1px solid rgba(216,178,90,.25);
+  background:rgba(20,17,14,.6);color:var(--muted);font-size:16px;cursor:pointer;z-index:20}
+
+/* overlays */
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px 16px;
+  background:rgba(10,8,6,.78);opacity:0;pointer-events:none;transition:opacity .9s ease;z-index:10}
+.overlay.show{opacity:1;pointer-events:auto}
+.card{max-width:560px;width:100%;max-height:100%;overflow:auto;text-align:center}
+.kicker{font-size:12px;letter-spacing:.35em;color:var(--muted)}
+.big{font-family:'Shippori Mincho','Noto Serif TC',serif;font-weight:700;color:var(--gold);
+  font-size:clamp(52px,14vw,88px);letter-spacing:.12em;line-height:1.15;margin:10px 0 2px;
+  text-shadow:0 0 30px rgba(216,178,90,.25)}
+.kana{font-size:14px;letter-spacing:.2em;color:var(--gold2);opacity:.85;margin-bottom:22px}
+.card p{font-size:16px;line-height:1.95;margin:0 auto 14px;max-width:30em;font-weight:300}
+.card p.note{font-size:13px;color:var(--muted)}
+.gold-rule{width:60px;height:1px;margin:18px auto;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.btn{margin-top:14px;font:inherit;font-size:16px;letter-spacing:.2em;color:#1a140c;background:var(--gold);
+  border:0;border-radius:999px;padding:12px 30px;cursor:pointer;box-shadow:0 0 24px rgba(216,178,90,.3);transition:transform .2s,box-shadow .2s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 0 34px rgba(216,178,90,.5)}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid rgba(216,178,90,.5);box-shadow:none}
+
+#toast{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:9;
+  opacity:0;transition:opacity .7s;background:rgba(10,8,6,.55)}
+#toast.show{opacity:1}
+#toast div{text-align:center;font-size:16px;line-height:2;letter-spacing:.1em;padding:0 24px}
+#toast div b{display:block;font-family:'Shippori Mincho',serif;font-size:22px;color:var(--gold2);letter-spacing:.3em;font-weight:400}
+
+/* ending */
+.trio{display:flex;justify-content:center;gap:10px;margin:6px 0 18px}
+.trio img{width:min(26vw,120px);height:min(26vw,120px);border-radius:50%;opacity:0;animation:fadeUp 1.4s ease forwards}
+.line{opacity:0;animation:fadeUp 1.6s ease forwards}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.final{font-family:'Shippori Mincho',serif;font-size:clamp(30px,8vw,44px);color:var(--gold);letter-spacing:.2em;margin:18px 0 6px;
+  text-shadow:0 0 24px rgba(216,178,90,.35)}
+.stamp{font-size:13px;color:var(--muted);letter-spacing:.1em;line-height:1.9}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hudTop" class="hidden">
+  <div id="vname"></div>
+  <div class="steps" id="steps"></div>
+</div>
+<div id="hudBot" class="hidden">
+  <div id="sTitle"></div>
+  <div id="sQuote"></div>
+  <div id="sHint"></div>
+  <div class="bar"><i id="bar"></i></div>
+</div>
+<button id="mute" title="聲音" aria-label="開／關聲音">♪</button>
+<div id="toast"><div id="toastText"></div></div>
+
+<!-- Intro -->
+<div class="overlay show" id="intro">
+  <div class="card">
+    <div class="kicker">日本傳統工藝</div>
+    <div class="big">金繼</div>
+    <div class="kana">きんつぎ · Kintsugi</div>
+    <p>相傳十五世紀，有人將一隻打爛咗嘅茶碗送去修補。日本工匠用生漆將碎片黏返埋，再喺裂痕上面撒上金粉。</p>
+    <p>佢哋冇將傷痕收埋——反而將佢變成器物身上最靚嘅地方。</p>
+    <div class="gold-rule"></div>
+    <p>今日，你會親手修補三件器物。<br>慢慢嚟，唔使急。</p>
+    <p class="note">建議開聲 · 滑鼠或手指都可以玩</p>
+    <button class="btn" id="startBtn">開始 · 始める</button>
+  </div>
+</div>
+
+<!-- Reflection -->
+<div class="overlay" id="reflect">
+  <div class="card">
+    <div class="kicker" id="rKicker"></div>
+    <div class="big" id="rBig"></div>
+    <div class="kana" id="rKana"></div>
+    <div id="rText"></div>
+    <button class="btn" id="nextBtn">下一件</button>
+  </div>
+</div>
+
+<!-- Ending -->
+<div class="overlay" id="ending">
+  <div class="card" id="endCard"></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const TAU = Math.PI * 2;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+
+/* ---------------- layout ---------------- */
+let W, H, DPR, R, CX, CY, bgGrad, vignette;
+function layout() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  const top = 100, bot = 160;
+  const availH = Math.max(160, H - top - bot);
+  R = Math.max(70, Math.min(W * 0.34, availH * 0.46, 230));
+  CX = W / 2; CY = top + availH / 2;
+  bgGrad = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.max(W, H) * 0.75);
+  bgGrad.addColorStop(0, '#2a231c'); bgGrad.addColorStop(0.55, '#1a1612'); bgGrad.addColorStop(1, '#0d0b09');
+  if (V) buildTexture();
+}
+
+/* ---------------- seeded rng ---------------- */
+function mulberry(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------------- vessel paintings (plate-local, centre 0,0, radius r) ---------------- */
+function paintShino(g, r, rnd) {
+  let gr = g.createRadialGradient(-r * .1, -r * .1, 0, 0, 0, r);
+  gr.addColorStop(0, '#f3ebde'); gr.addColorStop(.55, '#eadcc6'); gr.addColorStop(.86, '#d8bb98');
+  gr.addColorStop(.96, '#b98d68'); gr.addColorStop(1, '#7d5a40');
+  g.fillStyle = gr; g.fillRect(-r, -r, 2 * r, 2 * r);
+  // hiiro – fire-coloured blush near the rim
+  for (let i = 0; i < 7; i++) {
+    const a = rnd() * TAU, d = r * (.6 + rnd() * .3), s = r * (.25 + rnd() * .3);
+    const bg = g.createRadialGradient(Math.cos(a) * d, Math.sin(a) * d, 0, Math.cos(a) * d, Math.sin(a) * d, s);
+    bg.addColorStop(0, 'rgba(208,110,62,.32)'); bg.addColorStop(1, 'rgba(208,110,62,0)');
+    g.fillStyle = bg; g.fillRect(-r, -r, 2 * r, 2 * r);
+  }
+  // tea well
+  g.strokeStyle = 'rgba(140,105,80,.18)'; g.lineWidth = r * .03;
+  g.beginPath(); g.arc(0, 0, r * .34, 0, TAU); g.stroke();
+  let w = g.createRadialGradient(0, 0, 0, 0, 0, r * .33);
+  w.addColorStop(0, 'rgba(160,125,95,.16)'); w.addColorStop(1, 'rgba(160,125,95,0)');
+  g.fillStyle = w; g.beginPath(); g.arc(0, 0, r * .33, 0, TAU); g.fill();
+  // pinholes
+  for (let i = 0; i < 420; i++) {
+    const a = rnd() * TAU, d = Math.sqrt(rnd()) * r;
+    g.fillStyle = `rgba(${110 + rnd() * 40 | 0},${80 + rnd() * 30 | 0},60,${.15 + rnd() * .3})`;
+    g.beginPath(); g.arc(Math.cos(a) * d, Math.sin(a) * d, (.4 + rnd() * 1.1) * r / 150, 0, TAU); g.fill();
+  }
+  rimLight(g, r, .35);
+}
+
+function paintSometsuke(g, r, rnd) {
+  let gr = g.createRadialGradient(0, 0, 0, 0, 0, r);
+  gr.addColorStop(0, '#f8f6f0'); gr.addColorStop(.8, '#efece2'); gr.addColorStop(1, '#cfcabb');
+  g.fillStyle = gr; g.fillRect(-r, -r, 2 * r, 2 * r);
+  const blue = '#22427e';
+  // rim band
+  g.fillStyle = 'rgba(34,66,126,.88)';
+  g.beginPath(); g.arc(0, 0, r * .955, 0, TAU); g.arc(0, 0, r * .86, 0, TAU, true); g.fill();
+  g.strokeStyle = blue; g.lineWidth = Math.max(1, r * .008);
+  g.beginPath(); g.arc(0, 0, r * .82, 0, TAU); g.stroke();
+  // small dots in band
+  g.fillStyle = 'rgba(248,246,240,.85)';
+  for (let i = 0; i < 36; i++) { const a = i / 36 * TAU; g.beginPath(); g.arc(Math.cos(a) * r * .907, Math.sin(a) * r * .907, r * .012, 0, TAU); g.fill(); }
+  // seigaiha (青海波) waves in the centre medallion
+  g.save();
+  g.beginPath(); g.arc(0, 0, r * .62, 0, TAU); g.clip();
+  const s = r * .16;
+  let row = 0;
+  for (let y = -r * .75; y <= r * .8; y += s * .28, row++) {
+    const off = (row % 2) * s * .5;
+    for (let x = -r * .8 - off; x <= r * .8 + s; x += s) {
+      g.fillStyle = '#f6f3ec';
+      g.beginPath(); g.arc(x, y, s * .5, Math.PI, 0); g.fill();
+      g.strokeStyle = `rgba(34,66,126,${.75 + rnd() * .2})`;
+      g.lineWidth = Math.max(.8, r * .0065);
+      for (let k = 1; k <= 4; k++) { g.beginPath(); g.arc(x, y, s * .5 * k / 4, Math.PI, 0); g.stroke(); }
+    }
+  }
+  g.restore();
+  g.strokeStyle = blue; g.lineWidth = Math.max(1, r * .01);
+  g.beginPath(); g.arc(0, 0, r * .62, 0, TAU); g.stroke();
+  // cobalt bleeding / glaze sheen
+  for (let i = 0; i < 60; i++) {
+    const a = rnd() * TAU, d = r * (.86 + rnd() * .09);
+    g.fillStyle = 'rgba(20,40,90,.18)';
+    g.beginPath(); g.arc(Math.cos(a) * d, Math.sin(a) * d, r * (.005 + rnd() * .012), 0, TAU); g.fill();
+  }
+  let hl = g.createRadialGradient(-r * .35, -r * .4, 0, -r * .35, -r * .4, r * .7);
+  hl.addColorStop(0, 'rgba(255,255,255,.35)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = hl; g.fillRect(-r, -r, 2 * r, 2 * r);
+  rimLight(g, r, .4);
+}
+
+function paintRaku(g, r, rnd) {
+  let gr = g.createRadialGradient(0, 0, 0, 0, 0, r);
+  gr.addColorStop(0, '#2b2522'); gr.addColorStop(.5, '#1c1816'); gr.addColorStop(.88, '#2c2420');
+  gr.addColorStop(.96, '#3b2f27'); gr.addColorStop(1, '#0c0a09');
+  g.fillStyle = gr; g.fillRect(-r, -r, 2 * r, 2 * r);
+  // glaze pooling
+  for (let i = 0; i < 18; i++) {
+    const a = rnd() * TAU, d = rnd() * r * .9, s = r * (.08 + rnd() * .22);
+    const bg = g.createRadialGradient(Math.cos(a) * d, Math.sin(a) * d, 0, Math.cos(a) * d, Math.sin(a) * d, s);
+    const c = rnd() < .5 ? '8,6,6' : '70,55,45';
+    bg.addColorStop(0, `rgba(${c},.35)`); bg.addColorStop(1, `rgba(${c},0)`);
+    g.fillStyle = bg; g.fillRect(-r, -r, 2 * r, 2 * r);
+  }
+  // tea well
+  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = r * .035;
+  g.beginPath(); g.arc(r * .02, r * .03, r * .3, 0, TAU); g.stroke();
+  for (let i = 0; i < 500; i++) {
+    const a = rnd() * TAU, d = Math.sqrt(rnd()) * r;
+    g.fillStyle = `rgba(150,125,100,${.05 + rnd() * .15})`;
+    g.beginPath(); g.arc(Math.cos(a) * d, Math.sin(a) * d, (.3 + rnd()) * r / 160, 0, TAU); g.fill();
+  }
+  let hl = g.createRadialGradient(-r * .4, -r * .45, 0, -r * .4, -r * .45, r * .55);
+  hl.addColorStop(0, 'rgba(255,235,210,.16)'); hl.addColorStop(1, 'rgba(255,235,210,0)');
+  g.fillStyle = hl; g.fillRect(-r, -r, 2 * r, 2 * r);
+  rimLight(g, r, .18);
+}
+
+function rimLight(g, r, a) {
+  g.strokeStyle = `rgba(255,248,235,${a})`; g.lineWidth = Math.max(1, r * .012);
+  g.beginPath(); g.arc(0, 0, r * .975, Math.PI * .95, Math.PI * 1.75); g.stroke();
+}
+
+/* ---------------- content ---------------- */
+const STAGES = [
+  { k: '碎', jp: '割れる · wareru', q: '萬物，終有一日會碎。', h: '輕輕點一下器物。' },
+  { k: '接', jp: '接ぐ · tsugu', q: '用麥漆（小麥粉混生漆）將碎片黏返埋。', h: '拖動碎片返去原位——靠近時佢會自己擺正。' },
+  { k: '塗', jp: '塗る · nuru', q: '沿住裂痕，用幼毛筆塗上紅色嘅弁柄漆。', h: '用手指或者滑鼠，描過每一條裂痕。' },
+  { k: '蒔', jp: '蒔く · maku', q: '趁漆仲有少少黐，撒上金粉。', h: '按住，喺裂痕上面慢慢撒金。' },
+  { k: '磨', jp: '磨く · migaku', q: '用鯛魚嘅牙齒輕輕打磨，令金浮現光澤。', h: '喺器物上面來回擦拭。' },
+];
+
+const VESSELS = [
+  {
+    order: '其一', name: '志野茶碗', ro: 'Shino chawan', paint: paintShino, cracks: 3, hair: 0,
+    big: '侘寂', kana: 'わびさび · Wabi-sabi',
+    text: [
+      '「侘」係簡樸、清寂；「寂」係歲月慢慢留低嘅痕跡。',
+      '侘寂相信，美唔喺完美入面。一隻有裂痕、有歲月嘅茶碗，比全新嗰隻更安靜，更深。',
+      '完美係一個終點。不完美，先至仲有故事可以講落去。',
+    ],
+  },
+  {
+    order: '其二', name: '染付皿', ro: 'Sometsuke sara', paint: paintSometsuke, cracks: 4, hair: 1,
+    big: '物の哀れ', kana: 'もののあわれ · Mono no aware',
+    text: [
+      '櫻花之所以咁靚，係因為佢好快就會散。',
+      '「物の哀れ」係對萬物無常嘅一份淡淡哀愁。頭先隻碟碎嗰一下，你心入面可能「啊」咗一聲——嗰份可惜，其實就係愛。',
+      '正因為知道會失去，我哋先識得珍惜。',
+    ],
+  },
+  {
+    order: '其三', name: '黒楽茶碗', ro: 'Kuro-raku chawan', paint: paintRaku, cracks: 5, hair: 2,
+    big: '一期一会', kana: 'いちごいちえ · Ichigo ichie',
+    text: [
+      '茶道有句說話：「一期一会」。今日呢一碗茶、呢一次相遇，一生人只會有一次。',
+      '你頭先修補嘅裂痕係隨機生成嘅。世上冇第二件器物會碎成一模一樣——佢只為你、喺呢一刻出現過一次。',
+      '下次再玩，佢就唔會再係咁樣。',
+    ],
+  },
+];
+
+/* ---------------- state ---------------- */
+let state = 'intro', vi = 0, stage = 0, V = null, tex = null;
+let pieces = [], cracks = [], totalSamples = 0, crackCenter = { x: 0, y: 0 };
+let dust = [], parts = [], glints = [], motes = [];
+let polish = 0, polishDist = 0, shattered = false, busy = false, shake = 0, finishing = false;
+let drag = null, snapshots = [];
+const ptr = { x: 0, y: 0, nx: 0, ny: 0, down: false, lx: null, ly: null, inside: false };
+
+for (let i = 0; i < 46; i++) motes.push({ x: Math.random(), y: Math.random(), v: .004 + Math.random() * .01, s: .5 + Math.random() * 1.6, p: Math.random() * TAU });
+
+/* ---------------- fracture generation ---------------- */
+function jaggedLine(x0, y0, x1, y1, k, amp) {
+  const pts = [{ x: x0, y: y0 }];
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+  for (let j = 1; j < k; j++) {
+    const t = j / k, off = (Math.random() - .5) * 2 * amp * (0.35 + Math.sin(Math.PI * t));
+    pts.push({ x: x0 + dx * t + nx * off, y: y0 + dy * t + ny * off });
+  }
+  pts.push({ x: x1, y: y1 });
+  return pts;
+}
+
+function polyCentroid(P) {
+  let a = 0, cx = 0, cy = 0;
+  for (let i = 0; i < P.length; i++) {
+    const p = P[i], q = P[(i + 1) % P.length], f = p.x * q.y - q.x * p.y;
+    a += f; cx += (p.x + q.x) * f; cy += (p.y + q.y) * f;
+  }
+  a *= .5;
+  return Math.abs(a) < 1e-6 ? { x: P[0].x, y: P[0].y } : { x: cx / (6 * a), y: cy / (6 * a) };
+}
+
+function generate(n, hair) {
+  const c = { x: (Math.random() - .5) * .45, y: (Math.random() - .5) * .45 };
+  crackCenter = c;
+  const base = Math.random() * TAU, slot = TAU / n;
+  const angs = [];
+  for (let i = 0; i < n; i++) angs.push(base + (i + (Math.random() - .5) * .5) * slot);
+  angs.sort((a, b) => a - b);
+  const lines = angs.map(a => jaggedLine(c.x, c.y, Math.cos(a) * 1.04, Math.sin(a) * 1.04, 10, .045));
+  pieces = [];
+  for (let i = 0; i < n; i++) {
+    const a0 = angs[i], a1 = i + 1 < n ? angs[i + 1] : angs[0] + TAU;
+    const poly = lines[i].slice();
+    for (let a = a0 + .06; a < a1 - .03; a += .06) poly.push({ x: Math.cos(a) * 1.04, y: Math.sin(a) * 1.04 });
+    const back = lines[(i + 1) % n].slice().reverse();
+    poly.push(...back.slice(0, back.length - 1));
+    const ce = polyCentroid(poly);
+    const ext = Math.max(...poly.map(q => Math.hypot(q.x - ce.x, q.y - ce.y)));
+    pieces.push({ poly, ext, cx: ce.x, cy: ce.y, dx: 0, dy: 0, rot: 0, placed: true, snap: null, from: null, to: null });
+  }
+  const crackLines = lines.slice();
+  // hairline cracks (ひび) – fine cracks that do not separate pieces
+  for (let h = 0; h < hair; h++) {
+    const i = Math.floor(Math.random() * n);
+    const a0 = angs[i], a1 = i + 1 < n ? angs[i + 1] : angs[0] + TAU;
+    const src = lines[i][4 + Math.floor(Math.random() * 3)];
+    const a = a0 + (a1 - a0) * (.35 + Math.random() * .3);
+    crackLines.push(jaggedLine(src.x, src.y, Math.cos(a) * 1.04, Math.sin(a) * 1.04, 8, .03));
+  }
+  // resample into paintable points
+  cracks = []; totalSamples = 0;
+  for (const L of crackLines) {
+    const out = [];
+    const step = .014;
+    let carry = 0;
+    for (let j = 0; j < L.length - 1; j++) {
+      const p = L[j], q = L[j + 1], d = Math.hypot(q.x - p.x, q.y - p.y);
+      for (let t = carry; t < d; t += step) {
+        const x = p.x + (q.x - p.x) * t / d, y = p.y + (q.y - p.y) * t / d;
+        if (Math.hypot(x, y) < .992) out.push({ x, y, st: 0 });
+        carry = t + step - d;
+      }
+    }
+    cracks.push(out); totalSamples += out.length;
+  }
+}
+
+function buildTexture() {
+  const size = Math.ceil(2.2 * R * DPR);
+  tex = document.createElement('canvas');
+  tex.width = tex.height = size;
+  const g = tex.getContext('2d');
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.translate(1.1 * R, 1.1 * R);
+  g.save(); g.beginPath(); g.arc(0, 0, R, 0, TAU); g.clip();
+  V.paint(g, R, mulberry(V.seed));
+  g.restore();
+}
+
+/* ---------------- audio ---------------- */
+let AC = null, master = null, muted = false, lastSpark = 0;
+function A() {
+  if (muted) return null;
+  if (!AC) {
+    try {
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      master = AC.createGain(); master.gain.value = .55; master.connect(AC.destination);
+    } catch (e) { return null; }
+  }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function ping(a, f, t, dur, vol, type) {
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type || 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .004);
+  g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .05);
+}
+function noise(a, dur) {
+  const b = a.createBuffer(1, Math.floor(a.sampleRate * dur), a.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  return b;
+}
+function sShatter() {
+  const a = A(); if (!a) return; const t = a.currentTime;
+  const o = a.createOscillator(), g = a.createGain();
+  o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + .25);
+  g.gain.setValueAtTime(.55, t); g.gain.exponentialRampToValueAtTime(.001, t + .35);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + .4);
+  const n = a.createBufferSource(); n.buffer = noise(a, .9);
+  const f = a.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 2200;
+  const ng = a.createGain(); ng.gain.setValueAtTime(.45, t); ng.gain.exponentialRampToValueAtTime(.001, t + .8);
+  n.connect(f); f.connect(ng); ng.connect(master); n.start(t);
+  for (let i = 0; i < 18; i++) ping(a, 2400 + Math.random() * 5000, t + Math.random() * .7, .05 + Math.random() * .1, .04 + Math.random() * .07);
+}
+function sTock() {
+  const a = A(); if (!a) return; const t = a.currentTime;
+  ping(a, 680, t, .14, .22, 'triangle'); ping(a, 1900, t, .05, .06);
+}
+function sBell() {
+  const a = A(); if (!a) return; const t = a.currentTime, b = 392;
+  [[1, .2, 4.5], [2.76, .09, 3], [5.4, .05, 1.8], [8.93, .025, 1.1]].forEach(([m, v, d]) => ping(a, b * m, t, d, v));
+}
+function sSpark() {
+  const now = performance.now(); if (now - lastSpark < 70) return; lastSpark = now;
+  const a = A(); if (!a) return;
+  ping(a, 2800 + Math.random() * 3200, a.currentTime, .18, .025);
+}
+$('mute').onclick = () => {
+  muted = !muted; $('mute').textContent = muted ? '✕' : '♪';
+  if (master) master.gain.value = muted ? 0 : .55;
+};
+
+/* ---------------- UI ---------------- */
+function showHUD(on) { $('hudTop').classList.toggle('hidden', !on); $('hudBot').classList.toggle('hidden', !on); }
+function setStageUI() {
+  $('vname').innerHTML = `${V.order} · <b>${V.name}</b> · ${V.ro}`;
+  $('steps').innerHTML = STAGES.map((s, i) => `<div class="step ${i < stage ? 'done' : i === stage ? 'now' : ''}">${s.k}</div>`).join('');
+  const S = STAGES[stage];
+  $('sTitle').innerHTML = `${S.k}<small>${S.jp}</small>`;
+  $('sQuote').textContent = S.q;
+  $('sHint').textContent = S.h;
+  setBar(0);
+}
+function setBar(v) { $('bar').style.width = (Math.max(0, Math.min(1, v)) * 100).toFixed(1) + '%'; }
+function toast(html, ms) {
+  return new Promise(res => {
+    $('toastText').innerHTML = html; $('toast').classList.add('show');
+    setTimeout(() => { $('toast').classList.remove('show'); setTimeout(res, 600); }, ms);
+  });
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------------- flow ---------------- */
+function startVessel(i) {
+  vi = i; V = VESSELS[i]; V.seed = (Math.random() * 1e9) | 0;
+  stage = 0; shattered = false; busy = false; finishing = false;
+  polish = 0; polishDist = 0; dust = []; parts = []; glints = [];
+  generate(V.cracks, V.hair);
+  buildTexture();
+  state = 'play';
+  showHUD(true); setStageUI();
+}
+
+async function completeStage() {
+  busy = true;
+  sBell(); setBar(1);
+  if (stage === 4) { finishVessel(); return; }
+  await wait(900);
+  if (stage === 1) await toast('<b>漆風呂</b>放入溫暖潮濕嘅「漆風呂」，等麥漆慢慢乾透<br>——大約一至兩個星期。', 2600);
+  if (stage === 3) await toast('<b>待つ</b>再等幾日，等金粉同漆結合埋一齊。', 2200);
+  stage++; setStageUI(); busy = false;
+}
+
+async function finishVessel() {
+  finishing = true;
+  $('steps').innerHTML = STAGES.map(s => `<div class="step done">${s.k}</div>`).join('');
+  $('sTitle').innerHTML = '完<small>kansei</small>';
+  $('sQuote').textContent = '裂痕仍然喺度。只係，而家佢係金色嘅。';
+  $('sHint').textContent = '';
+  await wait(3200);
+  snapshots[vi] = snapshot();
+  $('rKicker').textContent = `${V.order} · ${V.name}`;
+  $('rBig').textContent = V.big;
+  $('rKana').textContent = V.kana;
+  $('rText').innerHTML = V.text.map(t => `<p>${t}</p>`).join('');
+  $('nextBtn').textContent = vi < VESSELS.length - 1 ? '下一件' : '最後……';
+  $('reflect').classList.add('show');
+  state = 'reflect';
+}
+
+function snapshot() {
+  const s = document.createElement('canvas'); s.width = s.height = 320;
+  const g = s.getContext('2d');
+  const half = 1.08 * R;
+  g.drawImage(cv, (CX - half) * DPR, (CY - half) * DPR, 2 * half * DPR, 2 * half * DPR, 0, 0, 320, 320);
+  return s.toDataURL('image/png');
+}
+
+function showEnding() {
+  state = 'ending'; showHUD(false);
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日　${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const lines = [
+    '<div class="kicker">終 · 刹那</div>',
+    '<p>佛經講，一彈指之間，已經有六十個「刹那」（せつな）。</p>',
+    '<p>一件器物跌落地、碎開，只係一刹那。</p>',
+    '<p>但係嗰一刹那發生咗，就永遠發生咗。<br>冇任何力量，可以令佢變返「未發生過」。</p>',
+    '<p>金繼冇假裝傷痕唔存在。佢用黃金，將嗰一刹那記低——一直記到器物嘅最後。</p>',
+    '<p>道元禪師講「而今」：只有此刻係真實嘅。<br>而每一個此刻，都完整咁包含住永恆。</p>',
+    '<div class="gold-rule"></div>',
+    '<p>所以，一剎那嘅永恆，都係永恆。</p>',
+    '<div class="final">一瞬は、永遠。</div>',
+    `<div class="stamp">${stamp}<br>你修補三件器物嘅呢一刻，已經過去咗——<br>但佢，已經永遠發生過。</div>`,
+    '<button class="btn ghost" id="againBtn">再修補一次</button>',
+  ];
+  const imgs = snapshots.map((src, i) => `<img src="${src}" alt="${VESSELS[i].name}" style="animation-delay:${.3 + i * .5}s">`).join('');
+  $('endCard').innerHTML = `<div class="trio">${imgs}</div>` +
+    lines.map((l, i) => `<div class="line" style="animation-delay:${1.8 + i * 1.5}s">${l}</div>`).join('');
+  $('ending').classList.add('show');
+  $('ending').scrollTop = 0;
+  $('againBtn').onclick = () => {
+    $('ending').classList.remove('show'); snapshots = [];
+    setTimeout(() => startVessel(0), 500);
+  };
+  setTimeout(sBell, 1800 + 8 * 1500);
+}
+
+$('startBtn').onclick = () => { A(); $('intro').classList.remove('show'); setTimeout(() => startVessel(0), 400); };
+$('nextBtn').onclick = () => {
+  $('reflect').classList.remove('show');
+  if (vi < VESSELS.length - 1) setTimeout(() => startVessel(vi + 1), 500);
+  else setTimeout(showEnding, 500);
+};
+
+/* ---------------- geometry helpers ---------------- */
+function pieceScreen(p) { return { x: CX + (p.cx + p.dx) * R, y: CY + (p.cy + p.dy) * R }; }
+function pointInPoly(P, x, y) {
+  let inside = false;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+    const a = P[i], b = P[j];
+    if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+function hitPiece(mx, my) {
+  for (let i = pieces.length - 1; i >= 0; i--) {
+    const p = pieces[i]; if (p.placed) continue;
+    const s = pieceScreen(p);
+    let x = (mx - s.x) / R, y = (my - s.y) / R;
+    const c = Math.cos(-p.rot), sn = Math.sin(-p.rot);
+    const lx = x * c - y * sn + p.cx, ly = x * sn + y * c + p.cy;
+    if (pointInPoly(p.poly, lx, ly)) return p;
+  }
+  return null;
+}
+const ease = t => 1 - Math.pow(1 - t, 3);
+
+/* ---------------- actions ---------------- */
+function shatter() {
+  shattered = true; busy = true; shake = 1; sShatter();
+  for (const p of pieces) {
+    let dx = p.cx - crackCenter.x, dy = p.cy - crackCenter.y, L = Math.hypot(dx, dy) || 1;
+    dx /= L; dy /= L;
+    const dist = .45 + Math.random() * .4;
+    let tx = dx * dist + (Math.random() - .5) * .25, ty = dy * dist * 1.25 + (Math.random() - .5) * .25;
+    // keep each shard (not just its centre) on screen and clear of the text
+    const e = p.ext * R * .72;
+    const xmin = (8 + e - CX) / R - p.cx, xmax = (W - 8 - e - CX) / R - p.cx;
+    const ymin = (96 + e - CY) / R - p.cy, ymax = (H - 150 - e - CY) / R - p.cy;
+    tx = xmin < xmax ? Math.max(xmin, Math.min(xmax, tx)) : (xmin + xmax) / 2;
+    ty = ymin < ymax ? Math.max(ymin, Math.min(ymax, ty)) : (ymin + ymax) / 2;
+    const tr = (Math.random() < .5 ? -1 : 1) * (.35 + Math.random() * .9);
+    p.placed = false; p.from = { t: performance.now(), dur: 750 + Math.random() * 250 }; p.to = { x: tx, y: ty, r: tr };
+  }
+  // shuffle draw order
+  pieces.sort(() => Math.random() - .5);
+  setTimeout(() => { stage = 1; setStageUI(); busy = false; }, 1100);
+}
+
+function place(p) {
+  p.placed = true; p.snap = { t: performance.now(), x: p.dx, y: p.dy, r: p.rot };
+  sTock();
+  const done = pieces.filter(q => q.placed).length;
+  setBar(done / pieces.length);
+  if (done === pieces.length) completeStage();
+}
+
+function forEachNear(x, y, rad, fn) {
+  const r2 = rad * rad;
+  for (const C of cracks) for (const s of C) { const dx = s.x - x, dy = s.y - y; if (dx * dx + dy * dy < r2) fn(s); }
+}
+function countState(v) { let n = 0; for (const C of cracks) for (const s of C) if (s.st >= v) n++; return n; }
+function setAll(v) { for (const C of cracks) for (const s of C) s.st = Math.max(s.st, v); }
+
+function lacquerStroke(x0, y0, x1, y1) {
+  const d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(d / .015));
+  let changed = false;
+  for (let i = 0; i <= n; i++) {
+    const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n;
+    forEachNear(x, y, .06, s => { if (s.st < 1) { s.st = 1; changed = true; } });
+  }
+  if (changed) {
+    const f = countState(1) / totalSamples; setBar(f);
+    if (f >= .965) { setAll(1); completeStage(); }
+  }
+}
+
+/* ---------------- input ---------------- */
+function toLocal(e) {
+  ptr.x = e.clientX; ptr.y = e.clientY;
+  ptr.nx = (ptr.x - CX) / R; ptr.ny = (ptr.y - CY) / R;
+  ptr.inside = Math.hypot(ptr.nx, ptr.ny) < 1.15;
+}
+cv.addEventListener('pointerdown', e => {
+  toLocal(e); ptr.down = true; ptr.lx = ptr.nx; ptr.ly = ptr.ny;
+  try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+  if (state !== 'play' || busy || finishing) return;
+  if (stage === 0 && !shattered && Math.hypot(ptr.nx, ptr.ny) < 1) shatter();
+  else if (stage === 1) {
+    const p = hitPiece(ptr.x, ptr.y);
+    if (p) {
+      pieces.splice(pieces.indexOf(p), 1); pieces.push(p);
+      drag = { p, ox: ptr.nx - p.dx, oy: ptr.ny - p.dy, r0: p.rot, d0: Math.max(.05, Math.hypot(p.dx, p.dy)) };
+      p.from = null;
+    }
+  } else if (stage === 2) lacquerStroke(ptr.nx, ptr.ny, ptr.nx, ptr.ny);
+});
+cv.addEventListener('pointermove', e => {
+  toLocal(e);
+  if (state !== 'play' || busy || finishing) { ptr.lx = ptr.nx; ptr.ly = ptr.ny; return; }
+  if (stage === 1 && drag) {
+    const p = drag.p;
+    p.dx = ptr.nx - drag.ox; p.dy = ptr.ny - drag.oy;
+    const d = Math.hypot(p.dx, p.dy);
+    p.rot = drag.r0 * Math.min(1, d / drag.d0);
+    if (d < .035) { drag = null; place(p); }
+  } else if (stage === 2 && ptr.down) {
+    lacquerStroke(ptr.lx, ptr.ly, ptr.nx, ptr.ny);
+  } else if (stage === 4 && ptr.down && ptr.inside) {
+    const d = Math.hypot(ptr.nx - ptr.lx, ptr.ny - ptr.ly);
+    polishDist += Math.min(d, .3);
+    polish = Math.min(1, polishDist / 16);
+    setBar(polish);
+    if (Math.random() < .5) {
+      forEachNear(ptr.nx, ptr.ny, .1, s => { if (Math.random() < .04) glints.push({ x: s.x, y: s.y, t: 0 }); });
+    }
+    if (d > .01) sSpark();
+    if (polish >= 1) completeStage();
+  }
+  ptr.lx = ptr.nx; ptr.ly = ptr.ny;
+});
+const up = e => {
+  ptr.down = false;
+  if (drag) {
+    const p = drag.p; drag = null;
+    if (Math.hypot(p.dx, p.dy) < .13) place(p);
+  }
+};
+cv.addEventListener('pointerup', up);
+cv.addEventListener('pointercancel', up);
+cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') ptr.inside = false; });
+
+/* ---------------- update ---------------- */
+function update(dt, now) {
+  shake *= Math.pow(.0015, dt / 1000);
+  for (const m of motes) { m.y -= m.v * dt / 1000; m.p += dt / 1000; if (m.y < -.02) { m.y = 1.02; m.x = Math.random(); } }
+  if (state !== 'play') return;
+  for (const p of pieces) {
+    if (p.from) {
+      const t = Math.min(1, (now - p.from.t) / p.from.dur), e = ease(t);
+      p.dx = p.to.x * e; p.dy = p.to.y * e; p.rot = p.to.r * e;
+      if (t >= 1) p.from = null;
+    }
+    if (p.snap) {
+      const t = Math.min(1, (now - p.snap.t) / 180), e = ease(t);
+      p.dx = p.snap.x * (1 - e); p.dy = p.snap.y * (1 - e); p.rot = p.snap.r * (1 - e);
+      if (t >= 1) { p.snap = null; p.dx = p.dy = p.rot = 0; }
+    }
+  }
+  // gold sprinkling
+  if (stage === 3 && ptr.down && !busy && !finishing) {
+    for (let i = 0; i < 5; i++) {
+      const a = Math.random() * TAU, r = Math.sqrt(Math.random()) * .07;
+      parts.push({ x: ptr.nx + Math.cos(a) * r, y: ptr.ny + Math.sin(a) * r, z: .18 + Math.random() * .15, life: 0, max: 280 + Math.random() * 320 });
+    }
+  }
+  let converted = false;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const q = parts[i]; q.life += dt;
+    if (q.life >= q.max) {
+      parts.splice(i, 1);
+      if (stage === 3) {
+        forEachNear(q.x, q.y, .032, s => { if (s.st === 1) { s.st = 2; converted = true; } });
+        if (Math.hypot(q.x, q.y) < .99 && Math.random() < .35 && dust.length < 900) dust.push({ x: q.x, y: q.y, a: .4 + Math.random() * .5, s: .5 + Math.random() });
+      }
+    }
+  }
+  if (converted && stage === 3 && !busy) {
+    sSpark();
+    const f = countState(2) / totalSamples; setBar(f);
+    if (f >= .965) { setAll(2); completeStage(); }
+  }
+  for (let i = glints.length - 1; i >= 0; i--) { glints[i].t += dt; if (glints[i].t > 500) glints.splice(i, 1); }
+}
+
+/* ---------------- render ---------------- */
+function platePath(g, P, s) {
+  g.beginPath(); g.moveTo(P[0].x * s, P[0].y * s);
+  for (let i = 1; i < P.length; i++) g.lineTo(P[i].x * s, P[i].y * s);
+  g.closePath();
+}
+
+function drawPlateWhole(alpha) {
+  ctx.save(); ctx.translate(CX, CY);
+  ctx.globalAlpha = alpha == null ? 1 : alpha;
+  if (alpha == null) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.65)'; ctx.shadowBlur = R * .18; ctx.shadowOffsetY = R * .07;
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, 0, R * .99, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  ctx.drawImage(tex, -1.1 * R, -1.1 * R, 2.2 * R, 2.2 * R);
+  ctx.restore();
+}
+
+function pieceTransform(p) {
+  const s = pieceScreen(p);
+  ctx.translate(s.x, s.y); ctx.rotate(p.rot); ctx.translate(-p.cx * R, -p.cy * R);
+}
+
+function drawPieces() {
+  // ghost guide
+  if (stage === 1) {
+    ctx.save(); ctx.translate(CX, CY);
+    ctx.globalAlpha = .1; ctx.drawImage(tex, -1.1 * R, -1.1 * R, 2.2 * R, 2.2 * R); ctx.globalAlpha = 1;
+    ctx.setLineDash([4, 6]); ctx.strokeStyle = 'rgba(216,178,90,.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.stroke();
+    ctx.restore();
+  }
+  const placed = pieces.filter(p => p.placed && !p.snap), loose = pieces.filter(p => !(p.placed && !p.snap));
+  // placed: shadow pass then texture pass
+  if (placed.length) {
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = R * .15; ctx.shadowOffsetY = R * .06; ctx.fillStyle = '#000';
+    for (const p of placed) { ctx.save(); pieceTransform(p); platePath(ctx, p.poly, R * .99); ctx.fill(); ctx.restore(); }
+    ctx.restore();
+    for (const p of placed) drawPieceTex(p, false);
+  }
+  for (const p of loose) {
+    const lifted = drag && drag.p === p;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = R * (lifted ? .25 : .12); ctx.shadowOffsetY = R * (lifted ? .12 : .05);
+    pieceTransform(p); ctx.fillStyle = '#000'; platePath(ctx, p.poly, R * .99); ctx.fill();
+    ctx.restore();
+    drawPieceTex(p, true);
+  }
+  // thin seams between placed pieces
+  if (stage >= 1) drawCracks(performance.now(), true);
+}
+
+function drawPieceTex(p, edge) {
+  ctx.save(); pieceTransform(p);
+  platePath(ctx, p.poly, R); ctx.save(); ctx.clip();
+  ctx.drawImage(tex, -1.1 * R, -1.1 * R, 2.2 * R, 2.2 * R);
+  ctx.restore();
+  if (edge) {
+    // exposed ceramic body on the broken edges
+    ctx.save(); platePath(ctx, p.poly, R); ctx.clip();
+    ctx.strokeStyle = 'rgba(232,218,196,.55)'; ctx.lineWidth = Math.max(1.2, R * .012);
+    platePath(ctx, p.poly, R); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function strokeRuns(pred, style, width, onlyPlaced) {
+  ctx.strokeStyle = style; ctx.lineWidth = width;
+  ctx.beginPath();
+  for (const C of cracks) {
+    let open = false;
+    for (let i = 0; i < C.length; i++) {
+      const s = C[i];
+      if (pred(s)) {
+        if (!open) { ctx.moveTo(s.x * R, s.y * R); open = true; }
+        else ctx.lineTo(s.x * R, s.y * R);
+      } else open = false;
+    }
+  }
+  ctx.stroke();
+}
+
+function drawCracks(now, seamsOnly) {
+  ctx.save(); ctx.translate(CX, CY);
+  ctx.beginPath(); ctx.arc(0, 0, R * .995, 0, TAU); ctx.clip();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (seamsOnly) {
+    // only show seams once every piece is in place-ish: draw where neighbouring pieces are placed
+    if (pieces.every(p => p.placed && !p.snap)) strokeRuns(() => true, 'rgba(20,12,8,.7)', Math.max(1, R * .007));
+    ctx.restore(); return;
+  }
+  strokeRuns(s => s.st === 0, 'rgba(20,12,8,.75)', Math.max(1, R * .007));
+  if (stage === 2) {
+    const a = .25 + .2 * Math.sin(now / 350);
+    strokeRuns(s => s.st === 0, `rgba(255,214,150,${a})`, Math.max(1.5, R * .012));
+  }
+  // urushi (bengara lacquer)
+  const lw = Math.max(2.2, R * .022);
+  strokeRuns(s => s.st >= 1, '#5e1d12', lw);
+  strokeRuns(s => s.st === 1, 'rgba(255,170,140,.22)', lw * .3);
+  // gold
+  const gw = Math.max(2.6, R * .026);
+  const pz = stage === 4 || finishing ? polish : 0;
+  if (countState(2) > 0) {
+    const r = Math.round(170 + (240 - 170) * pz), g = Math.round(138 + (205 - 138) * pz), b = Math.round(70 + (112 - 70) * pz);
+    ctx.save();
+    if (pz > 0) { ctx.shadowColor = `rgba(255,205,110,${.7 * pz})`; ctx.shadowBlur = R * .06 * pz; }
+    strokeRuns(s => s.st === 2, `rgb(${r},${g},${b})`, gw);
+    ctx.restore();
+    if (pz < 1) {
+      // granular unpolished texture
+      ctx.fillStyle = `rgba(110,80,35,${.5 * (1 - pz)})`;
+      for (const C of cracks) for (let i = 0; i < C.length; i += 2) {
+        const s = C[i]; if (s.st !== 2) continue;
+        ctx.fillRect(s.x * R + Math.sin(i * 12.9) * gw * .3, s.y * R + Math.cos(i * 7.3) * gw * .3, 1, 1);
+      }
+    }
+    if (pz > .25) {
+      // travelling highlight
+      const sweep = ((now / 2600) % 1) * 3.2 - 1.6;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (const C of cracks) for (let i = 1; i < C.length; i++) {
+        const s = C[i], q = C[i - 1]; if (s.st !== 2 || q.st !== 2) continue;
+        const k = Math.exp(-Math.pow((s.x + s.y * .6) - sweep, 2) / .02) * (pz - .25) / .75;
+        if (k < .03) continue;
+        ctx.strokeStyle = `rgba(255,240,200,${.8 * k})`; ctx.lineWidth = gw * .55;
+        ctx.beginPath(); ctx.moveTo(q.x * R, q.y * R); ctx.lineTo(s.x * R, s.y * R); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+  // dust left over from sprinkling
+  if (dust.length && pz < 1) {
+    for (const d of dust) {
+      ctx.fillStyle = `rgba(214,176,90,${d.a * (1 - pz)})`;
+      ctx.fillRect(d.x * R, d.y * R, d.s * R / 150, d.s * R / 150);
+    }
+  }
+  ctx.restore();
+}
+
+function drawParticles(now) {
+  ctx.save(); ctx.translate(CX, CY);
+  for (const q of parts) {
+    const t = q.life / q.max, z = q.z * (1 - t);
+    const tw = .6 + .4 * Math.sin(q.life * .05 + q.x * 50);
+    ctx.fillStyle = `rgba(255,${200 + tw * 40 | 0},120,${.5 + .5 * tw})`;
+    const s = Math.max(1, R * .007 * (1 + z * 2));
+    ctx.fillRect(q.x * R - s / 2, (q.y - z * .35) * R - s / 2, s, s);
+  }
+  for (const gl of glints) {
+    const t = gl.t / 500, a = Math.sin(t * Math.PI), s = R * .04 * a;
+    ctx.strokeStyle = `rgba(255,250,225,${a})`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(gl.x * R - s, gl.y * R); ctx.lineTo(gl.x * R + s, gl.y * R);
+    ctx.moveTo(gl.x * R, gl.y * R - s); ctx.lineTo(gl.x * R, gl.y * R + s); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawCursor(now) {
+  if (state !== 'play' || busy || finishing || !ptr.inside) return;
+  ctx.save();
+  if (stage === 2) {
+    ctx.strokeStyle = 'rgba(200,90,60,.6)'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(ptr.x, ptr.y, .06 * R, 0, TAU); ctx.stroke();
+    ctx.fillStyle = 'rgba(94,29,18,.8)'; ctx.beginPath(); ctx.arc(ptr.x, ptr.y, 2.5, 0, TAU); ctx.fill();
+  } else if (stage === 3) {
+    ctx.strokeStyle = 'rgba(243,217,139,.45)'; ctx.setLineDash([2, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(ptr.x, ptr.y, .07 * R, 0, TAU); ctx.stroke();
+  } else if (stage === 4) {
+    ctx.fillStyle = 'rgba(239,231,216,.08)'; ctx.strokeStyle = 'rgba(239,231,216,.3)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(ptr.x, ptr.y, .1 * R, 0, TAU); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function render(now) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
+  // drifting gold motes
+  for (const m of motes) {
+    ctx.fillStyle = `rgba(216,178,90,${.08 + .08 * Math.sin(m.p)})`;
+    ctx.beginPath(); ctx.arc(m.x * W, m.y * H, m.s, 0, TAU); ctx.fill();
+  }
+  if (!V || state === 'intro' || state === 'ending') return;
+  ctx.save();
+  if (shake > .01) ctx.translate((Math.random() - .5) * shake * R * .08, (Math.random() - .5) * shake * R * .08);
+  if (stage === 0 && !shattered) {
+    const bob = Math.sin(now / 900) * R * .012;
+    ctx.translate(0, bob);
+    drawPlateWhole();
+  } else if (stage <= 1) {
+    drawPieces();
+  } else {
+    drawPlateWhole();
+    drawCracks(now, false);
+  }
+  drawParticles(now);
+  ctx.restore();
+  drawCursor(now);
+  // stage 0 invitation ring
+  if (stage === 0 && !shattered && state === 'play') {
+    const a = .15 + .12 * Math.sin(now / 500);
+    ctx.strokeStyle = `rgba(216,178,90,${a})`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(CX, CY, R * (1.08 + .02 * Math.sin(now / 500)), 0, TAU); ctx.stroke();
+  }
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(50, now - last); last = now;
+  update(dt, now); render(now);
+  requestAnimationFrame(frame);
+}
+addEventListener('resize', layout);
+layout();
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
