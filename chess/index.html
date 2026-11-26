@@ -64,7 +64,7 @@
   .mi { position: relative; display: grid; grid-template-columns: 56px 1fr auto; align-items: baseline; width: 100%; padding: 1.3vh 6px 1.1vh;
     border: 0; border-bottom: 1px solid var(--ink); background: none; text-align: left; isolation: isolate; transition: color .15s;
     animation: rise .5s cubic-bezier(.2,1,.2,1) both; }
-  .mi:nth-child(1) { animation-delay: .3s; } .mi:nth-child(2) { animation-delay: .36s; } .mi:nth-child(3) { animation-delay: .42s; } .mi:nth-child(4) { animation-delay: .48s; }
+  .mi:nth-child(1) { animation-delay: .3s; } .mi:nth-child(2) { animation-delay: .36s; } .mi:nth-child(3) { animation-delay: .42s; } .mi:nth-child(4) { animation-delay: .48s; } .mi:nth-child(5) { animation-delay: .54s; }
   .mi::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--ink); transform: scaleY(0); transform-origin: bottom;
     transition: transform .2s cubic-bezier(.7,0,.2,1); }
   .mi .n { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; }
@@ -197,6 +197,7 @@
   #gallery .row .btn:last-child { border-right: 0; }
   body.gallery #panel, body.gallery #fab { display: none; }
   body:not(.gallery) #gName { display: none; }
+  body.demo #bUndo, body.demo #bNew, body.demo #bGallery { opacity: .35; pointer-events: none; }
   body.intro #panel, body.intro #fab, body.intro header, body.intro #hudtop { visibility: hidden; }
 
   @media (max-width: 760px) {
@@ -243,7 +244,8 @@
       <button class="mi" data-mode="ai-w"><span class="n">01</span><span class="t">Play White</span><span class="a">→</span></button>
       <button class="mi" data-mode="ai-b"><span class="n">02</span><span class="t">Play Black</span><span class="a">→</span></button>
       <button class="mi" data-mode="pvp"><span class="n">03</span><span class="t">Versus</span><span class="a">→</span></button>
-      <button class="mi" id="tGallery"><span class="n">04</span><span class="t">Gallery</span><span class="a">→</span></button>
+      <button class="mi" data-mode="demo"><span class="n">04</span><span class="t">COM vs COM</span><span class="a">→</span></button>
+      <button class="mi" id="tGallery"><span class="n">05</span><span class="t">Gallery</span><span class="a">→</span></button>
     </nav>
     <div class="foot">
       <div class="opts mono"><span>AI —</span><span id="tLevel" style="display:flex"><button class="btn" data-l="1">Easy</button><button class="btn" data-l="2" aria-pressed="true" style="margin-left:-1px">Normal</button><button class="btn" data-l="3" style="margin-left:-1px">Hard</button></span></div>
@@ -258,7 +260,7 @@
 </section>
 
 <header><button id="bMenu" title="Menu"><span class="wm">Chess<em>Fantasia</em></span><span class="mono">← Menu</span></button></header>
-<div id="hudtop" class="mono"><span class="live">Live</span><span class="tcode" id="mcount">Move 001</span></div>
+<div id="hudtop" class="mono"><span class="live" id="liveLabel">Live</span><span class="tcode" id="mcount">Move 001</span></div>
 
 <aside id="panel">
   <section>
@@ -1770,10 +1772,12 @@ function updateTurnUI() {
   document.documentElement.style.setProperty('--turn', state.turn === 'w' ? 'var(--cyan)' : 'var(--gold)');
   $('pW').classList.toggle('active', state.turn === 'w' && !gameOver);
   $('pB').classList.toggle('active', state.turn === 'b' && !gameOver);
-  const who = c => settings.mode === 'pvp' ? '' : (isHuman(c) ? 'YOU' : `AI · ${['', 'EASY', 'NORMAL', 'HARD'][settings.level]}`);
+  const lvl = ['', 'EASY', 'NORMAL', 'HARD'][settings.level];
+  const who = c => settings.mode === 'pvp' ? '' : settings.mode === 'demo' ? `COM ${c === 'w' ? 1 : 2} · ${lvl}` : (isHuman(c) ? 'YOU' : `AI · ${lvl}`);
   $('nW').innerHTML = `White<small>${who('w') || 'Player 1'}</small>`;
   $('nB').innerHTML = `Black<small>${who('b') || 'Player 2'}</small>`;
-  $('modeLabel').textContent = { 'ai-w': 'vs AI', 'ai-b': 'vs AI', pvp: 'Versus' }[settings.mode];
+  $('modeLabel').textContent = { 'ai-w': 'vs AI', 'ai-b': 'vs AI', pvp: 'Versus', demo: 'COM vs COM', idle: '—' }[settings.mode];
+  $('liveLabel').textContent = settings.mode === 'demo' ? 'Demo — auto play' : 'Live';
   $('mcount').textContent = 'Move ' + String(Math.floor(history.length / 2) + 1).padStart(3, '0');
   // captured material, worked out from what is missing from the board
   const start = { P: 8, N: 2, B: 2, R: 2, Q: 1 };
@@ -1810,7 +1814,8 @@ function updateMarks() {
   checkMark.visible = E.inCheck(state);
   if (checkMark.visible) checkMark.position.copy(sqPos(ks)).setY(.02);
 }
-const isHuman = color => settings.mode === 'pvp' || (settings.mode === 'ai-w' ? color === 'w' : color === 'b');
+const isHuman = color => settings.mode === 'demo' ? false
+  : settings.mode === 'pvp' || settings.mode === 'idle' || (settings.mode === 'ai-w' ? color === 'w' : color === 'b');
 
 function refreshStatus() {
   updateMarks();
@@ -1823,13 +1828,19 @@ function refreshStatus() {
     toast('Checkmate', 4200, `${NAME[win]} wins`);
     gameOver = true;
     victory(win);
+    demoNext();
   } else if (st === 'stalemate' || st === 'fifty' || st === 'insufficient') {
     const why = { stalemate: 'Stalemate', fifty: '50-move rule', insufficient: 'Insufficient material' }[st];
     gameOver = true;
     setStatus('Draw — ' + why, 'over'); toast('DRAW', 3200, why);
     gameOver = true;
+    demoNext();
+  } else if (settings.mode === 'demo' && history.length >= 180) {
+    gameOver = true;
+    setStatus('Draw — move limit', 'over'); toast('DRAW', 3200, 'Demo move limit');
+    demoNext();
   } else {
-    setStatus(st === 'check' ? `${who} is in check` : (isHuman(state.turn) ? (settings.mode === 'pvp' ? `${who} to move` : 'Your move') : `${who} is plotting…`), st === 'check' ? 'check' : '');
+    setStatus(st === 'check' ? `${who} is in check` : (isHuman(state.turn) ? (settings.mode === 'pvp' ? `${who} to move` : 'Your move') : `${settings.mode === 'demo' ? 'COM ' + (state.turn === 'w' ? 1 : 2) + ' — ' + who : who} is plotting…`), st === 'check' ? 'check' : '');
     if (st === 'check') toast('Check', 1400, `${who} king`);
   }
   updateTurnUI();
@@ -1995,10 +2006,26 @@ async function aiTurn() {
   setStatus(`${NAME[state.turn]} is thinking…`);
   await new Promise(r => setTimeout(r, 30));
   const depth = settings.level;
-  const m = E.bestMove(state, depth, depth === 1 ? 90 : 6);
+  const demo = settings.mode === 'demo';
+  const m = E.bestMove(state, depth, depth === 1 ? 90 : demo ? 14 : 6);   // a little looser in demo so games differ
+  if (demo) await new Promise(r => setTimeout(r, 450 / SPEED));
   busy = false;
-  if (m) play(m);
+  if (m && !gameOver && !isHuman(state.turn)) play(m);
 }
+
+/* ---------- COM vs COM demo ---------- */
+let demoTimer = 0;
+function demoNext() {
+  if (settings.mode !== 'demo') return;
+  clearTimeout(demoTimer);
+  demoTimer = setTimeout(() => whenIdle(() => {
+    if (settings.mode !== 'demo') return;
+    tvStatic();
+    newGame();
+    setTimeout(() => toast('Next Match', 1500, 'COM vs COM'), 400);
+  }), 6000);
+}
+function whenIdle(fn) { if (!busy) fn(); else setTimeout(() => whenIdle(fn), 120); }
 
 /* ---------- controls ---------- */
 function newGame() {
@@ -2088,13 +2115,18 @@ setInterval(() => {
 }, 100);
 function startGame(mode) {
   tvStatic();
+  clearTimeout(demoTimer);
   settings.mode = mode;
   document.body.classList.remove('intro');
+  document.body.classList.toggle('demo', mode === 'demo');
   $('title').classList.add('hide');
   geared = settings.tmode === 'always'; setFab();
-  newGame();
-  servo(true, .5);
-  setTimeout(() => toast('Game Start', 1500, 'Channel 01'), 500);
+  controls.autoRotate = mode === 'demo'; controls.autoRotateSpeed = .45;
+  whenIdle(() => {
+    newGame();
+    servo(true, .5);
+    setTimeout(() => mode === 'demo' ? toast('Demo', 1600, 'COM vs COM') : toast('Game Start', 1500, 'Channel 01'), 500);
+  });
 }
 document.querySelectorAll('#title [data-mode]').forEach(b => b.onclick = () => startGame(b.dataset.mode));
 // arrow keys walk the title menu
@@ -2107,7 +2139,8 @@ addEventListener('keydown', e => {
 });
 $('tGallery').onclick = () => { document.body.classList.remove('intro'); $('title').classList.add('hide'); openGallery(true); };
 $('bMenu').onclick = () => {
-  if (busy) return;
+  if (busy && settings.mode !== 'demo') return;
+  if (settings.mode === 'demo') { settings.mode = 'idle'; clearTimeout(demoTimer); controls.autoRotate = false; document.body.classList.remove('demo'); }
   tvStatic();
   if (galleryOn) closeGallery();
   document.body.classList.add('intro');
