@@ -306,6 +306,26 @@
   body:not(.intro) .title-tap, body.sound-ready .tapsound { display: none; }
   body.moon .tapsound { background: var(--cyan); color: var(--abyss); }
   #soundOn { font-size: 14px; padding: 10px 18px !important; }
+  /* press start (right before the movie, so the movie starts from a real tap with sound) */
+  #press { position: fixed; inset: 0; z-index: 57; display: grid; place-items: center; background: var(--paper); cursor: pointer; transition: opacity .45s; }
+  #press[hidden] { display: none; }
+  #press.gone { opacity: 0; pointer-events: none; }
+  #press .bg { position: absolute; inset: 0; background-image: linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+    background-size: 100% 25vh, 12.5vw 100%; opacity: .6; }
+  #press .inner { position: relative; display: grid; justify-items: center; gap: 28px; text-align: center; animation: rise .6s cubic-bezier(.2,1,.2,1) both; }
+  #press .bw { font-weight: 900; font-stretch: 62%; font-size: clamp(70px, 14vw, 200px); line-height: .8; text-transform: uppercase; }
+  #press .bw span { display: block; } #press .bw span + span { font-weight: 300; font-stretch: 100%; font-size: .56em; }
+  #press .moonlogo-p { display: none; width: min(560px, 80vw); filter: drop-shadow(0 0 24px rgba(79,224,255,.6)); }
+  #pressBtn { border: 1px solid var(--ink); background: var(--ink); color: var(--white); padding: 14px 30px; font-size: 15px; animation: blink 1.1s steps(1) infinite; }
+  #press .hint { color: var(--grey); }
+  #press .kp { position: absolute; bottom: 28px; left: 0; right: 0; text-align: center; color: var(--grey); letter-spacing: .3em; }
+  body.moon #press { background: radial-gradient(ellipse 70% 55% at 50% 30%, #123f8f 0%, #071d4a 55%, #030b1f 100%); }
+  body.moon #press .bg { background: url(assets/keyart_moon.jpg) center / cover; opacity: .25; filter: blur(2px); }
+  body.moon #press .bw { display: none; }
+  body.moon #press .moonlogo-p { display: block; }
+  body.moon #pressBtn { background: none; border: 0; color: var(--cyan); font-size: 22px; letter-spacing: .3em; text-shadow: 0 0 12px var(--cyan); }
+  body.moon #press .hint { color: rgba(234,248,255,.6); }
+  body.moon #press .kp { color: var(--cyan); }
   /* studio card */
   #studio { position: fixed; inset: 0; z-index: 58; display: grid; place-items: center; background: #0d0d0d; color: #fff; transition: opacity .5s; }
   #studio[hidden] { display: none; }
@@ -638,10 +658,19 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="tapsound mono" aria-hidden="true">♪ Tap anywhere for sound</div>
 </section>
 <section id="studio" aria-label="A Kenneth So Production" hidden>
   <div class="st"><span class="a mono">A</span><span class="n">Kenneth So</span><i class="rule"></i><span class="p mono">Production</span></div>
+</section>
+<section id="press" aria-label="Press start" hidden>
+  <div class="bg" aria-hidden="true"></div>
+  <div class="inner">
+    <div class="bw"><span>Chess</span><span>Fantasia</span></div>
+    <img class="moonlogo-p" src="assets/logo_moon.webp" alt="Chess Fantasia">
+    <button id="pressBtn" class="mono">Press start</button>
+    <div class="hint mono">Click, tap or press any key — sound on</div>
+  </div>
+  <div class="kp mono">A Kenneth So Production</div>
 </section>
 <section id="intro" aria-label="Opening movie" hidden>
   <video id="introVid" playsinline preload="auto"></video>
@@ -2077,6 +2106,16 @@ function fadeVol(el, to, ms, done) {
     if (k < 1) setTimeout(step, 30); else done?.();
   })();
 }
+const musicPool = [new Audio(), new Audio()];
+musicPool.forEach(a => { a.loop = true; a.preload = 'auto'; });
+function primeMusic() {
+  musicPool.forEach(a => {
+    if (!a.dataset.src) { a.src = MUSIC[THEME].title; a.dataset.src = MUSIC[THEME].title; }
+    a.volume = 0;
+    const p = a.play();
+    if (p) p.then(() => { if (a !== musicEl) a.pause(); }, () => {});
+  });
+}
 function setMusic(kind) {
   if (kind) musicKind = kind;
   const src = MUSIC[THEME][musicKind];
@@ -2086,8 +2125,11 @@ function setMusic(kind) {
   }
   if (musicEl && musicEl.dataset.src === src) { if (musicEl.paused) musicEl.play().then(() => fadeVol(musicEl, .42, 600), () => {}); return; }
   const old = musicEl;
-  const el = new Audio(src);
-  el.loop = true; el.volume = 0; el.dataset.src = src;
+  // reuse two primed elements (mobile Safari only lets elements that were started from a tap play later)
+  const el = musicPool[0] === old ? musicPool[1] : musicPool[0];
+  el.pause();
+  if (el.dataset.src !== src) { el.src = src; el.dataset.src = src; }
+  el.currentTime = 0; el.volume = 0;
   el.play().catch(() => {});
   musicEl = el;
   fadeVol(el, .42, 1400);
@@ -2110,8 +2152,9 @@ let soundReady = false;
 function unlockSound() {
   try { ac().resume(); } catch (e) { /* audio blocked */ }
   const vid = $('introVid');
-  if (!$('intro').hidden && vid.muted) { vid.muted = false; vid.play().catch(() => {}); $('soundOn').hidden = true; }
-  if ($('intro').hidden && !document.getElementById('boot')) {
+  // during the movie a tap only resumes it if the browser paused it; it never pauses or skips
+  if (!$('intro').hidden) { if (vid.paused && !vid.ended && vid.dataset.started) vid.play().catch(() => {}); return; }
+  if (!document.getElementById('boot') && $('press').hidden) {
     musicUnlocked = true;
     if (musicOn && musicEl && musicEl.paused) musicEl.play().then(() => fadeVol(musicEl, .42, 600), () => {});
     else setMusic();
@@ -2119,7 +2162,7 @@ function unlockSound() {
   soundReady = true;
   document.body.classList.add('sound-ready');
 }
-['pointerdown', 'keydown', 'touchend'].forEach(ev => addEventListener(ev, unlockSound, { passive: true, capture: true }));
+['click', 'keydown', 'touchend'].forEach(ev => addEventListener(ev, unlockSound, { passive: true }));
 syncMusicUI();
 
 /* ---------- RPG camera: sits behind the acting piece's shoulder ---------- */
@@ -2930,24 +2973,38 @@ const modelsReady = loadModels();
     if (soundOn) try { thud(); } catch (e) { /* audio blocked */ }
     setTimeout(() => { st.classList.add('gone'); setTimeout(() => { st.hidden = true; res(); }, 500); }, 2600);
   });
-  const play = async () => {
-    await studio();
+  // called synchronously inside the tap, so the movie is allowed to start with sound
+  const startMovie = () => {
+    const press = $('press');
+    if (press.hidden || press.classList.contains('gone')) return;
+    press.classList.add('gone');
+    setTimeout(() => { press.hidden = true; }, 450);
+    try { ac().resume(); } catch (e) { /* audio blocked */ }
+    musicUnlocked = true; soundReady = true; document.body.classList.add('sound-ready');
+    primeMusic();
     intro.hidden = false;
-    vid.volume = .85;
+    vid.muted = false; vid.volume = .85;
     vid.onended = () => setTimeout(toTitle, 900);
     vid.onerror = toTitle;
-    try { vid.muted = false; await vid.play(); soundReady = true; document.body.classList.add('sound-ready'); }
-    catch (e) {
-      // no gesture yet: browsers only allow silent autoplay
-      vid.muted = true;
-      try { await vid.play(); $('soundOn').hidden = false; } catch (e2) { toTitle(); return; }
-    }
+    vid.dataset.started = '1';
+    const p = vid.play();
+    if (p) p.catch(() => {
+      // the browser still refused sound: play silently with a sound button rather than not at all
+      vid.muted = true; vid.play().then(() => { $('soundOn').hidden = false; }, () => toTitle());
+    });
     cueLoop();
+  };
+  const play = async () => {
+    await studio();
+    $('press').hidden = false;
+    $('press').addEventListener('click', startMovie);
+    addEventListener('keydown', e => { if (!$('press').hidden && !['Tab', 'Shift', 'Alt', 'Control', 'Meta'].includes(e.key)) { e.preventDefault(); startMovie(); } });
+    $('pressBtn').focus({ preventScroll: true });
   };
   vid.src = `assets/intro_${THEME}.mp4`;
   const videoReady = new Promise(res => { vid.addEventListener('canplaythrough', res, { once: true }); vid.addEventListener('error', res, { once: true }); setTimeout(res, 8000); });
   Promise.all([modelsReady, videoReady]).then(() => setTimeout(play, 350));
-  $('soundOn').onclick = e => { e.stopPropagation(); vid.muted = false; $('soundOn').hidden = true; };
+  $('soundOn').onclick = e => { e.stopPropagation(); vid.muted = false; vid.play().catch(() => {}); $('soundOn').hidden = true; };
   $('skip').onclick = toTitle;
   addEventListener('keydown', e => { if (!intro.hidden && ['Escape', 'Enter', ' '].includes(e.key)) toTitle(); });
 
