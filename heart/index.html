@@ -4,37 +4,125 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Keep it below 100°C</title>
-<meta name="description" content="Kenneth Soh's digital painting of a kintsugi heart, turned into an interactive 3D object.">
+<meta name="description" content="Kenneth Soh's digital painting of a kintsugi heart, turned into an interactive 3D object with a live heartbeat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@200;300;400;500&family=IBM+Plex+Mono:wght@300;400;500&display=swap">
 <style>
+  /* Layout: full-bleed 3D stage, a thin framed HUD on top: four corners, ECG top-right, core temperature bottom-left. */
   :root{
-    --bg:#121110; --ink:#efe6d6; --muted:#9b9184; --gold:#f3d77b; --red:#d4121b;
+    --void:#070809;           /* stage black */
+    --line:#e9edf0;           /* HUD white */
+    --dim:#e9edf08c;          /* secondary text */
+    --hair:#e9edf02e;         /* hairlines */
+    --gold:#f2d27a;           /* kintsugi gold, the only accent */
+    --alarm:#ff3b30;          /* critical */
+    --f-disp:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+    --g:max(18px,3.2vw);      /* frame inset */
+    color-scheme:dark;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
-    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-    -webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:var(--void);color:var(--line);overflow:hidden;-webkit-tap-highlight-color:transparent}
+  body{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em}
   canvas{display:block;touch-action:none}
   #stage{position:fixed;inset:0}
-  .hud{position:fixed;pointer-events:none;z-index:2}
-  .title{top:max(20px,env(safe-area-inset-top));left:20px;right:20px}
-  .title h1{font-weight:400;font-size:clamp(22px,4vw,34px);letter-spacing:.01em;font-style:italic}
-  .title p{margin-top:6px;color:var(--muted);font:13px/1.4 ui-sans-serif,system-ui,sans-serif;letter-spacing:.04em}
-  .gauge{bottom:max(20px,env(safe-area-inset-bottom));left:20px;font:12px ui-sans-serif,system-ui,sans-serif;color:var(--muted);letter-spacing:.06em}
-  .gauge .temp{font:300 clamp(34px,7vw,52px)/1 ui-sans-serif,system-ui,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em;transition:color .3s}
-  .gauge .temp small{font-size:.45em;color:var(--muted);margin-left:2px}
-  .gauge .bar{width:min(220px,48vw);height:3px;background:#ffffff1a;margin:10px 0 6px;border-radius:2px;overflow:hidden}
-  .gauge .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--red));transition:width .25s}
-  .controls{bottom:max(20px,env(safe-area-inset-bottom));right:20px;display:flex;gap:8px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end;max-width:50vw}
-  button{font:12px ui-sans-serif,system-ui,sans-serif;letter-spacing:.05em;color:var(--ink);background:#ffffff10;
-    border:1px solid #ffffff22;border-radius:999px;padding:9px 14px;cursor:pointer;backdrop-filter:blur(6px)}
-  button:hover{background:#ffffff1e}
-  button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
-  .hint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);color:var(--muted);
-    font:13px ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;z-index:2;pointer-events:none;transition:opacity .6s}
-  .warn{position:fixed;left:20px;bottom:calc(max(20px,env(safe-area-inset-bottom)) + 96px);z-index:3;pointer-events:none;
-    font:600 13px ui-sans-serif,system-ui,sans-serif;letter-spacing:.2em;color:var(--gold);opacity:0;transition:opacity .4s;text-transform:uppercase}
-  a.back{pointer-events:auto;color:var(--muted);text-decoration:none;border-bottom:1px solid #ffffff30}
-  @media (max-width:560px){ .controls{max-width:none;left:20px;right:20px;bottom:auto;top:calc(max(20px,env(safe-area-inset-top)) + 84px);justify-content:flex-start} }
+
+  /* film grain + scanlines + vignette */
+  .fx{position:fixed;inset:0;pointer-events:none;z-index:1}
+  .fx::before{content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(0deg,#ffffff06 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+  .fx::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 50%,transparent 55%,#000000b0 100%)}
+
+  /* HUD frame */
+  .hud{position:fixed;inset:0;z-index:2;pointer-events:none;
+    padding:calc(var(--g) + env(safe-area-inset-top,0px)) max(var(--g),env(safe-area-inset-right,0px)) calc(var(--g) + env(safe-area-inset-bottom,0px)) max(var(--g),env(safe-area-inset-left,0px));
+    opacity:0;transition:opacity 1.2s ease .6s}
+  body.live .hud{opacity:1}
+  .corner{position:absolute;width:22px;height:22px;border:0 solid var(--line);opacity:.7}
+  .tl{top:calc(var(--g)*.5 + env(safe-area-inset-top,0px));left:calc(var(--g)*.5);border-top-width:1px;border-left-width:1px}
+  .tr{top:calc(var(--g)*.5 + env(safe-area-inset-top,0px));right:calc(var(--g)*.5);border-top-width:1px;border-right-width:1px}
+  .bl{bottom:calc(var(--g)*.5 + env(safe-area-inset-bottom,0px));left:calc(var(--g)*.5);border-bottom-width:1px;border-left-width:1px}
+  .br{bottom:calc(var(--g)*.5 + env(safe-area-inset-bottom,0px));right:calc(var(--g)*.5);border-bottom-width:1px;border-right-width:1px}
+  .grid{position:relative;height:100%;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 1fr auto;gap:16px}
+
+  .ident{display:grid;gap:8px;align-content:start;min-width:0}
+  .tag{color:var(--dim);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .tag b{font-weight:500;color:var(--line);border:1px solid var(--hair);padding:2px 6px}
+  .ident h1{font:200 clamp(30px,5.4vw,62px)/.9 var(--f-disp);letter-spacing:.06em;text-transform:uppercase;text-wrap:balance}
+  .ident h1 em{font-style:normal;color:var(--gold)}
+  .ident .han{font:300 11px var(--f-mono);letter-spacing:.3em;color:var(--dim)}
+  .rule{height:1px;width:min(320px,60vw);background:linear-gradient(90deg,var(--line),transparent)}
+
+  .vitals{display:grid;gap:6px;justify-items:end;align-content:start;text-align:right}
+  .vitals .row{display:flex;gap:10px;align-items:baseline;color:var(--dim)}
+  .vitals .bpm{font:200 34px/1 var(--f-disp);color:var(--line);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+  #ecg{width:min(240px,42vw);height:54px;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+  .blink{display:inline-block;width:6px;height:6px;background:var(--alarm);border-radius:50%;animation:bl 1s steps(2) infinite}
+  @keyframes bl{50%{opacity:0}}
+
+  .core{grid-column:1;grid-row:3;display:grid;gap:6px;align-content:end;min-width:0}
+  .core .lab{color:var(--dim);display:flex;gap:12px}
+  .core .temp{font:200 clamp(56px,11vw,120px)/.82 var(--f-disp);font-variant-numeric:tabular-nums;letter-spacing:-.01em;transition:color .3s}
+  .core .temp small{font-size:.3em;letter-spacing:.1em;color:var(--dim);margin-left:6px;vertical-align:top}
+  .scale{position:relative;width:min(360px,70vw);height:22px;margin-top:6px}
+  .scale .ticks{position:absolute;inset:0 0 auto;height:8px;
+    background:repeating-linear-gradient(90deg,var(--dim) 0 1px,transparent 1px 10%) ,repeating-linear-gradient(90deg,var(--hair) 0 1px,transparent 1px 2%);}
+  .scale .fill{position:absolute;left:0;top:10px;height:2px;width:0;background:var(--line);transition:width .2s,background .3s}
+  .scale .nums{position:absolute;left:0;right:0;top:13px;display:flex;justify-content:space-between;color:var(--dim);font-size:9px}
+  .scale .limit{position:absolute;right:0;top:-4px;height:16px;width:1px;background:var(--alarm)}
+
+  .ops{grid-column:2;grid-row:3;display:grid;gap:6px;justify-items:end;align-content:end;pointer-events:auto}
+  .ops .lab{color:var(--dim)}
+  .ops button{font:400 11px var(--f-mono);letter-spacing:.12em;color:var(--line);background:#07080999;border:1px solid var(--hair);
+    padding:9px 12px;cursor:pointer;text-transform:uppercase;min-width:168px;text-align:left;display:flex;justify-content:space-between;gap:14px;backdrop-filter:blur(4px)}
+  .ops button span{color:var(--dim)}
+  .ops button:hover{border-color:var(--line)}
+  .ops button:focus-visible{outline:1px solid var(--gold);outline-offset:2px}
+  .ops button[aria-pressed="true"]{border-color:var(--gold)}
+  .ops button[aria-pressed="true"] span{color:var(--gold)}
+  .ops .k{font-size:9px;color:var(--dim)}
+
+  .status{position:absolute;left:50%;transform:translateX(-50%);bottom:0;color:var(--dim);white-space:nowrap}
+  a.home{pointer-events:auto;color:var(--dim);text-decoration:none;border-bottom:1px solid var(--hair)}
+  a.home:hover{color:var(--line)}
+
+  /* critical banner */
+  .alarm{position:fixed;left:0;right:0;top:50%;transform:translateY(-50%);z-index:3;pointer-events:none;display:none;
+    padding:10px max(var(--g),env(safe-area-inset-left,0px));
+    background:repeating-linear-gradient(-45deg,#ff3b3022 0 10px,transparent 10px 20px);border-top:1px solid var(--alarm);border-bottom:1px solid var(--alarm);
+    color:var(--alarm);font:500 12px var(--f-mono);letter-spacing:.3em;text-align:center;text-transform:uppercase}
+  .alarm.on{display:block;animation:bl .8s steps(2) infinite}
+
+  /* opening screen */
+  .gate{position:fixed;inset:0;z-index:5;background:var(--void);display:grid;place-items:center;cursor:pointer;transition:opacity 1.4s ease}
+  .gate.out{opacity:0;pointer-events:none}
+  .gate .in{display:grid;gap:18px;justify-items:center;text-align:center;padding:0 24px}
+  .gate .pre{color:var(--dim);letter-spacing:.4em;min-height:1.4em}
+  .gate h2{font:200 clamp(34px,7vw,78px)/.95 var(--f-disp);letter-spacing:.12em;text-transform:uppercase;opacity:0;transition:opacity 1.6s}
+  .gate .han{font:300 12px var(--f-mono);letter-spacing:.5em;color:var(--dim);opacity:0;transition:opacity 1.6s .4s}
+  .gate .go{margin-top:24px;border:1px solid var(--hair);padding:10px 18px;letter-spacing:.35em;opacity:0;transition:opacity 1s 1.2s;font:400 11px var(--f-mono);color:var(--line);background:none;cursor:pointer}
+  .gate .go:focus-visible{outline:1px solid var(--gold);outline-offset:3px}
+  .gate.ready h2,.gate.ready .han,.gate.ready .go{opacity:1}
+  .gate .go::after{content:"";display:inline-block;width:7px;height:11px;background:var(--line);margin-left:10px;vertical-align:-1px;animation:bl 1s steps(2) infinite}
+  .gate .note{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:16px;right:16px;text-align:center;color:var(--dim);font-size:10px;letter-spacing:.3em}
+
+  .bars{position:fixed;left:0;right:0;height:0;background:#000;z-index:4;transition:height 1.6s cubic-bezier(.7,0,.2,1)}
+  .bars.top{top:0}.bars.bot{bottom:0}
+  body.cine .bars{height:9vh}
+
+  @media (max-width:640px){
+    .grid{grid-template-columns:1fr;grid-template-rows:auto auto 1fr auto auto}
+    .vitals{grid-row:2;justify-items:start;text-align:left}
+    .vitals .row{flex-direction:row-reverse}
+    .core{grid-row:4}
+    .ops{grid-column:1;grid-row:5;justify-items:stretch;grid-template-columns:1fr 1fr}
+    .ops .lab{grid-column:1/-1}
+    .ops button{min-width:0}
+    .status{display:none}
+    #ecg{width:min(240px,60vw);height:40px}
+  }
+  @media (prefers-reduced-motion: reduce){ .alarm.on,.blink,.gate .go::after{animation:none} }
 </style>
 <script type="importmap">
 { "imports": {
@@ -45,26 +133,55 @@
 </head>
 <body>
 <div id="stage"></div>
+<div class="fx"></div>
+<div class="bars top"></div><div class="bars bot"></div>
 
-<div class="hud title">
-  <h1>“Keep it below 100°C.”</h1>
-  <p>kennethsoh24 · Procreate, 2025 · <a class="back" href="../">home</a></p>
+<div class="hud" aria-live="polite">
+  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="grid">
+    <div class="ident">
+      <div class="tag"><b>FILE 0610</b><span>K_WORKS · KENNETHSOH24</span><span>PROCREATE / 2025</span></div>
+      <h1>Keep it below <em>100°C</em></h1>
+      <div class="rule"></div>
+      <div class="han">KINTSUGI HEART · THERMAL MONITOR</div>
+    </div>
+
+    <div class="vitals">
+      <div class="row"><span class="blink"></span><span>LIVE · HEART RATE</span></div>
+      <div class="row"><span class="bpm" id="bpm">62</span><span>BPM</span></div>
+      <canvas id="ecg" width="480" height="108" aria-label="ECG trace"></canvas>
+      <div class="row"><span id="phaseLab">DIASTOLE</span><span>·</span><span id="clock">00:00:00</span></div>
+    </div>
+
+    <div class="core">
+      <div class="lab"><span>CORE TEMP</span><span id="state">NOMINAL</span></div>
+      <div class="temp" id="tempBox"><span id="temp">36.6</span><small>°C</small></div>
+      <div class="scale"><div class="ticks"></div><div class="fill" id="bar"></div><div class="limit"></div>
+        <div class="nums"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div></div>
+    </div>
+
+    <div class="ops">
+      <div class="lab">OPERATIONS</div>
+      <button id="btnSound" aria-pressed="true">Sound<span>ON</span></button>
+      <button id="btnSpin" aria-pressed="true">Rotate<span>AUTO</span></button>
+      <button id="btnFlat" aria-pressed="false">Canvas<span>3D</span></button>
+      <button id="btnCool">Cool down<span>RESET</span></button>
+    </div>
+    <div class="status">DRAG TO ROTATE &nbsp;/&nbsp; TAP HEART TO RAISE BPM &nbsp;/&nbsp; <a class="home" href="../">HOME</a></div>
+  </div>
 </div>
 
-<div class="hud gauge">
-  <div class="temp"><span id="temp">36.6</span><small>°C</small></div>
-  <div class="bar"><i id="bar"></i></div>
-  <div><span id="bpm">62</span> BPM · tap the heart to raise it</div>
-</div>
+<div class="alarm" id="alarm">Warning · core temperature approaching 100°C</div>
 
-<div class="hud controls">
-  <button id="btnSpin" aria-pressed="true">Auto-rotate</button>
-  <button id="btnFlat" aria-pressed="false">Flatten to canvas</button>
-  <button id="btnCool">Cool down</button>
+<div class="gate" id="gate">
+  <div class="in">
+    <div class="pre" id="pre"></div>
+    <h2>Keep it below 100°C</h2>
+    <div class="han">KINTSUGI HEART</div>
+    <button class="go" id="go">TAP TO CONNECT</button>
+  </div>
+  <div class="note">HEADPHONES RECOMMENDED</div>
 </div>
-
-<div class="hint" id="hint">loading…</div>
-<div class="warn" id="warn">Approaching 100°C</div>
 
 <script type="module">
 import * as THREE from 'three';
@@ -300,26 +417,99 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
+// ---------- heartbeat sound (synthesised, so it stays locked to the animation) ----------
+const audio = { ctx: null, out: null, lp: null, drone: null, noise: null, on: true };
+function initAudio() {
+  if (audio.ctx) { audio.ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  const ctx = new AC();
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.ratio.value = 4;
+  const out = ctx.createGain(); out.gain.value = audio.on ? 1 : 0;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 320; lp.Q.value = 0.7;  // heard through the chest wall
+  lp.connect(out); out.connect(comp); comp.connect(ctx.destination);
+  const nb = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+  const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  // low room tone underneath everything
+  const droneGain = ctx.createGain(); droneGain.gain.value = 0;
+  const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 140;
+  [41.2, 61.7, 82.4].forEach((f, i) => { const o = ctx.createOscillator(); o.frequency.value = f; o.detune.value = i * 4;
+    const g = ctx.createGain(); g.gain.value = [0.5, 0.25, 0.12][i]; o.connect(g).connect(dlp); o.start(); });
+  dlp.connect(droneGain).connect(out);
+  droneGain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 4);
+  Object.assign(audio, { ctx, out, lp, drone: droneGain, noise: nb });
+}
+function thump(strength, pitch) {
+  const { ctx, lp, noise } = audio; if (!ctx || !audio.on) return;
+  const t = ctx.currentTime + 0.005;
+  const o = ctx.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(pitch * 1.8, t);
+  o.frequency.exponentialRampToValueAtTime(pitch, t + 0.04);
+  o.frequency.exponentialRampToValueAtTime(pitch * 0.65, t + 0.22);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(strength, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+  o.connect(g).connect(lp); o.start(t); o.stop(t + 0.32);
+  const n = ctx.createBufferSource(); n.buffer = noise;
+  const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = pitch * 2.2; nf.Q.value = 1.2;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(strength * 0.6, t + 0.006); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+  n.connect(nf).connect(ng).connect(lp); n.start(t); n.stop(t + 0.1);
+}
+
+// ---------- ECG trace ----------
+const ecg = document.getElementById('ecg'), ex = ecg.getContext('2d');
+const trace = new Float32Array(240); let traceHead = 0, traceAcc = 0;
+const gauss = (x, c, w) => Math.exp(-Math.pow((x - c) / w, 2));
+const ecgAt = p => 0.12 * gauss(p, 0.04, 0.025) - 0.12 * gauss(p, 0.13, 0.008) + 1.0 * gauss(p, 0.15, 0.009)
+                 - 0.28 * gauss(p, 0.17, 0.01) + 0.28 * gauss(p, 0.38, 0.045);
+function drawEcg(hot) {
+  const w = ecg.width, h = ecg.height;
+  ex.clearRect(0, 0, w, h);
+  ex.fillStyle = 'rgba(233,237,240,0.14)';
+  for (let x = 0; x < w; x += 24) for (let y = 6; y < h; y += 24) ex.fillRect(x, y, 2, 2);
+  ex.lineWidth = 2; ex.lineJoin = 'round';
+  ex.strokeStyle = hot ? '#ff3b30' : '#e9edf0';
+  ex.beginPath();
+  const n = trace.length;
+  for (let i = 0; i < n; i++) {
+    const v = trace[(traceHead + i) % n];
+    const x = i / (n - 1) * w, y = h * 0.66 - v * h * 0.55;
+    i ? ex.lineTo(x, y) : ex.moveTo(x, y);
+  }
+  ex.stroke();
+  const last = trace[(traceHead + n - 1) % n];
+  ex.fillStyle = '#f2d27a';
+  ex.beginPath(); ex.arc(w - 4, h * 0.66 - last * h * 0.55, 4, 0, 7); ex.fill();
+}
+
 // ---------- heartbeat + temperature ----------
-let bpm = 62, phase = 0, lastBeat = 0, flat = false;
+let bpm = 62, phase = 0, lastBeat = 0, flat = false, started = false, t0 = 0;
 const restBpm = 62;
 const $ = id => document.getElementById(id);
-const tempEl = $('temp'), barEl = $('bar'), bpmEl = $('bpm'), warn = $('warn');
+const tempEl = $('temp'), tempBox = $('tempBox'), barEl = $('bar'), bpmEl = $('bpm'), alarm = $('alarm'),
+      stateEl = $('state'), phaseLab = $('phaseLab'), clockEl = $('clock');
 const pulse = (t, c, w) => Math.exp(-Math.pow((t - c) / w, 2));
 
 const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
 let downAt = null;
 renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
 renderer.domElement.addEventListener('pointerup', e => {
-  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+  if (!started || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
   ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ptr, camera);
-  if (ray.intersectObject(heartMesh)[0]) { bpm = Math.min(bpm + 14, 178); phase = 0; }  // a tap jolts the heart
+  if (ray.intersectObject(heartMesh)[0]) { bpm = Math.min(bpm + 14, 178); phase = 0.999; }  // a tap jolts the heart
 });
 
-$('btnSpin').onclick = e => { controls.autoRotate = !controls.autoRotate; e.target.setAttribute('aria-pressed', controls.autoRotate); };
-$('btnFlat').onclick = e => { flat = !flat; e.target.setAttribute('aria-pressed', flat);
-  if (flat) { controls.autoRotate = false; $('btnSpin').setAttribute('aria-pressed', false); } };
+const press = (btn, on, a, b) => { btn.setAttribute('aria-pressed', on); btn.querySelector('span').textContent = on ? a : b; };
+controls.autoRotate = false;
+$('btnSound').onclick = e => { audio.on = !audio.on; press(e.currentTarget, audio.on, 'ON', 'OFF');
+  if (audio.on) initAudio(); if (audio.out) audio.out.gain.setTargetAtTime(audio.on ? 1 : 0, audio.ctx.currentTime, 0.05); };
+$('btnSpin').onclick = e => { controls.autoRotate = !controls.autoRotate; press(e.currentTarget, controls.autoRotate, 'AUTO', 'HOLD'); };
+$('btnFlat').onclick = e => { flat = !flat; press(e.currentTarget, flat, '2D', '3D');
+  if (flat) { controls.autoRotate = false; press($('btnSpin'), false, 'AUTO', 'HOLD'); } };
 $('btnCool').onclick = () => { bpm = restBpm; };
 
 addEventListener('resize', () => {
@@ -328,23 +518,39 @@ addEventListener('resize', () => {
   fit();
 });
 function fit(){ // keep the whole heart in frame on narrow phones
-  const need = innerWidth / innerHeight < 0.8 ? 6.2 / (innerWidth / innerHeight / 0.8) : 6.2;
+  const need = innerWidth / innerHeight < 0.8 ? 6.6 / (innerWidth / innerHeight / 0.8) : 6.6;
   controls.maxDistance = Math.max(9, need + 1);
-  if (camera.position.length() < need) camera.position.setLength(need);
+  camera.position.setLength(Math.max(camera.position.length(), need));
 }
+camera.position.set(0, 0, 6.6);
 fit();
 
-$('hint').textContent = 'drag to turn · tap to quicken';
-setTimeout(() => $('hint').style.opacity = 0, 2600);
+// ---------- opening ----------
+const gate = $('gate'), pre = $('pre');
+const line = 'K_WORKS  ·  KENNETHSOH24  ·  FILE 0610';
+let ci = 0;
+const typer = setInterval(() => { pre.textContent = line.slice(0, ++ci); if (ci >= line.length) { clearInterval(typer); gate.classList.add('ready'); } }, reduced ? 5 : 45);
+function connect() {
+  if (started) return;
+  started = true; t0 = clock.elapsedTime;
+  initAudio();
+  gate.classList.add('out');
+  document.body.classList.add('cine');
+  setTimeout(() => { document.body.classList.remove('cine'); document.body.classList.add('live');
+    if (!reduced) { controls.autoRotate = true; press($('btnSpin'), true, 'AUTO', 'HOLD'); } }, reduced ? 300 : 3600);
+}
+gate.addEventListener('click', connect);
+addEventListener('keydown', e => { if (!started && (e.key === 'Enter' || e.key === ' ')) connect(); });
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
   uniforms.uTime.value = t;
+  const st = started ? t - t0 : 0;
 
   // intro: the painting rests on its canvas, then the heart swells out of it
-  const intro = Math.min(t / 3.2, 1);
+  const intro = Math.min(st / 3.2, 1);
   const lift = THREE.MathUtils.smootherstep(intro, 0.2, 1);
   const target = flat ? 0 : 1;
   const dCur = uniforms.uDepth.value;
@@ -357,26 +563,48 @@ renderer.setAnimationLoop(() => {
   // heart rate relaxes back toward rest; temperature follows
   bpm += (restBpm - bpm) * dt * 0.06;
   const cycle = 60 / bpm;
+  const prev = phase;
   phase += dt / cycle;
-  if (phase >= 1) { phase -= 1; lastBeat = t; }
+  const wrapped = phase >= 1;
+  if (wrapped) { phase -= 1; lastBeat = t; }
+  const crossed = c => wrapped ? (prev < c || phase >= c) : (prev < c && phase >= c);
+  const temp = 36.6 + (bpm - restBpm) / (178 - restBpm) * (99.4 - 36.6);
+  const heat = (temp - 36.6) / (100 - 36.6);
+  if (started) {
+    if (crossed(0.15)) thump(0.95, 52 + heat * 10);   // S1 "lub": AV valves close
+    if (crossed(0.37)) thump(0.6, 66 + heat * 12);    // S2 "dub": aortic and pulmonary valves close
+    if (audio.lp) audio.lp.frequency.setTargetAtTime(320 + heat * 500, audio.ctx.currentTime, 0.2);
+  }
   const k = reduced ? 0.35 : 1;
   // atria contract just before the ventricles (lub), then the ventricles squeeze and relax (dub)
   uniforms.uAtria.value = k * pulse(phase, 0.04, 0.05) * vol;
   const vent = k * (pulse(phase, 0.2, 0.07) + 0.45 * pulse(phase, 0.36, 0.05));
   uniforms.uVent.value = vent * vol;
   uniforms.uFlow.value = Math.min((t - lastBeat) / (cycle * 0.9), 1);
-  const temp = 36.6 + (bpm - restBpm) / (178 - restBpm) * (99.4 - 36.6);
-  const heat = (temp - 36.6) / (100 - 36.6);
   uniforms.uHeat.value = heat;
-  const s = 1 + 0.02 * vent * vol;
-  heart.scale.setScalar(s);
+  heart.scale.setScalar(1 + 0.02 * vent * vol);
   bloom.strength = 0.4 + 0.35 * heat + 0.15 * vent;
 
+  // HUD
+  traceAcc += dt * 110;                       // trace speed: samples per second
+  // sample the waveform at even time steps even when frames are slow, so the QRS spike never gets skipped
+  const nS = Math.floor(traceAcc); traceAcc -= nS;
+  for (let i = 0; i < nS; i++) {
+    const ph = ((phase - (nS - 1 - i) / 110 / cycle) % 1 + 1) % 1;
+    trace[traceHead] = ecgAt(ph); traceHead = (traceHead + 1) % trace.length;
+  }
+  drawEcg(heat > 0.85);
   tempEl.textContent = temp.toFixed(1);
-  tempEl.parentElement.style.color = heat > 0.75 ? 'var(--gold)' : '';
+  const level = heat > 0.85 ? 2 : heat > 0.35 ? 1 : 0;
+  tempBox.style.color = ['', 'var(--gold)', 'var(--alarm)'][level];
+  stateEl.textContent = ['NOMINAL', 'ELEVATED', 'CRITICAL'][level];
   barEl.style.width = temp.toFixed(1) + '%';
+  barEl.style.background = ['var(--line)', 'var(--gold)', 'var(--alarm)'][level];
   bpmEl.textContent = Math.round(bpm);
-  warn.style.opacity = temp > 90 ? (0.6 + 0.4 * Math.sin(t * 8)) : 0;
+  phaseLab.textContent = phase > 0.12 && phase < 0.4 ? 'SYSTOLE' : 'DIASTOLE';
+  const s = Math.floor(st);
+  clockEl.textContent = [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(n => String(n).padStart(2, '0')).join(':');
+  alarm.classList.toggle('on', temp > 92);
 
   embers.rotation.y = t * 0.03;
   controls.update();
