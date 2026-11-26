@@ -564,16 +564,16 @@ const NIGHTS={
     ev:[{k:'redlamp',t:60},{k:'bears',t:90},{k:'fakecast',t:137,z:'carousel'},{k:'ferris',t:160},{k:'mirror',t:200},{k:'kiosk',t:240},{k:'realcast',t:300,z:'haunted'},{k:'stranger',t:320},{k:'coworker',t:370},{k:'redlamp',t:400},{k:'fakebell',t:420}],
     cust:{ghost:.35,meat:.2,shoes:true,max:3,leaf:true}},
 };
-const LOST=[['氣球','🎈'],['兔子玩偶','🐰'],['入場券','🎟️'],['水瓶','🧴'],['太陽帽','👒'],['奶嘴','🍼'],['底片','🎞️'],['鑰匙圈','🔑'],['童鞋','👟'],['雪糕棒','🍦']];
+const LOST=[['氣球','🎈'],['兔子玩偶','🐰'],['入場券','🎟️'],['水瓶','🧴'],['太陽帽','👒'],['奶嘴','🍼'],['底片','🎞️'],['鑰匙圈','🔑'],['童鞋','👟'],['冰淇淋棒','🍦']];
 
 /* ============================================================
    STATE
    ============================================================ */
 const UPG={
  light:{n:'防霧眼鏡',ic:'👓',d:'看得更遠，在霧中理智下降得較慢',cost:[40,90]},
- shoe:{n:'好走的球鞋',ic:'👟',d:'移動速度更快',cost:[35,80]},
+ shoe:{n:'輕便球鞋',ic:'👟',d:'移動速度更快',cost:[35,80]},
  pop:{n:'長柄餵飼勺',ic:'🥄',d:'餵飼區準備飼料快 40%',cost:[50]},
- flask:{n:'伯伯的保溫壺',ic:'🫖',d:'理智上限 +25（伯伯說是他太太煲的湯）',cost:[60]},
+ flask:{n:'Kenneth 的保溫壺',ic:'🫖',d:'理智上限 +25（Kenneth 說是他太太燉的湯）',cost:[60]},
  charm:{n:'兔子徽章',ic:'🐰',d:'自動抵擋一次理智損失。最多攜帶 3 個',cost:[25],consum:true},
 };
 let S;
@@ -665,8 +665,8 @@ function updateHUD(){
    DIALOGUE
    ============================================================ */
 const WHO={
- uncle:{n:'售票處伯伯',sp:'uncle'},shop:{n:'紀念品店姐姐',sp:'shop'},me:{n:'Cyan',sp:'player'},
- fsis:{n:'小曦？',sp:'sister',o:{fake:true}},sis:{n:'小曦',sp:'sister'},stranger:{n:'白衣職員',sp:'whitestaff'},
+ uncle:{n:'Kenneth',sp:'uncle'},shop:{n:'Helen',sp:'shop'},me:{n:'Cyan',sp:'player'},
+ fsis:{n:'Mandy？',sp:'sister',o:{fake:true}},sis:{n:'Mandy',sp:'sister'},stranger:{n:'白衣職員',sp:'whitestaff'},
  rabbit:{n:'兔頭人',sp:'rabbitman'},radio:{n:'📢 園內廣播'},sys:{n:''},cust:{n:'動物',sp:'cust'}
 };
 const D={open:false,full:'',shown:0,choices:null,res:null,typing:false,cust:null};
@@ -719,16 +719,16 @@ function renderBook(){
     h+='<div class="rh"><h2>灰林動物園　遊客須知</h2><small>（本須知共 9 條。為了你的安全，請嚴格遵守。）</small></div>';
     for(const n of (orig?[1,2,3,4,5,6,7,8,9]:N.rules)){const rt=orig?{t:RULES[n],alt:false}:ruleText(n,S.night);
       h+='<div class="rule'+(rt.alt?' alt':'')+'"><b>'+n+'.</b><div>'+rt.t+((!orig&&N.nw.includes(n)&&S.night>1)?'<span class="new">NEW</span>':'')+'</div></div>';}
-    h+=orig?'<div class="stampbox" style="color:#9b1f1a">（鉛筆字：這是我第一天抄下來的。—曦）</div>':'<div class="stampbox">灰林動物園管理處　<i>已核准</i></div>';
+    h+=orig?'<div class="stampbox" style="color:#9b1f1a">（鉛筆字：這是我第一天抄下來的。—Mandy）</div>':'<div class="stampbox">灰林動物園管理處　<i>已核准</i></div>';
   }else{
     const ids=Object.keys(S.notes);
     if(!ids.length)h='<div class="empty">尚未撿到任何字條。<br>聽說三年前，有個孩子經常在園裡寫東西……</div>';
     for(const id of ids)h+=noteHTML(id);
-    if(S.badge)h+='<div class="note" style="background:#f4f4f4"><div class="when">在兔子館撿到</div><p style="color:#333">🐰 一枚白色兔子髮夾。背面用原子筆寫著：「小曦」。</p></div>';
+    if(S.badge)h+='<div class="note" style="background:#f4f4f4"><div class="when">在兔子館撿到</div><p style="color:#333">🐰 一枚白色兔子髮夾。背面用原子筆寫著：「Mandy」。</p></div>';
   }
   $('bookBody').innerHTML=h;
 }
-function noteHTML(id){const n=NOTES[id];return'<div class="note'+(n.sig?'':' fake')+'"><div class="when">'+n.where+'</div><p>'+n.t+'</p>'+(n.sig?'<div class="sig">—曦</div>':'')+'</div>';}
+function noteHTML(id){const n=NOTES[id];return'<div class="note'+(n.sig?'':' fake')+'"><div class="when">'+n.where+'</div><p>'+n.t+'</p>'+(n.sig?'<div class="sig">—Mandy</div>':'')+'</div>';}
 function openBook(tab,cb,label){if(D.open)return;bookTab=tab||'rules';bookCb=cb||null;$('bookClose').textContent=label||'收好';renderBook();$('book').classList.remove('hidden');AU.sfx('blip');}
 function closeBook(){$('book').classList.add('hidden');const c=bookCb;bookCb=null;if(c)c();}
 $('bookClose').onclick=closeBook;
@@ -799,7 +799,7 @@ function startNight(){
   PHASE='patrol';newNight();
   $('hud').classList.remove('hidden');if(isTouch){$('joy').classList.remove('hidden');$('actBtn').classList.remove('hidden');}
   AU.setMode('night');updateHUD();
-  toast('第'+S.night+'日 · 入園。尋找小曦，撿拾失物，遵守須知。','gold',3500);
+  toast('第'+S.night+'天 · 入園。尋找 Mandy，撿拾失物，遵守須知。','gold',3500);
   setTimeout(()=>{if(PHASE==='patrol')toast('💡 在霧中理智會下降——靠近路燈可以回復','',3500)},2500);
 }
 function hurt(n,msg){
@@ -870,14 +870,14 @@ async function runScript(fn){R.busy=true;try{await fn();}catch(err){console.erro
 
 async function evStranger(){
   await talk(['一個穿白色制服的「職員」站在你面前。','他的笑容……很寬。寬得不像一個人能笑出來的樣子。']);
-  const c=await ask('stranger','你好呀，遊客～可以讓我看看你的入場券嗎？',['（拿出門票給他看）','（不作聲，慢慢走開）','「你……真的是職員嗎？」']);
+  const c=await ask('stranger','您好，遊客。可以讓我看看您的入場券嗎？',['（拿出門票給他看）','（不作聲，慢慢走開）','「你……真的是職員嗎？」']);
   if(c===0){await talk(['他接過門票，慢慢地、慢慢地撕成兩半。',['stranger','你沒有票了。你今天走不了了。']]);await scare('face');hurt(35,'門票還在口袋裡，完好無缺。但 Cyan 的雙手在發抖。');}
   else if(c===1){await talk(['你低頭走開。他沒有追上來。','走了很遠，你回頭一看——他仍站在原地，向你揮手。']);heal(5,'須知第2條 ✔');}
-  else{await talk([['stranger','是呀。'],'他向前走近了一步。身上有一股很甜、很甜的氣味。','你轉身就跑。']);hurt(15);}
+  else{await talk([['stranger','是的。'],'他向前走近了一步。身上有一股很甜、很甜的氣味。','你轉身就跑。']);hurt(15);}
 }
 async function evCoworker(){
   await talk([['fsis','姐姐！姐姐！我在這裡！'],['fsis','跟我來，員工通道可以出去，快點！'],'她穿著紅色雨衣，和三年前一模一樣。','一點都沒有長高。']);
-  const c=await ask('fsis','走吧，姐姐，不要讓我擔心嘛。',['（牽起她的手）','「……小曦，我們進來的時候，你並沒有和我在一起。」']);
+  const c=await ask('fsis','走吧，姐姐，別讓我擔心。',['（牽起她的手）','「……Mandy，我們進來的時候，你並沒有和我在一起。」']);
   if(c===0){await talk(['她的手很冰，冰得像一團濕泥。','員工通道很長、很長。兩旁的籠子裡全是兔子，全都站了起來。']);await scare('rabbit');hurt(45,'回過神來時，Cyan 已記不起自己走了多久。');}
   else{await talk(['她的笑容僵住了。',['fsis','……姐姐，原來你看過須知。'],'她像一張濕透的紙，慢慢溶在地上，滲進磚縫裡。']);heal(8,'你沒有跟她走 ✔');}
 }
@@ -981,7 +981,7 @@ function updatePatrol(dt){
     R.pickups.splice(i,1);
     if(q.kind==='lost')gain(q.v,q.ic+' '+q.name);
     else if(q.kind==='note'){S.notes[q.id]=true;AU.sfx('pick');R.busy=true;showNote('<div class="rh"><h2 style="font-size:16px">一張摺起來的小紙條</h2></div>'+noteHTML(q.id),()=>{R.busy=false;toast('字條已夾入須知 📜','gold');});}
-    else if(q.kind==='badge'){S.badge=true;AU.sfx('pick');R.busy=true;showNote('<div class="rh"><h2 style="font-size:16px">一枚兔子髮夾</h2></div><div class="note" style="background:#f4f4f4"><p style="color:#333">🐰 白色兔子髮夾。背面用原子筆寫著：「小曦」。</p></div><p style="font-weight:700;color:#4b4538;line-height:1.7">三年前她生日時，Cyan 在紀念品店買給她的。<br>髮夾冰冷得像剛從水裡撈上來。</p>',()=>{R.busy=false;});}
+    else if(q.kind==='badge'){S.badge=true;AU.sfx('pick');R.busy=true;showNote('<div class="rh"><h2 style="font-size:16px">一枚兔子髮夾</h2></div><div class="note" style="background:#f4f4f4"><p style="color:#333">🐰 白色兔子髮夾。背面用原子筆寫著：「Mandy」。</p></div><p style="font-weight:700;color:#4b4538;line-height:1.7">三年前她生日時，Cyan 在紀念品店買給她的。<br>髮夾冰冷得像剛從水裡撈上來。</p>',()=>{R.busy=false;});}
     break;}}
   let lt=0;if(!R.lampRed)for(const lp of LAMPS){if(!lp.lit)continue;const d=dist(lp.x,lp.y,P.x,P.y);if(d<46)lt=Math.max(lt,1-d/46);}
   const clear=R.time>455;
@@ -1272,7 +1272,7 @@ async function endNight(fainted){
 const EVENING={
  1:[['uncle','你出來了。……很好。'],['shop','歡迎光臨紀念品店～你交回的失物，失物認領處已換成代幣給你了。要買點甚麼嗎？']],
  2:[['uncle','第二天了。'],['shop','兔子館的兔子很乖的……牠們從來不會站起來。真的。']],
- 3:[['uncle','你有沒有看見……算了，別說。'],['shop','三年前有個小女孩常來看兔子徽章，她說要存錢買給姐姐。']],
+ 3:[['uncle','你有沒有看見……算了，別說。'],['shop','三年前有個叫 Mandy 的小女孩常來看兔子徽章，她說要存錢買給姐姐。']],
  4:[['uncle','（他收票的手在發抖）明天……是最後一天了。'],['shop','這個兔子徽章送給你。那個小女孩……以前很想買的。']],
 };
 function openMorning(fainted){
@@ -1282,11 +1282,11 @@ function openMorning(fainted){
   const lines=EVENING[N];
   $('mcard').innerHTML=`<div class="k">CLOSING TIME · 第${N}天 完</div><h2>🌫 閉園了。Cyan 平安離開</h2>
    <div class="stats"><div class="stat"><small>失物 + 餵飼報酬</small><b>${R.earned} 🪙</b></div>
-    <div class="stat"><small>伯伯給的回程車費</small><b>${salary} 🪙</b></div>
+    <div class="stat"><small>Kenneth 給的回程車費</small><b>${salary} 🪙</b></div>
     <div class="stat"><small>須知遵守</small><b>${R.events_ok} ✔ · ${R.events_bad} ✘</b></div>
     <div class="stat"><small>手頭代幣</small><b id="mCoins">${S.coins} 🪙</b></div></div>
-   <div class="mtalk"><canvas width="32" height="32" id="mpB"></canvas><div class="bubble"><b>售票處伯伯</b>${fainted?'你在遊客中心睡了整個下午……回家好好休息吧。':lines[0][1]}</div></div>
-   <div class="mtalk"><canvas width="32" height="32" id="mpK"></canvas><div class="bubble"><b>紀念品店姐姐</b>${lines[1][1]}</div></div>
+   <div class="mtalk"><canvas width="32" height="32" id="mpB"></canvas><div class="bubble"><b>Kenneth</b>${fainted?'你在遊客中心睡了整個下午……回家好好休息吧。':lines[0][1]}</div></div>
+   <div class="mtalk"><canvas width="32" height="32" id="mpK"></canvas><div class="bubble"><b>Helen</b>${lines[1][1]}</div></div>
    <div class="k" style="margin:4px 0 6px">紀念品店</div><div class="shop" id="shop"></div>
    <div class="mfoot"><button class="btn ghost" id="mBook">📜 查看須知／字條</button><button class="btn red" id="mNext">🎟️ 第${S.night}天 · 再次入園</button></div>`;
   const dp=(id,sp)=>{const c=$(id).getContext('2d');c.imageSmoothingEnabled=false;drawChar(c,sp,16,36,{s:1.35});};
@@ -1306,12 +1306,12 @@ function renderShop(){
 }
 
 const BRIEF={
- 1:[['sys','三年前，Cyan 的妹妹小曦在灰林動物園走失了。'],['sys','警方搜索了三個月，一無所獲。動物園隨即關閉。'],['sys','上個月，動物園重新開放。'],['me','……我一定會找到你。'],
+ 1:[['sys','三年前，Cyan 的妹妹 Mandy 在灰林動物園走失了。'],['sys','警方搜索了三個月，一無所獲。動物園隨即關閉。'],['sys','上個月，動物園重新開放。'],['me','……我一定會找到你。'],
     ['uncle','一位？門票連同《遊客須知》一併給你。'],['uncle','今天霧大。記得靠近路燈走——在霧裡待久了，人會忘記自己是誰。'],
-    ['uncle','須知要完全遵守。不要問為甚麼。'],['me','伯伯，你有沒有見過一個穿紅色雨衣的小女孩？'],['uncle','……進去吧。閉園之前，不要離開。']],
+    ['uncle','須知要完全遵守。不要問為甚麼。'],['me','Kenneth，你有沒有見過一個穿紅色雨衣的小女孩？'],['uncle','……進去吧。閉園之前，不要離開。']],
  2:[['uncle','又是你？……好吧。'],['uncle','須知多了兩條，自己看清楚。'],['me','為甚麼須知每天都不一樣？'],['uncle','霧大，進去吧。']],
- 3:[['uncle','第三天了。很少人會回來第三次。'],['uncle','如果你聽到有人叫你「姐姐」……看須知。'],['me','你怎麼知道我有妹妹？'],['sys','伯伯沒有回答。']],
- 4:[['sys','伯伯今天沒有戴眼鏡。他的雙眼通紅。'],['uncle','須知……印刷部稍微改了一下。照著做就好。'],['uncle','記住：紙可以被人修改，但你記得的事不會。'],['me','甚麼？'],['uncle','進去吧。']],
+ 3:[['uncle','第三天了。很少人會回來第三次。'],['uncle','如果你聽到有人叫你「姐姐」……看須知。'],['me','你怎麼知道我有妹妹？'],['sys','Kenneth 沒有回答。']],
+ 4:[['sys','Kenneth 今天沒有戴眼鏡。他的雙眼通紅。'],['uncle','須知……印刷部稍微改了一下。照著做就好。'],['uncle','記住：紙可以被人修改，但你記得的事不會。'],['me','甚麼？'],['uncle','進去吧。']],
  5:[['uncle','最後一天了。'],['uncle','三年前，那個穿紅色雨衣的小女孩……她在閉園前一小時，自己走出了出口。'],['uncle','我沒有攔住她。'],['uncle','今天，我不會再犯同樣的錯。閉園之前——不要離開。']],
 };
 async function brief(){
@@ -1329,7 +1329,7 @@ async function badEnding(){
     '<small style="color:#6a6252">提示：閉園音樂響了，但霧散了嗎？</small>'],'#3a1214');
 }
 async function finalEnding(fainted){
-  if(fainted){showEnding('NORMAL END','結局：睡過了頭',['Cyan 在遊客中心醒來，窗外的霧已經散盡。','伯伯說她是三年來第一個撐過五天的遊客——雖然最後一天是睡過去的。','她仍然沒有找到小曦。','<small style="color:#6a6252">提示：收集小曦的全部 4 張字條，並在第5天找回她的兔子髮夾。</small>'],'#2a2e2a');return;}
+  if(fainted){showEnding('NORMAL END','結局：睡過了頭',['Cyan 在遊客中心醒來，窗外的霧已經散盡。','Kenneth 說她是三年來第一個撐過五天的遊客——雖然最後一天是睡過去的。','她仍然沒有找到 Mandy。','<small style="color:#6a6252">提示：收集 Mandy 的全部 4 張字條，並在第5天找回她的兔子髮夾。</small>'],'#2a2e2a');return;}
   const all=['A','B','C','D'].every(k=>S.notes[k]);
   await fadeOut('');await sleep(400);
   $('hud').classList.add('hidden');$('joy').classList.add('hidden');$('actBtn').classList.add('hidden');
@@ -1340,12 +1340,12 @@ async function finalEnding(fainted){
       ['sis','三年前，我一聽到閉園音樂就走了。可是出口外面……仍然是動物園。'],['sis','我一直寫字條，等待有人看見。'],['me','（Cyan 把兔子髮夾輕輕別回她的頭髮上。）'],
       ['sis','你還記得我喜歡兔子。'],['sis','姐姐，我們回家吧。'],'Cyan 牽起她的手。那隻手是溫暖的。']);
     for(let i=0;i<10;i++){P.y+=2;await sleep(60);}
-    await talk(['兩人一起走出出口。這一次，外面真的是外面。','售票處的伯伯摘下帽子，向她們深深鞠了一躬。']);
-    showEnding('TRUE END','結局：一起回家',['灰林動物園在下個月結業。','最後一天，伯伯把《遊客須知》重新印製——原版的 9 條。','然後，他親手加上了第 10 條：','<b style="color:#8e1c1c">「10. 如果你在霧中看見走失的孩子，請牽起他的手，帶他回家。」</b>'],'#2a3a30');
+    await talk(['兩人一起走出出口。這一次，外面真的是外面。','售票處的 Kenneth 摘下帽子，向她們深深鞠了一躬。']);
+    showEnding('TRUE END','結局：一起回家',['灰林動物園在下個月結業。','最後一天，Kenneth 把《遊客須知》重新印製——原版的 9 條。','然後，他親手加上了第 10 條：','<b style="color:#8e1c1c">「10. 如果你在霧中看見走失的孩子，請牽起他的手，帶他回家。」</b>'],'#2a3a30');
   }else{
-    await talk(['霧散了。真正地散了。','伯伯在出口等著。',['uncle','閉園了。……你撐過了五天。'],['uncle','回家吧。別再來了。'],'Cyan 走出出口，回頭看了一眼。','兔子館二樓的窗口，有個穿紅色雨衣的孩子，正向她揮手。']);
+    await talk(['霧散了。真正地散了。','Kenneth 在出口等著。',['uncle','閉園了。……你撐過了五天。'],['uncle','回家吧。別再來了。'],'Cyan 走出出口，回頭看了一眼。','兔子館二樓的窗口，有個穿紅色雨衣的孩子，正向她揮手。']);
     showEnding('NORMAL END','結局：撐過五天',['Cyan 平安回到家中。','但每晚在夢裡，她都會聽見閉園音樂，以及一聲細細的「姐姐」。',
-      '<small style="color:#6a6252">提示：收集小曦的全部 4 張字條，並在第5天找回她的兔子髮夾。</small>'],'#2a3038');
+      '<small style="color:#6a6252">提示：收集 Mandy 的全部 4 張字條，並在第5天找回她的兔子髮夾。</small>'],'#2a3038');
   }
 }
 function showEnding(k,title,ps,col){
