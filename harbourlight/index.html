@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>海燈：忘海潛行 Harbourlight</title>
+<meta name="description" content="日頭喺香港仔冰室撞奶茶，夜晚潛入成個城市唔記得咗嘅「忘海」。像素風潛水 RPG。">
+<meta property="og:title" content="海燈：忘海潛行 Harbourlight">
+<meta property="og:description" content="日頭撞奶茶，夜晚潛入忘海。七日後公園就要拆，你要令全香港記返起佢。">
+<meta property="og:image" content="https://d2ol7oe51mr4n9.cloudfront.net/user_3MXUtv73JoYXMci9MhAXPN4exH7/15592b32-741b-4392-98e1-275135ecea4b.jpg">
+<style>
+  html,body{margin:0;height:100%;background:#03040b;color:#fff8ea;font:16px/1.5 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+  .boot{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;box-sizing:border-box}
+  h1{margin:0;font-size:clamp(32px,8vw,56px);color:#ffd34d;text-shadow:0 4px 0 #6a2a00;line-height:1.1}
+  .bar{width:min(320px,80vw);height:12px;border:2px solid #fff;border-radius:6px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:#ffd34d;transition:width .2s}
+  .dim{color:#aab0d0;font-size:14px}
+  a{color:#5ad1ff}
+</style>
+</head>
+<body>
+<div class="boot" id="boot">
+  <h1>海燈<br>忘海潛行</h1>
+  <div class="bar"><i id="bar"></i></div>
+  <div class="dim" id="msg">載入遊戲中（約 3MB）……</div>
+</div>
+<script>
+// The full game (code + Higgsfield pixel art, self-contained) is hosted on Higgsfield's CDN.
+(function () {
+  var SRC = 'https://d2ol7oe51mr4n9.cloudfront.net/user_3MXUtv73JoYXMci9MhAXPN4exH7/ea5618dd-9607-4f55-be9a-fce8861915bb.html';
+  var bar = document.getElementById('bar'), msg = document.getElementById('msg');
+  function fail() {
+    msg.innerHTML = '載入唔到遊戲。請檢查網絡再<a href="">重新整理</a>。';
+  }
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', SRC, true);
+    xhr.onprogress = function (e) { bar.style.width = (e.lengthComputable ? Math.round(100 * e.loaded / e.total) : 50) + '%'; };
+    xhr.onload = function () {
+      if (xhr.status !== 200 || xhr.responseText.indexOf('<!DOCTYPE html>') !== 0) return fail();
+      bar.style.width = '100%';
+      document.open(); document.write(xhr.responseText); document.close();
+    };
+    xhr.onerror = fail;
+    xhr.send();
+  } catch (e) { fail(); }
+})();
+</script>
+</body>
+</html>
