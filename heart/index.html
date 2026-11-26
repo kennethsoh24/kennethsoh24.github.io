@@ -98,103 +98,160 @@ controls.maxDistance = 9;
 controls.autoRotate = !reduced;
 controls.autoRotateSpeed = 0.9;
 
-// ---------- textures ----------
+// ---------- textures + anatomical model ----------
 const loader = new THREE.TextureLoader();
-const load = (u, srgb) => new Promise(r => loader.load(u, t => {
+const load = (u, srgb) => new Promise((res, rej) => loader.load(u, t => {
   t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   t.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  r(t);
-}));
-const [colorTex, mapsTex, origTex] = await Promise.all([
-  load('heart_color.png', true), load('heart_maps.png', false), load('heart_original.jpg', true)
-]);
-mapsTex.premultiplyAlpha = false;
+  res(t);
+}, undefined, rej));
 
-// ---------- the heart: two relief shells (front + back) driven by a depth map ----------
+// heart.bin: [nVerts, nIndices] u32 · positions f32x3 · normals i8x3 · (ao, ventricle, atria, coronary) u8x4 · indices u16
+async function loadHeart(url) {
+  const buf = await (await fetch(url)).arrayBuffer();
+  const [nv, ni] = new Uint32Array(buf, 0, 2);
+  let o = 8;
+  const take = (Type, count, size) => { const a = new Type(buf.slice(o, o + count * size)); o += count * size; return a; };
+  const pos = take(Float32Array, nv * 3, 4);
+  const nrm = take(Int8Array, nv * 3, 1);
+  const att = take(Uint8Array, nv * 4, 1);
+  const idx = take(Uint16Array, ni, 2);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nrm, 3, true));
+  g.setAttribute('region', new THREE.BufferAttribute(att, 4, true));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.computeBoundingSphere();
+  return g;
+}
+
+const [colorTex, mapsTex, origTex, heartGeo] = await Promise.all([
+  load('heart_color.png', true), load('heart_maps.png', false), load('heart_original.jpg', true), loadHeart('heart.bin')
+]);
+
 const uniforms = {
   uColor: { value: colorTex }, uMaps: { value: mapsTex },
-  uDepth: { value: 0 },          // 0 = flat painting, 1 = full volume
-  uThick: { value: 0.62 },
-  uBeat: { value: 0 },           // 0..1 pulse
-  uFlow: { value: 0 },           // gold flowing out from the centre crack
-  uHeat: { value: 0 },           // 0..1 temperature
+  uDepth: { value: 0 },          // 0 = pressed flat into the canvas, 1 = full volume
+  uVent: { value: 0 },           // ventricular contraction 0..1
+  uAtria: { value: 0 },          // atrial contraction 0..1
+  uFlow: { value: 0 },           // gold wave travelling out along the cracks
+  uHeat: { value: 0 },
   uTime: { value: 0 },
-  uLight: { value: new THREE.Vector3(-0.5, 0.7, 1).normalize() },
+  uLight: { value: new THREE.Vector3(-0.55, 0.65, 0.9).normalize() },
 };
 
 const vert = /* glsl */`
-  uniform sampler2D uMaps; uniform float uDepth, uThick, uBeat, uSide;
-  varying vec2 vUv; varying vec3 vN; varying vec3 vView; varying float vD;
-  float h(vec2 uv){ return texture2D(uMaps, uv).r; }
+  uniform float uDepth, uVent, uAtria, uTime;
+  attribute vec4 region;            // ao, ventricle, atria, coronary
+  varying vec3 vObj; varying vec3 vObjN; varying vec3 vN; varying vec3 vView; varying vec4 vReg;
   void main(){
-    vUv = uv;
-    float d = h(uv);
-    float amp = uThick * uDepth * (1.0 + 0.10 * uBeat);
-    vec3 p = position; p.z = d * amp * uSide;
-    float e = 1.0/256.0;
-    float dx = (h(uv+vec2(e,0.)) - h(uv-vec2(e,0.))) * amp;
-    float dy = (h(uv+vec2(0.,e)) - h(uv-vec2(0.,e))) * amp;
-    vec3 n = normalize(vec3(-dx/(2.0*e*3.0), -dy/(2.0*e*3.0), uSide));
-    vD = d;
-    vec4 mv = modelViewMatrix * vec4(p,1.0);
+    vec3 p = position;
+    vec3 n = normal;
+    // ventricles squeeze toward their long axis and wring slightly; atria squeeze first
+    vec3 vc = vec3(0.02, -0.35, 0.0);
+    vec3 dv = p - vc;
+    float v = region.y * uVent;
+    p -= vec3(dv.x, dv.y * 0.35, dv.z) * 0.07 * v;
+    float tw = 0.08 * v * (vc.y - p.y);
+    p.xz = mat2(cos(tw), -sin(tw), sin(tw), cos(tw)) * p.xz;
+    vec3 ac = vec3(0.0, 0.2, -0.1);
+    p -= (p - ac) * 0.05 * region.z * uAtria;
+    // great vessels swell as blood is pushed out
+    float vessel = 1.0 - clamp(region.y + region.z, 0.0, 1.0);
+    p += n * 0.012 * vessel * uVent;
+    vObj = p; vObjN = n; vReg = region;
+    p.z *= mix(0.03, 1.0, uDepth);
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
     vView = -mv.xyz;
     vN = normalize(normalMatrix * n);
     gl_Position = projectionMatrix * mv;
   }`;
 
 const frag = /* glsl */`
-  uniform sampler2D uColor, uMaps; uniform float uBeat, uFlow, uHeat, uTime, uSide, uDepth;
+  uniform sampler2D uColor, uMaps; uniform float uVent, uFlow, uHeat, uTime, uDepth;
   uniform vec3 uLight;
-  varying vec2 vUv; varying vec3 vN; varying vec3 vView; varying float vD;
-  float hash(vec2 p){ return fract(sin(dot(p, vec2(41.3,289.1)))*45758.5); }
+  varying vec3 vObj; varying vec3 vObjN; varying vec3 vN; varying vec3 vView; varying vec4 vReg;
+
+  float hash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float noise(vec3 x){
+    vec3 i = floor(x), f = fract(x); f = f*f*(3.0-2.0*f);
+    return mix(mix(mix(hash(i), hash(i+vec3(1,0,0)), f.x), mix(hash(i+vec3(0,1,0)), hash(i+vec3(1,1,0)), f.x), f.y),
+               mix(mix(hash(i+vec3(0,0,1)), hash(i+vec3(1,0,1)), f.x), mix(hash(i+vec3(0,1,1)), hash(i+vec3(1,1,1)), f.x), f.y), f.z);
+  }
+  float fbm(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++){ s += a * noise(p); p *= 2.03; a *= 0.5; } return s; }
+
   void main(){
-    vec4 c = texture2D(uColor, vUv);
-    vec4 m = texture2D(uMaps, vUv);
-    if (m.b < 0.5) discard;
     vec3 N = normalize(vN);
     vec3 V = normalize(vView);
-    vec3 L = normalize((viewMatrix * vec4(uLight,0.)).xyz);
-    float diff = max(dot(N,L),0.0);
-    float rim = pow(1.0 - max(dot(N,V),0.0), 2.5);
-    vec3 base = c.rgb;
-    if (uSide < 0.0) base = mix(base, vec3(dot(base, vec3(.5,.3,.2)))*vec3(1.,.25,.22), 0.35) * 0.62;
-    // wet, glossy flesh
-    vec3 H = normalize(L+V);
-    float spec = pow(max(dot(N,H),0.0), 48.0) * (0.25 + 0.6*smoothstep(0.5,0.95,c.r+c.g));
-    vec3 col = base * (0.42 + 0.78*diff) + spec*vec3(1.0,0.85,0.8);
-    col += rim * vec3(0.9,0.08,0.06) * (0.3 + 0.4*uBeat + 0.4*uHeat) * uDepth;
-    // flush redder with heat
-    col *= 1.0 + uBeat*0.18*vec3(1.0,0.35,0.3);
-    // kintsugi: gold glows, and a bright wave runs outward from the centre on each beat
-    float g = m.g;
-    float along = 1.0 - m.a;                     // 1 at the central junction -> 0 at tips
+    vec3 L = normalize((viewMatrix * vec4(uLight, 0.)).xyz);
+    float ao = vReg.x, cor = vReg.w;
+
+    // your painting, projected straight through the model from the front
+    vec2 uv = vObj.xy / 3.0 + 0.5;
+    vec4 paint = texture2D(uColor, uv);
+    vec4 maps = texture2D(uMaps, uv);
+    float facing = abs(normalize(vObjN).z);
+
+    // brushy painted flesh for everywhere the projection can't reach (sides, back, vessel tops)
+    vec3 q = vObj * vec3(3.0, 7.5, 3.0);                       // stretched noise = vertical brush strokes
+    float b = fbm(q + vec3(0.0, uTime * 0.02, 0.0));
+    float b2 = fbm(vObj * 14.0);
+    vec3 deep = vec3(0.30, 0.012, 0.018), mid = vec3(0.62, 0.03, 0.04), hot = vec3(0.92, 0.10, 0.08);
+    vec3 flesh = mix(deep, mid, smoothstep(0.30, 0.62, b));
+    flesh = mix(flesh, hot, smoothstep(0.58, 0.78, b) * 0.8);
+    flesh = mix(flesh, vec3(0.04, 0.005, 0.008), smoothstep(0.55, 0.30, b2) * 0.45);   // dark charcoal smudges
+    // coronary vessels: darker, bluish-purple, with a little yellow fat alongside
+    flesh = mix(flesh, vec3(0.30, 0.03, 0.10), cor * 0.8);
+    flesh = mix(flesh, vec3(0.75, 0.55, 0.30), smoothstep(0.0, 0.5, cor) * (1.0 - cor) * 0.25);
+
+    float useP = paint.a * smoothstep(0.15, 0.75, facing) * (1.0 - vReg.w * 0.6);
+    // the back gets a darker, mirrored echo of the painting
+    float back = step(vObjN.z, 0.0);
+    vec3 paintCol = mix(paint.rgb, paint.rgb * vec3(0.75, 0.6, 0.6), back);
+    vec3 base = mix(flesh, paintCol, useP * mix(0.92, 0.6, back));
+
+    // white chalky speckle, like the dry brush in the original
+    float speck = step(0.83, fbm(vObj * 42.0)) * step(0.45, b) * 0.55;
+    base = mix(base, vec3(0.95, 0.9, 0.88), speck * (1.0 - useP * 0.7));
+
+    // light: soft wrap diffuse with a red sub-surface bleed, wet double specular, red rim
+    float ndl = dot(N, L);
+    float diff = max(ndl, 0.0);
+    float wrap = max((ndl + 0.5) / 1.5, 0.0);
+    vec3 H = normalize(L + V);
+    float sp1 = pow(max(dot(N, H), 0.0), 90.0);
+    float sp2 = pow(max(dot(N, H), 0.0), 16.0) * 0.05;
+    float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+    vec3 col = base * (0.14 + 0.8 * diff) * ao + base * vec3(0.55, 0.05, 0.04) * wrap * 0.35;
+    col += (sp1 * 0.7 + sp2) * vec3(1.0, 0.8, 0.78) * (0.4 + 0.6 * ao) * mix(0.7, 1.0, b);
+    col += rim * vec3(0.85, 0.06, 0.05) * (0.25 + 0.35 * uVent + 0.45 * uHeat) * ao;
+    col *= 1.0 + uVent * 0.15 * vec3(1.0, 0.3, 0.3);
+
+    // kintsugi gold, projected from the painting through front and back
+    float g = maps.g * smoothstep(0.35, 0.7, facing);
+    float along = 1.0 - maps.a;
     float wave = smoothstep(0.12, 0.0, abs(along - (1.0 - uFlow)));
-    float shimmer = 0.85 + 0.15*sin(uTime*3.0 + vUv.y*40.0);
-    vec3 goldC = vec3(1.0,0.78,0.36);
-    col = mix(col, goldC*(0.9+0.6*pow(max(dot(N,H),0.),12.)), g*0.85);
-    col += g * goldC * (0.3*shimmer + 1.6*wave*(0.6+0.4*uHeat) + 0.6*uHeat + 0.3*uBeat);
-    // white speckle sparkle
-    float lum = dot(c.rgb, vec3(0.333));
-    float sp = step(0.62, lum) * step(0.985, hash(floor(vUv*512.0) + floor(uTime*6.0)));
-    col += sp * vec3(1.0) * 0.8;
+    float shimmer = 0.85 + 0.15 * sin(uTime * 3.0 + vObj.y * 30.0);
+    vec3 goldC = vec3(1.0, 0.76, 0.34);
+    col = mix(col, goldC * (0.55 + 2.0 * sp2 * 6.0 + 0.5 * diff), g * 0.9);
+    col += g * goldC * (0.3 * shimmer + 1.6 * wave * (0.6 + 0.4 * uHeat) + 0.6 * uHeat + 0.3 * uVent);
+
     gl_FragColor = vec4(col, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }`;
 
+const heartMat = new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag });
+const heartMesh = new THREE.Mesh(heartGeo, heartMat);
 const heart = new THREE.Group();
+heart.add(heartMesh);
 scene.add(heart);
-const geo = new THREE.PlaneGeometry(3, 3, 320, 320);
-const mkShell = side => new THREE.Mesh(geo, new THREE.ShaderMaterial({
-  uniforms: { ...uniforms, uSide: { value: side } },
-  vertexShader: vert, fragmentShader: frag, side: THREE.DoubleSide,
-}));
-heart.add(mkShell(1), mkShell(-1));
 
 // ---------- the canvas it lifts off ----------
-const canvasMat = new THREE.MeshBasicMaterial({ map: origTex, transparent: true, opacity: 1, fog: false });
+const canvasMat = new THREE.MeshBasicMaterial({ map: origTex, transparent: true, opacity: 1, fog: false, depthWrite: false });
 const canvasPlane = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), canvasMat);
-canvasPlane.position.z = -0.002;
+canvasPlane.position.z = 0.06;
+canvasPlane.renderOrder = 2;
 scene.add(canvasPlane);
 
 // ---------- embers + dust ----------
@@ -239,18 +296,16 @@ scene.add(embers);
 // ---------- post ----------
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.6, 0.82);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.6, 0.82);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
 // ---------- heartbeat + temperature ----------
-let bpm = 62, phase = 0, lastBeat = 0, flat = false, depthTarget = 1;
+let bpm = 62, phase = 0, lastBeat = 0, flat = false;
 const restBpm = 62;
 const $ = id => document.getElementById(id);
 const tempEl = $('temp'), barEl = $('bar'), bpmEl = $('bpm'), warn = $('warn');
-
-// lub-dub: two gaussian pulses inside one cycle
-const lubdub = t => Math.exp(-Math.pow((t - 0.08) / 0.045, 2)) + 0.6 * Math.exp(-Math.pow((t - 0.30) / 0.05, 2));
+const pulse = (t, c, w) => Math.exp(-Math.pow((t - c) / w, 2));
 
 const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
 let downAt = null;
@@ -259,8 +314,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
   ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ptr, camera);
-  const hit = ray.intersectObjects(heart.children)[0];
-  if (hit) { bpm = Math.min(bpm + 14, 178); phase = 0; }  // a tap jolts the heart
+  if (ray.intersectObject(heartMesh)[0]) { bpm = Math.min(bpm + 14, 178); phase = 0; }  // a tap jolts the heart
 });
 
 $('btnSpin').onclick = e => { controls.autoRotate = !controls.autoRotate; e.target.setAttribute('aria-pressed', controls.autoRotate); };
@@ -284,44 +338,43 @@ $('hint').textContent = 'drag to turn · tap to quicken';
 setTimeout(() => $('hint').style.opacity = 0, 2600);
 
 const clock = new THREE.Clock();
-let intro = 0;
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
   uniforms.uTime.value = t;
 
-  // intro: the painting rests flat on its canvas, then lifts off and swells into volume
-  intro = Math.min(t / 3.2, 1);
-  const lift = intro < 0.25 ? 0 : THREE.MathUtils.smootherstep(intro, 0.25, 1);
-  depthTarget = flat ? 0 : 1;
+  // intro: the painting rests on its canvas, then the heart swells out of it
+  const intro = Math.min(t / 3.2, 1);
+  const lift = THREE.MathUtils.smootherstep(intro, 0.2, 1);
+  const target = flat ? 0 : 1;
   const dCur = uniforms.uDepth.value;
-  uniforms.uDepth.value = intro < 1 ? lift * depthTarget : dCur + (depthTarget - dCur) * Math.min(dt * 3, 1);
+  uniforms.uDepth.value = intro < 1 ? lift * target : dCur + (target - dCur) * Math.min(dt * 3, 1);
   const vol = uniforms.uDepth.value;
-  canvasMat.opacity = 1 - vol;
+  canvasMat.opacity = 1 - THREE.MathUtils.smoothstep(vol, 0.0, 0.55);
   canvasPlane.visible = canvasMat.opacity > 0.01;
-  heart.position.z = vol * 0.25;
-  if (flat) { // ease the camera back to face the canvas
-    camera.position.lerp(new THREE.Vector3(0, 0, camera.position.length()), Math.min(dt * 2.5, 1));
-  }
+  if (flat) camera.position.lerp(new THREE.Vector3(0, 0, camera.position.length()), Math.min(dt * 2.5, 1));
 
   // heart rate relaxes back toward rest; temperature follows
   bpm += (restBpm - bpm) * dt * 0.06;
   const cycle = 60 / bpm;
   phase += dt / cycle;
   if (phase >= 1) { phase -= 1; lastBeat = t; }
-  const beat = reduced ? 0.3 * lubdub(phase) : lubdub(phase);
-  uniforms.uBeat.value = beat * vol;
+  const k = reduced ? 0.35 : 1;
+  // atria contract just before the ventricles (lub), then the ventricles squeeze and relax (dub)
+  uniforms.uAtria.value = k * pulse(phase, 0.04, 0.05) * vol;
+  const vent = k * (pulse(phase, 0.2, 0.07) + 0.45 * pulse(phase, 0.36, 0.05));
+  uniforms.uVent.value = vent * vol;
   uniforms.uFlow.value = Math.min((t - lastBeat) / (cycle * 0.9), 1);
   const temp = 36.6 + (bpm - restBpm) / (178 - restBpm) * (99.4 - 36.6);
   const heat = (temp - 36.6) / (100 - 36.6);
   uniforms.uHeat.value = heat;
-  const s = 1 + 0.045 * beat * vol;
-  heart.scale.set(s, s * (1 + 0.01 * beat), s);
-  bloom.strength = 0.4 + 0.35 * heat + 0.15 * beat;
+  const s = 1 + 0.02 * vent * vol;
+  heart.scale.setScalar(s);
+  bloom.strength = 0.4 + 0.35 * heat + 0.15 * vent;
 
   tempEl.textContent = temp.toFixed(1);
   tempEl.parentElement.style.color = heat > 0.75 ? 'var(--gold)' : '';
-  barEl.style.width = (temp / 100 * 100).toFixed(1) + '%';
+  barEl.style.width = temp.toFixed(1) + '%';
   bpmEl.textContent = Math.round(bpm);
   warn.style.opacity = temp > 90 ? (0.6 + 0.4 * Math.sin(t * 8)) : 0;
 
