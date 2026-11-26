@@ -229,6 +229,54 @@
     #cutin img { right: -14%; }
   }
 
+
+  /* ---------- title motion ---------- */
+  #tfx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+  #title .left, #title .right { padding-bottom: 46px !important; }
+  .brand { position: relative; overflow: hidden; transform: translate(calc(var(--mx, 0) * 7px), calc(var(--my, 0) * 5px)); transition: transform .2s ease-out; }
+  .brand::after { content: ""; position: absolute; top: 0; bottom: 0; left: -40%; width: 26%; background: #fff; mix-blend-mode: difference;
+    animation: sweep 6s cubic-bezier(.7,0,.2,1) infinite 1.6s; pointer-events: none; }
+  @keyframes sweep { 0% { left: -40%; } 16%, 100% { left: 115%; } }
+  .wordmark.glitch span { animation: glitch .34s steps(5) both; }
+  .wordmark.glitch span + span { animation-delay: .05s; }
+  @keyframes glitch {
+    0% { transform: translateX(0); clip-path: inset(0 0 0 0); }
+    20% { transform: translateX(-9px); clip-path: inset(10% 0 55% 0); }
+    40% { transform: translateX(7px); clip-path: inset(60% 0 8% 0); }
+    60% { transform: translateX(-4px); clip-path: inset(30% 0 30% 0); }
+    80% { transform: translateX(3px); clip-path: inset(0 0 70% 0); }
+    100% { transform: translateX(0); clip-path: inset(0 0 0 0); } }
+  .screen { background-position: calc(50% + var(--mx, 0) * -2%) calc(70% + var(--my, 0) * -2%) !important; }
+  .screen .castbg { position: absolute; inset: 0; background: rgba(255,255,255,.86); opacity: 0; transition: opacity .15s steps(2); }
+  .screen .castimg { position: absolute; z-index: 1; right: 6%; bottom: 0; height: 92%; filter: grayscale(1) contrast(1.12); opacity: 0; transform: translateX(12%);
+    transition: opacity .2s steps(3), transform .5s cubic-bezier(.2,1,.2,1); }
+  .screen .castname { position: absolute; z-index: 2; left: 12px; top: 10px; background: var(--ink); color: var(--white); padding: 3px 8px; opacity: 0; }
+  .screen.cast .castbg, .screen.cast .castimg, .screen.cast .castname { opacity: 1; }
+  .screen.cast .castimg { transform: translateX(calc(var(--mx, 0) * -10px)); }
+  .screen.switch { animation: chswitch .28s steps(4); }
+  @keyframes chswitch { 0% { filter: invert(1) contrast(3); } 25% { filter: brightness(2.2) blur(1px); transform: translateX(6px); } 50% { filter: invert(1); transform: translateX(-4px); } 100% { filter: none; transform: none; } }
+  .ticker { position: absolute; z-index: 4; left: 0; right: 0; bottom: 0; height: 34px; overflow: hidden; background: var(--ink); color: var(--white); display: flex; align-items: center; }
+  .ticker .track { display: flex; white-space: nowrap; animation: tick 38s linear infinite; }
+  .ticker .track span { padding: 0 22px; }
+  @keyframes tick { to { transform: translateX(-50%); } }
+  body.moon .ticker { background: linear-gradient(90deg, rgba(3,11,31,.95), rgba(11,58,140,.9), rgba(3,11,31,.95)); color: var(--cyan); border-top: 2px solid var(--cyan); }
+  body.moon .brand { overflow: visible; }
+  body.moon .brand::after { display: none; }
+  body.moon .moonlogo.glitch { animation: glow .6s ease-out; }
+  @keyframes glow { 0% { filter: drop-shadow(0 0 18px rgba(79,224,255,.45)); } 30% { filter: drop-shadow(0 0 40px rgba(79,224,255,1)) brightness(1.4); } 100% { filter: drop-shadow(0 0 18px rgba(79,224,255,.45)); } }
+  body.moon .screen { background-position: calc(70% + var(--mx, 0) * -2%) calc(50% + var(--my, 0) * -2%) !important; }
+  body.moon .screen .castbg { background: linear-gradient(100deg, transparent 40%, rgba(3,11,31,.6) 70%); }
+  body.moon .screen .castimg { right: 5vw; bottom: 44px; height: 66vh; filter: drop-shadow(-14px 12px 0 rgba(3,11,31,.7)) drop-shadow(0 0 22px rgba(79,224,255,.55)); transform: translateX(40%) skewX(-4deg); }
+  body.moon .screen.cast .castimg { transform: translateX(calc(var(--mx, 0) * -14px)); }
+  body.moon .screen .castname { display: block !important; left: auto; right: 6vw; top: auto; bottom: calc(44px + 66vh - 20px); background: var(--cyan); color: var(--abyss); transform: skewX(-12deg); font-size: 14px; }
+  body.moon .screen.switch { animation: none; }
+  body.moon .screen .ch { display: none; }
+  @media (max-width: 760px) {
+    .ticker { height: 26px; font-size: 10px; }
+    body.moon .screen .castimg { height: 34vh; bottom: auto; top: 6vh; }
+    body.moon .screen .castname { bottom: auto; top: 4vh; }
+  }
+
   /* =================== MOONLIT THEME =================== */
   #sea, .streaks, .moonlogo { display: none; }
   body.moon { --cyan: #4fe0ff; --navy: #071d4a; --deep: #0b3a8c; --blue: #1d6cff; --ice: #eaf8ff; --gold: #f5c518; --abyss: #030b1f; --red: #ff3b5c;
@@ -379,10 +427,12 @@
 <div id="lines" aria-hidden="true"></div>
 
 <section id="title" aria-label="Title screen">
+  <canvas id="tfx" aria-hidden="true"></canvas>
+  <div class="ticker mono" aria-hidden="true"><div class="track"></div></div>
   <div class="left">
     <div class="meta mono"><span class="live">On air</span><span>Channel 01</span><span id="clock">00:00:00</span></div>
-    <h1 class="wordmark"><span>Chess</span><span>Fantasia</span></h1>
-    <img class="moonlogo" src="assets/logo_moon.webp" alt="Chess Fantasia">
+    <div class="brand"><h1 class="wordmark"><span>Chess</span><span>Fantasia</span></h1>
+    <img class="moonlogo" src="assets/logo_moon.webp" alt="Chess Fantasia"></div>
     <div class="tagline mono"><b></b><span>Every piece transforms.</span></div>
     <nav aria-label="Main menu">
       <button class="mi" data-mode="ai-w"><span class="n">01</span><span class="t">Play White</span><span class="a">→</span></button>
@@ -393,13 +443,14 @@
     </nav>
     <div class="foot">
       <div class="opts mono"><span>AI —</span><span id="tLevel" style="display:flex"><button class="btn" data-l="1">Easy</button><button class="btn" data-l="2" aria-pressed="true" style="margin-left:-1px">Normal</button><button class="btn" data-l="3" style="margin-left:-1px">Hard</button></span></div>
+      <div class="opts mono"><span>Music —</span><span style="display:flex"><button class="btn" data-music="1">On</button><button class="btn" data-music="0" style="margin-left:-1px">Off</button></span></div>
       <div class="opts mono"><span>Theme —</span><span style="display:flex"><button class="btn" data-theme="mono">Mono</button><button class="btn" data-theme="moon" style="margin-left:-1px">Moonlit</button></span></div>
       <div class="loadbar mono"><span id="loadText">Loading models</span><div class="track"><div class="fill" id="loadFill"></div></div></div>
     </div>
   </div>
   <div class="right">
     <div class="meta mono"><span>Cast — 4</span><span>Pawn 2 / Bishop 2.0 / King / Queen</span></div>
-    <div class="screen"><span class="ch">01</span><span class="tc mono" id="tcode">REC 00:00:00:00</span></div>
+    <div class="screen" id="screen"><div class="castbg"></div><img class="castimg" alt=""><span class="castname mono"></span><span class="ch" id="chNum">01</span><span class="tc mono" id="tcode">REC 00:00:00:00</span></div>
     <div class="credits mono"><span>Concept sketches 4–6</span><span>3D via Higgsfield</span></div>
   </div>
 </section>
@@ -433,6 +484,10 @@
         <select id="tmode"><option value="move" selected>Every move</option><option value="capture">On capture</option><option value="always">Always mech</option><option value="never">Never</option></select></label>
       <label class="field mono">Battle
         <select id="battle"><option value="full" selected>Full</option><option value="quick">Quick</option></select></label>
+      <label class="field mono">Camera
+        <select id="cam"><option value="cine" selected>Cinematic</option><option value="fixed">Fixed</option></select></label>
+      <label class="field mono">Music
+        <select id="music"><option value="1">On</option><option value="0">Off</option></select></label>
       <label class="field mono">Theme
         <select id="theme"><option value="mono">Mono</option><option value="moon">Moonlit</option></select></label>
       <label class="field mono">Speed
@@ -1884,15 +1939,101 @@ async function finish(vic, dir, style) {
   vic.dispose();
 }
 
+/* ---------- music: Higgsfield-generated loops, one title + one game track per theme ---------- */
+const MUSIC = {
+  mono: { title: 'music/mono_title.mp3', game: 'music/mono_game.mp3' },
+  moon: { title: 'music/moon_title.mp3', game: 'music/moon_game.mp3' },
+};
+let musicOn = true, musicKind = 'title', musicEl = null, musicUnlocked = false;
+try { musicOn = localStorage.getItem('cf-music') !== '0'; } catch (e) { /* storage blocked */ }
+function fadeVol(el, to, ms, done) {
+  const from = el.volume, t0 = performance.now();
+  (function step() {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    el.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+    if (k < 1) setTimeout(step, 30); else done?.();
+  })();
+}
+function setMusic(kind) {
+  if (kind) musicKind = kind;
+  const src = MUSIC[THEME][musicKind];
+  if (!musicOn || !musicUnlocked) {
+    if (musicEl) { const old = musicEl; musicEl = null; fadeVol(old, 0, 600, () => old.pause()); }
+    return;
+  }
+  if (musicEl && musicEl.dataset.src === src) return;
+  const old = musicEl;
+  const el = new Audio(src);
+  el.loop = true; el.volume = 0; el.dataset.src = src;
+  el.play().catch(() => {});
+  musicEl = el;
+  fadeVol(el, .42, 1400);
+  if (old) fadeVol(old, 0, 900, () => old.pause());
+}
+function syncMusicUI() {
+  document.querySelectorAll('[data-music]').forEach(b => b.setAttribute('aria-pressed', (b.dataset.music === '1') === musicOn));
+  $('music').value = musicOn ? '1' : '0';
+}
+function setMusicOn(on) {
+  musicOn = on;
+  try { localStorage.setItem('cf-music', on ? '1' : '0'); } catch (e) { /* storage blocked */ }
+  syncMusicUI(); setMusic();
+}
+document.querySelectorAll('[data-music]').forEach(b => b.onclick = () => { musicUnlocked = true; setMusicOn(b.dataset.music === '1'); });
+$('music').onchange = e => { musicUnlocked = true; setMusicOn(e.target.value === '1'); };
+// browsers only allow audio after a gesture
+['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, () => { if (!musicUnlocked) { musicUnlocked = true; setMusic(); } }, { passive: true }));
+syncMusicUI();
+
+/* ---------- RPG camera: sits behind the acting piece's shoulder ---------- */
+let camFollow = null, camHome = null, camReturning = false;
+function camBehind(rig, look, o = {}) {
+  if (settings.cam !== 'cine' || galleryOn) return;
+  if (!camHome) camHome = { pos: camera.position.clone(), target: controls.target.clone() };
+  camReturning = false;
+  const prevDir = camFollow?.dir;
+  camFollow = { rig, look: look ? look.clone() : null, dir: prevDir || null,
+    dist: o.dist ?? (isMobile ? 4.4 : 3.5), h: o.h ?? 2.5, side: o.side ?? .95, k: o.k ?? 4.5 };
+  controls.enabled = false;
+  controls.minDistance = .5;
+}
+function camHomeBack() {
+  camFollow = null;
+  if (camHome) camReturning = true;
+}
+const _cp = new V3(), _ct = new V3();
+function updateCamera(dt) {
+  if (camFollow) {
+    const f = camFollow, p = f.rig.root.getWorldPosition(new V3());
+    if (f.look) {
+      const d = f.look.clone().sub(p).setY(0);
+      if (d.length() > .45) f.dir = d.normalize();
+    }
+    if (!f.dir) { const y = f.rig.yaw.rotation.y; f.dir = new V3(Math.sin(y), 0, Math.cos(y)); }
+    const right = new V3(-f.dir.z, 0, f.dir.x);
+    _cp.copy(p).addScaledVector(f.dir, -f.dist).addScaledVector(right, f.side).setY(f.h);
+    const ahead = f.look ? Math.min(2.2, Math.max(.8, f.look.clone().sub(p).setY(0).length())) : 1.4;
+    _ct.copy(p).addScaledVector(f.dir, ahead).setY(1.0);
+    const a = 1 - Math.exp(-dt * f.k);
+    camera.position.lerp(_cp, a); controls.target.lerp(_ct, a);
+  } else if (camReturning && camHome) {
+    const a = 1 - Math.exp(-dt * 3.5);
+    camera.position.lerp(camHome.pos, a); controls.target.lerp(camHome.target, a);
+    if (camera.position.distanceTo(camHome.pos) < .03) {
+      camera.position.copy(camHome.pos); controls.target.copy(camHome.target);
+      camHome = null; camReturning = false; controls.enabled = true; controls.minDistance = 5;
+    }
+  }
+}
+
 async function battle(att, vic, dir) {
   const vp = vic.root.position.clone();
-  const mid = att.root.position.clone().lerp(vp, .55);
-  speedLines(true);
-  await camFocus(mid, isMobile ? 7.5 : 6.3);
-  speedLines(false);
+  if (settings.cam === 'cine') camBehind(att, vp, { dist: isMobile ? 4.2 : 3.3, h: 2.2, side: 1.15, k: 6 });
+  else { await camFocus(att.root.position.clone().lerp(vp, .55), isMobile ? 7.5 : 6.3); }
+  speedLines(true); await wait(.12); speedLines(false);
   const style = await CHOREO[att.type](att, vic, towards(att.root.position, vp), vp);
   await finish(vic, towards(att.root.position, vp), style);
-  await camRestore();
+  if (settings.cam !== 'cine') await camRestore();
 }
 
 /* ================================================================
@@ -1903,7 +2044,7 @@ let state = E.initialState();
 let history = [];       // { state, san, move }
 let rigs = new Array(64).fill(null);
 let selected = -1, legalCache = [], busy = false, gameOver = false, flipped = false;
-const settings = { mode: 'ai-w', level: 2, tmode: 'move', battle: 'full' };
+const settings = { mode: 'ai-w', level: 2, tmode: 'move', battle: 'full', cam: 'cine' };
 
 function spawn(piece, s) {
   const rig = makeRig(piece.toUpperCase(), E.colorOf(piece));
@@ -2100,6 +2241,10 @@ function cutIn(rig) {
 }
 
 async function animateMove(m) {
+  camBehind(rigs[m.from], sqPos(m.to));
+  try { await animateMoveInner(m); } finally { camHomeBack(); }
+}
+async function animateMoveInner(m) {
   const rig = rigs[m.from];
   const victimSq = m.enPassant ? m.capSq : (m.captured ? m.to : -1);
   const victim = victimSq >= 0 ? rigs[victimSq] : null;
@@ -2214,6 +2359,7 @@ function undo() {
   if (!isHuman(state.turn)) setTimeout(aiTurn, 300);
 }
 function setCameraForSide(side, animate = true) {
+  if (camFollow || camReturning) { camHome = null; camFollow = null; camReturning = false; controls.enabled = true; controls.minDistance = 5; }
   flipped = side === 'b';
   const asp = innerWidth / innerHeight, vf = camera.fov * PI / 180;
   const hf = 2 * Math.atan(Math.tan(vf / 2) * asp);
@@ -2271,6 +2417,77 @@ function tvStatic(ms = 320) {
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * .08 * (1 - i / d.length);
     const src = a.createBufferSource(); src.buffer = b; src.connect(a.destination); src.start(); } catch (e) { /* audio blocked */ }
 }
+/* ---------- title screen motion ---------- */
+const titleEl = $('title');
+titleEl.addEventListener('pointermove', e => {
+  titleEl.style.setProperty('--mx', (e.clientX / innerWidth * 2 - 1).toFixed(3));
+  titleEl.style.setProperty('--my', (e.clientY / innerHeight * 2 - 1).toFixed(3));
+});
+{
+  const words = ['Chess Fantasia', 'Every piece transforms', 'Pawn 2', 'Bishop 2.0', 'King', 'Queen', 'Knight', 'Rook', 'On air — Channel 01', 'Gear up'];
+  const line = words.map(w => `<span>${w}</span><span>✦</span>`).join('');
+  document.querySelector('.ticker .track').innerHTML = line + line;
+}
+setInterval(() => {
+  if (!document.body.classList.contains('intro')) return;
+  const el = THEME === 'moon' ? document.querySelector('#title .moonlogo') : document.querySelector('.wordmark');
+  el.classList.remove('glitch'); void el.offsetWidth; el.classList.add('glitch');
+  if (THEME === 'mono' && soundOn && musicUnlocked) try { click(ac().currentTime, .03); } catch (e) { /* audio blocked */ }
+}, 4200);
+// channel surfing: key art, then each cast member in turn
+const CAST = [null, ['P', 'Pawn 2'], ['B', 'Bishop 2.0'], ['Q', 'Queen'], ['K', 'King'], ['N', 'Knight'], ['R', 'Rook']];
+let castIdx = 0;
+setInterval(() => {
+  if (!document.body.classList.contains('intro')) return;
+  castIdx = (castIdx + 1) % CAST.length;
+  const sc = $('screen'), c = CAST[castIdx];
+  sc.classList.remove('switch'); void sc.offsetWidth; sc.classList.add('switch');
+  $('chNum').textContent = String(castIdx + 1).padStart(2, '0');
+  sc.classList.remove('cast');
+  if (c) {
+    const img = sc.querySelector('.castimg');
+    img.onload = () => { sc.querySelector('.castname').textContent = `Cast ${String(castIdx).padStart(2, '0')} — ${c[1]}`; sc.classList.add('cast'); };
+    img.src = `assets/${THEME === 'moon' ? 'cutc' : 'cut'}_${c[0]}.webp`;
+  }
+}, 3500);
+function replayTitle() {
+  document.querySelectorAll('#title .mi, #title .wordmark, #title .moonlogo, #title .left').forEach(e => { e.style.animation = 'none'; void e.offsetWidth; e.style.animation = ''; });
+}
+document.querySelectorAll('#title .mi').forEach(m => m.addEventListener('pointerenter', () => {
+  if (soundOn && musicUnlocked) try { click(ac().currentTime, .05); } catch (e) { /* audio blocked */ }
+}));
+// drifting dust (mono) or rising bubbles (moonlit)
+{
+  const cv = $('tfx'), g = cv.getContext('2d');
+  let W = 0, H = 0, parts = [];
+  const fit = () => { W = cv.width = titleEl.clientWidth; H = cv.height = titleEl.clientHeight; };
+  addEventListener('resize', fit); fit();
+  for (let i = 0; i < 70; i++) parts.push({ x: Math.random(), y: Math.random(), r: Math.random(), s: .2 + Math.random() * .8, w: Math.random() * 6 });
+  let scanY = -1;
+  (function loop() {
+    requestAnimationFrame(loop);
+    if (!document.body.classList.contains('intro')) return;
+    g.clearRect(0, 0, W, H);
+    const moon = THEME === 'moon', t = performance.now() / 1000;
+    for (const p of parts) {
+      p.y -= .0006 * p.s * (moon ? 1.6 : .6);
+      if (p.y < -.05) { p.y = 1.05; p.x = Math.random(); }
+      const x = (p.x + Math.sin(t * .6 + p.w) * .006) * W + (parseFloat(titleEl.style.getPropertyValue('--mx')) || 0) * -12 * p.s, y = p.y * H;
+      if (moon) {
+        g.strokeStyle = `rgba(160,235,255,${.15 + p.r * .35})`; g.lineWidth = 1;
+        g.beginPath(); g.arc(x, y, 1.5 + p.r * 4, 0, Math.PI * 2); g.stroke();
+      } else {
+        g.fillStyle = `rgba(13,13,13,${.12 + p.r * .3})`;
+        g.fillRect(x, y, 1 + p.r * 2.2, 1 + p.r * 2.2);
+      }
+    }
+    if (!moon) {
+      if (scanY < 0 && Math.random() < .006) scanY = 0;
+      if (scanY >= 0) { g.fillStyle = 'rgba(13,13,13,.06)'; g.fillRect(0, scanY * H, W, 14); scanY += .02; if (scanY > 1) scanY = -1; }
+    }
+  })();
+}
+
 const t0clock = performance.now();
 setInterval(() => {
   const d = new Date(), pad = n => String(n).padStart(2, '0');
@@ -2286,7 +2503,8 @@ function startGame(mode) {
   document.body.classList.toggle('demo', mode === 'demo');
   $('title').classList.add('hide');
   geared = settings.tmode === 'always'; setFab();
-  controls.autoRotate = mode === 'demo'; controls.autoRotateSpeed = .45;
+  controls.autoRotate = false;
+  setMusic('game');
   whenIdle(() => {
     newGame();
     servo(true, .5);
@@ -2307,12 +2525,15 @@ $('bMenu').onclick = () => {
   if (busy && settings.mode !== 'demo') return;
   if (settings.mode === 'demo') { settings.mode = 'idle'; clearTimeout(demoTimer); controls.autoRotate = false; document.body.classList.remove('demo'); }
   tvStatic();
+  setMusic('title');
+  replayTitle();
   if (galleryOn) closeGallery();
   document.body.classList.add('intro');
   $('title').classList.remove('hide');
 };
 $('speed').onchange = e => { SPEED = +e.target.value; };
 $('battle').onchange = e => { settings.battle = e.target.value; };
+$('cam').onchange = e => { settings.cam = e.target.value; };
 $('theme').onchange = e => { tvStatic(220); applyTheme(e.target.value); };
 $('sound').onchange = e => { soundOn = e.target.value === '1'; };
 $('tmode').onchange = e => {
@@ -2377,6 +2598,7 @@ function applyTheme(name) {
   lastMarks.forEach(m => { m.material.color.setHex(P.last[0]); m.material.opacity = P.last[1]; });
   document.querySelectorAll('[data-theme]').forEach(b => b.setAttribute('aria-pressed', b.dataset.theme === THEME));
   if ($('theme')) $('theme').value = THEME;
+  if (typeof setMusic === 'function' && musicUnlocked) setMusic();
 }
 document.querySelectorAll('[data-theme]').forEach(b => b.onclick = () => { tvStatic(220); applyTheme(b.dataset.theme); });
 
@@ -2467,7 +2689,7 @@ function closeGallery() {
   camera.position.copy(gSaved.pos); controls.target.copy(gSaved.target);
   resize();
   updateTurnUI();
-  if (galleryFromTitle) { document.body.classList.add('intro'); $('title').classList.remove('hide'); }
+  if (galleryFromTitle) { document.body.classList.add('intro'); $('title').classList.remove('hide'); replayTitle(); }
 }
 $('bGallery').onclick = () => openGallery(false);
 $('gClose').onclick = closeGallery;
@@ -2507,6 +2729,7 @@ function frame() {
     }
   }
   updateSparks(dt);
+  updateCamera(dt);
   for (const d of moveDots) {
     const k = .85 + Math.sin(time * 4 + d.userData.pulse) * .12;
     d.scale.setScalar(k);
