@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@200;300;400;500&family=Barlow:wght@300;400&family=IBM+Plex+Mono:wght@300;400;500&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200;400&text=%E9%87%91%E7%B6%99%E3%81%8E%E6%BC%86%E6%B0%B8%E9%81%A0%E8%84%86%E3%81%95%E4%B8%8D%E5%8F%AF%E9%80%86%E7%99%BE%E5%BA%A6%E7%82%AD%E5%8C%96%E3%83%BB%E3%80%82&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200;400&text=%E9%87%91%E7%B6%99%E3%81%8E%E6%BC%86%E6%B0%B8%E9%81%A0%E8%84%86%E3%81%95%E4%B8%8D%E5%8F%AF%E9%80%86%E7%99%BE%E5%BA%A6%E7%82%AD%E5%8C%96%E3%83%BB%E3%80%82%E8%AA%B2%E9%A1%8C%E3%81%AE%E5%88%86%E9%9B%A2%E5%A2%83%E7%95%8C%E7%B7%9A%E5%BF%83&display=swap">
 <style>
   /* Layout: full-bleed 3D stage, a thin framed HUD on top: four corners, ECG top-right, core temperature bottom-left. */
   :root{
@@ -138,9 +138,11 @@
   .epi h3 em{font-style:normal;color:var(--gold)}
   .epi p{font:300 clamp(15px,1.6vw,17px)/1.65 var(--f-read);letter-spacing:.01em;color:#e9edf0d9;max-width:62ch;text-wrap:pretty}
   .epi p b{font-weight:400;color:var(--line)}
+  .epi .turn{display:flex;gap:14px;align-items:center;color:var(--dim);margin-top:10px;padding-top:18px;border-top:1px solid var(--hair)}
+  .epi .turn .jp{font:400 13px var(--f-jp);letter-spacing:.35em;color:var(--gold)}
   .epi .pair{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair);border:1px solid var(--hair);margin-top:6px}
   .epi .pair div{background:#070809;padding:14px 16px;display:grid;gap:6px}
-  .epi .pair .k{color:var(--dim);font-size:10px;letter-spacing:.25em}
+  .epi .pair .k{color:var(--dim);font-size:10px;line-height:1.6;letter-spacing:.25em}
   .epi .pair .v{font:200 30px/1 var(--f-disp);letter-spacing:.04em}
   .epi .pair .jp{font:400 13px var(--f-jp);letter-spacing:.3em;color:var(--dim)}
   .epi .pair .v.gold{color:var(--gold)} .epi .pair .v.char{color:var(--char)}
@@ -224,9 +226,13 @@
       <p>In kintsugi, a broken vessel is not thrown away. Its pieces are bonded with <b>urushi</b>, the sap of the lacquer tree, and the seams are dusted with powdered gold. Mended this way, a bowl can outlive the hands that made it, and the break becomes the most precious part.</p>
       <p>But the gold is only a surface. What holds the pieces together is the lacquer underneath, and lacquer has limits. Keep it cool and the seam can last for generations. In this work, <b>100°C</b> is the line: past it the urushi scorches and chars to carbon. The gold still shines, but nothing is holding it any more.</p>
       <p>What is mended with gold can be eternal, but only under the right conditions. Past them, the same repair becomes a fragility you can't come back from. Cooling it down afterwards does not undo the burn.</p>
+      <div class="turn"><span>THE HEART</span><span class="jp" lang="ja">課題の分離</span></div>
+      <p>This is not only about a bowl. It is about a heart that has been broken and mended too many times. Every repair holds, but only as long as the heat stays low.</p>
+      <p>The heat is everything that was never yours to carry: other people's choices, their moods, their expectations of you. The psychologist Alfred Adler called the answer <b>the separation of tasks</b>. Ask whose task this really is, then carry your own and hand the rest back.</p>
+      <p>Without that line, the heat rises one beat at a time. A heart can be mended in gold again and again. But if it never learns where it ends and others begin, one day the seams stop holding, and it bursts.</p>
       <div class="pair">
-        <div><span class="k">BELOW 100°C</span><span class="v gold">Eternal</span><span class="jp" lang="ja">永遠</span></div>
-        <div><span class="k">ABOVE 100°C</span><span class="v char">Irreversible</span><span class="jp" lang="ja">脆さ · 不可逆</span></div>
+        <div><span class="k">BELOW 100°C<br>BOUNDARIES KEPT</span><span class="v gold">Eternal</span><span class="jp" lang="ja">永遠</span></div>
+        <div><span class="k">ABOVE 100°C<br>BOUNDARIES LOST</span><span class="v char">Irreversible</span><span class="jp" lang="ja">脆さ · 不可逆</span></div>
       </div>
       <div class="act"><button id="btnAgain">Begin again</button></div>
       <div class="sig">“KEEP IT BELOW 100°C.” · KENNETHSOH24 · 2025</div>
@@ -818,7 +824,7 @@ renderer.setAnimationLoop(() => {
   const s = Math.floor(st);
   clockEl.textContent = [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(n => String(n).padStart(2, '0')).join(':');
   alarm.classList.toggle('on', !dead && temp > 92);
-  alarm.textContent = temp >= 100 ? 'Urushi carbonizing · irreversible · 炭化' : 'Warning · core temperature approaching 100°C';
+  alarm.textContent = temp >= 100 ? 'Boundary lost · urushi carbonizing · 炭化' : 'Warning · core temperature approaching 100°C';
 
   embers.rotation.y = t * 0.03;
   controls.update();
