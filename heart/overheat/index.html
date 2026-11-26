@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keep it below 100°C · Overheat</title>
+<meta name="description" content="Kenneth Soh's digital painting of a kintsugi heart, turned into an interactive 3D object with a live heartbeat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@200;300;400;500&family=Barlow:wght@300;400&family=IBM+Plex+Mono:wght@300;400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200;400&text=%E9%87%91%E7%B6%99%E3%81%8E%E6%BC%86%E6%B0%B8%E9%81%A0%E8%84%86%E3%81%95%E4%B8%8D%E5%8F%AF%E9%80%86%E7%99%BE%E5%BA%A6%E7%82%AD%E5%8C%96%E3%83%BB%E3%80%82&display=swap">
+<style>
+  /* Layout: full-bleed 3D stage, a thin framed HUD on top: four corners, ECG top-right, core temperature bottom-left. */
+  :root{
+    --void:#070809;           /* stage black */
+    --line:#e9edf0;           /* HUD white */
+    --dim:#e9edf08c;          /* secondary text */
+    --hair:#e9edf02e;         /* hairlines */
+    --gold:#f2d27a;           /* kintsugi gold, the only accent */
+    --alarm:#ff3b30;          /* critical */
+    --f-disp:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+    --f-read:"Barlow","Helvetica Neue",Arial,sans-serif;
+    --f-jp:"Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif;
+    --char:#ff6a1a;           /* burning lacquer */
+    --g:max(18px,3.2vw);      /* frame inset */
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--void);color:var(--line);overflow:hidden;-webkit-tap-highlight-color:transparent}
+  body{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em}
+  canvas{display:block;touch-action:none}
+  #stage{position:fixed;inset:0}
+
+  /* film grain + scanlines + vignette */
+  .fx{position:fixed;inset:0;pointer-events:none;z-index:1}
+  .fx::before{content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(0deg,#ffffff06 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+  .fx::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 50%,transparent 55%,#000000b0 100%)}
+
+  /* HUD frame */
+  .hud{position:fixed;inset:0;z-index:2;pointer-events:none;
+    padding:calc(var(--g) + env(safe-area-inset-top,0px)) max(var(--g),env(safe-area-inset-right,0px)) calc(var(--g) + env(safe-area-inset-bottom,0px)) max(var(--g),env(safe-area-inset-left,0px));
+    opacity:0;transition:opacity 1.2s ease .6s}
+  body.live .hud{opacity:1}
+  .corner{position:absolute;width:22px;height:22px;border:0 solid var(--line);opacity:.7}
+  .tl{top:calc(var(--g)*.5 + env(safe-area-inset-top,0px));left:calc(var(--g)*.5);border-top-width:1px;border-left-width:1px}
+  .tr{top:calc(var(--g)*.5 + env(safe-area-inset-top,0px));right:calc(var(--g)*.5);border-top-width:1px;border-right-width:1px}
+  .bl{bottom:calc(var(--g)*.5 + env(safe-area-inset-bottom,0px));left:calc(var(--g)*.5);border-bottom-width:1px;border-left-width:1px}
+  .br{bottom:calc(var(--g)*.5 + env(safe-area-inset-bottom,0px));right:calc(var(--g)*.5);border-bottom-width:1px;border-right-width:1px}
+  .grid{position:relative;height:100%;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 1fr auto;gap:16px}
+
+  .ident{display:grid;gap:8px;align-content:start;min-width:0}
+  .tag{color:var(--dim);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .tag b{font-weight:500;color:var(--line);border:1px solid var(--hair);padding:2px 6px}
+  .ident h1{font:200 clamp(30px,5.4vw,62px)/.9 var(--f-disp);letter-spacing:.06em;text-transform:uppercase;text-wrap:balance}
+  .ident h1 em{font-style:normal;color:var(--gold)}
+  .ident .han{font:300 11px var(--f-mono);letter-spacing:.3em;color:var(--dim)}
+  .rule{height:1px;width:min(320px,60vw);background:linear-gradient(90deg,var(--line),transparent)}
+
+  .vitals{display:grid;gap:6px;justify-items:end;align-content:start;text-align:right}
+  .vitals .row{display:flex;gap:10px;align-items:baseline;color:var(--dim)}
+  .vitals .bpm{font:200 34px/1 var(--f-disp);color:var(--line);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+  #ecg{width:min(240px,42vw);height:54px;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+  .blink{display:inline-block;width:6px;height:6px;background:var(--alarm);border-radius:50%;animation:bl 1s steps(2) infinite}
+  @keyframes bl{50%{opacity:0}}
+
+  .core{grid-column:1;grid-row:3;display:grid;gap:6px;align-content:end;min-width:0}
+  .core .lab{color:var(--dim);display:flex;gap:12px}
+  .core .temp{font:200 clamp(56px,11vw,120px)/.82 var(--f-disp);font-variant-numeric:tabular-nums;letter-spacing:-.01em;transition:color .3s}
+  .core .temp small{font-size:.3em;letter-spacing:.1em;color:var(--dim);margin-left:6px;vertical-align:top}
+  .scale{position:relative;width:min(360px,70vw);height:22px;margin-top:6px}
+  .scale .ticks{position:absolute;inset:0 0 auto;height:8px;
+    background:repeating-linear-gradient(90deg,var(--dim) 0 1px,transparent 1px 10%) ,repeating-linear-gradient(90deg,var(--hair) 0 1px,transparent 1px 2%);}
+  .scale .fill{position:absolute;left:0;top:10px;height:2px;width:0;background:var(--line);transition:width .2s,background .3s}
+  .scale .nums{position:absolute;left:0;right:0;top:13px;display:flex;justify-content:space-between;color:var(--dim);font-size:9px}
+  .scale .limit{position:absolute;right:0;top:-4px;height:16px;width:1px;background:var(--alarm)}
+
+  .ops{grid-column:2;grid-row:3;display:grid;gap:6px;justify-items:end;align-content:end;pointer-events:auto}
+  .ops .lab{color:var(--dim)}
+  .ops button{font:400 11px var(--f-mono);letter-spacing:.12em;color:var(--line);background:#07080999;border:1px solid var(--hair);
+    padding:9px 12px;cursor:pointer;text-transform:uppercase;min-width:168px;text-align:left;display:flex;justify-content:space-between;gap:14px;backdrop-filter:blur(4px)}
+  .ops button span{color:var(--dim)}
+  .ops button:hover{border-color:var(--line)}
+  .ops button:focus-visible{outline:1px solid var(--gold);outline-offset:2px}
+  .ops button[aria-pressed="true"]{border-color:var(--gold)}
+  .ops button[aria-pressed="true"] span{color:var(--gold)}
+  .ops .k{font-size:9px;color:var(--dim)}
+
+  .status{position:absolute;left:50%;transform:translateX(-50%);bottom:0;color:var(--dim);white-space:nowrap}
+  a.home{pointer-events:auto;color:var(--dim);text-decoration:none;border-bottom:1px solid var(--hair)}
+  a.home:hover{color:var(--line)}
+
+  /* critical banner */
+  .alarm{position:fixed;left:0;right:0;top:50%;transform:translateY(-50%);z-index:3;pointer-events:none;display:none;
+    padding:10px max(var(--g),env(safe-area-inset-left,0px));
+    background:repeating-linear-gradient(-45deg,#ff3b3022 0 10px,transparent 10px 20px);border-top:1px solid var(--alarm);border-bottom:1px solid var(--alarm);
+    color:var(--alarm);font:500 12px var(--f-mono);letter-spacing:.3em;text-align:center;text-transform:uppercase}
+  .alarm.on{display:block;animation:bl .8s steps(2) infinite}
+
+  /* opening screen */
+  .gate{position:fixed;inset:0;z-index:5;background:var(--void);display:grid;place-items:center;cursor:pointer;transition:opacity 1.4s ease}
+  .gate.out{opacity:0;pointer-events:none}
+  .gate .in{display:grid;gap:18px;justify-items:center;text-align:center;padding:0 24px}
+  .gate .pre{color:var(--dim);letter-spacing:.4em;min-height:1.4em}
+  .gate h2{font:200 clamp(34px,7vw,78px)/.95 var(--f-disp);letter-spacing:.12em;text-transform:uppercase;opacity:0;transition:opacity 1.6s}
+  .gate .han{font:300 12px var(--f-mono);letter-spacing:.5em;color:var(--dim);opacity:0;transition:opacity 1.6s .4s}
+  .gate .go{margin-top:24px;border:1px solid var(--hair);padding:10px 18px;letter-spacing:.35em;opacity:0;transition:opacity 1s 1.2s;font:400 11px var(--f-mono);color:var(--line);background:none;cursor:pointer}
+  .gate .go:focus-visible{outline:1px solid var(--gold);outline-offset:3px}
+  .gate.ready h2,.gate.ready .han,.gate.ready .go{opacity:1}
+  .gate .go::after{content:"";display:inline-block;width:7px;height:11px;background:var(--line);margin-left:10px;vertical-align:-1px;animation:bl 1s steps(2) infinite}
+  .gate .note{position:absolute;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:16px;right:16px;text-align:center;color:var(--dim);font-size:10px;letter-spacing:.3em}
+
+  .bars{position:fixed;left:0;right:0;height:0;background:#000;z-index:4;transition:height 1.6s cubic-bezier(.7,0,.2,1)}
+  .bars.top{top:0}.bars.bot{bottom:0}
+  body.cine .bars{height:9vh}
+
+  .jp-s{font:400 12px var(--f-jp);letter-spacing:.3em;color:var(--gold)}
+  .flash{position:fixed;inset:0;z-index:3;pointer-events:none;background:#fff3dc;opacity:0}
+  .flash.go{animation:fl 1.6s ease-out forwards}
+  @keyframes fl{0%{opacity:.95}12%{opacity:.75}100%{opacity:0}}
+  body.shake #stage{animation:sh .7s cubic-bezier(.36,.07,.19,.97) both}
+  @keyframes sh{10%,90%{transform:translate(-2px,1px)}20%,80%{transform:translate(4px,-2px)}30%,50%,70%{transform:translate(-7px,3px)}40%,60%{transform:translate(7px,-3px)}}
+
+  /* epilogue */
+  .epi{position:fixed;inset:0;z-index:4;display:flex;flex-direction:column;overflow-y:auto;
+    padding:calc(48px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(48px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));
+    background:radial-gradient(80% 70% at 50% 50%,#070809d9 0%,#070809f5 70%);opacity:0;pointer-events:none;transition:opacity 2.2s ease}
+  .epi.on{opacity:1;pointer-events:auto}
+  .epi .wrap{margin:auto;position:relative;display:grid;grid-template-columns:auto minmax(0,34rem);gap:clamp(20px,5vw,56px);align-items:start;max-width:100%}
+  .epi .vert{display:flex;flex-direction:column;align-items:center;gap:.12em;font:200 clamp(44px,8vw,88px)/1.1 var(--f-jp);color:var(--gold);
+    border-left:1px solid var(--hair);padding-left:14px;opacity:.95}
+  .epi .vert small{font:400 10px var(--f-mono);letter-spacing:.4em;color:var(--dim);margin-top:1.4em;writing-mode:vertical-rl}
+  .epi .body{display:grid;gap:18px;min-width:0}
+  .epi .eyebrow{color:var(--dim);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .epi .eyebrow .jp{font:400 13px var(--f-jp);letter-spacing:.35em;color:var(--char)}
+  .epi h3{font:200 clamp(30px,4.8vw,52px)/1 var(--f-disp);letter-spacing:.06em;text-transform:uppercase;text-wrap:balance}
+  .epi h3 em{font-style:normal;color:var(--gold)}
+  .epi p{font:300 clamp(15px,1.6vw,17px)/1.65 var(--f-read);letter-spacing:.01em;color:#e9edf0d9;max-width:62ch;text-wrap:pretty}
+  .epi p b{font-weight:400;color:var(--line)}
+  .epi .pair{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair);border:1px solid var(--hair);margin-top:6px}
+  .epi .pair div{background:#070809;padding:14px 16px;display:grid;gap:6px}
+  .epi .pair .k{color:var(--dim);font-size:10px;letter-spacing:.25em}
+  .epi .pair .v{font:200 30px/1 var(--f-disp);letter-spacing:.04em}
+  .epi .pair .jp{font:400 13px var(--f-jp);letter-spacing:.3em;color:var(--dim)}
+  .epi .pair .v.gold{color:var(--gold)} .epi .pair .v.char{color:var(--char)}
+  .epi .act{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .epi button{font:400 11px var(--f-mono);letter-spacing:.3em;color:var(--line);background:none;border:1px solid var(--line);padding:11px 18px;cursor:pointer;text-transform:uppercase}
+  .epi button:hover{background:#e9edf014}
+  .epi button:focus-visible{outline:1px solid var(--gold);outline-offset:3px}
+  .epi .sig{color:var(--dim);font-size:10px;letter-spacing:.3em}
+  @media (max-width:640px){ .epi .wrap{grid-template-columns:1fr} .epi .vert{flex-direction:row;align-items:baseline;border-left:0;border-bottom:1px solid var(--hair);padding:0 0 10px;font-size:40px}
+    .epi .vert small{writing-mode:horizontal-tb;margin:0 0 0 14px} }
+
+  @media (max-width:640px){
+    .grid{grid-template-columns:1fr;grid-template-rows:auto auto 1fr auto auto}
+    .vitals{grid-row:2;justify-items:start;text-align:left}
+    .vitals .row{flex-direction:row-reverse}
+    .core{grid-row:4}
+    .ops{grid-column:1;grid-row:5;justify-items:stretch;grid-template-columns:1fr 1fr}
+    .ops .lab{grid-column:1/-1}
+    .ops button{min-width:0}
+    .status{display:none}
+    #ecg{width:min(240px,60vw);height:40px}
+  }
+  @media (prefers-reduced-motion: reduce){ .alarm.on,.blink,.gate .go::after{animation:none} }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="stage"></div>
+<div class="fx"></div>
+<div class="bars top"></div><div class="bars bot"></div>
+
+<div class="hud" aria-live="polite">
+  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="grid">
+    <div class="ident">
+      <div class="tag"><b>FILE 0610-B</b><span class="jp-s">不可逆</span><span>K_WORKS · KENNETHSOH24</span><span>PROCREATE / 2025</span></div>
+      <h1>Keep it below <em>100°C</em></h1>
+      <div class="rule"></div>
+      <div class="han">KINTSUGI HEART · OVERHEAT BUILD</div>
+    </div>
+
+    <div class="vitals">
+      <div class="row"><span class="blink"></span><span>LIVE · HEART RATE</span></div>
+      <div class="row"><span class="bpm" id="bpm">62</span><span>BPM</span></div>
+      <canvas id="ecg" width="480" height="108" aria-label="ECG trace"></canvas>
+      <div class="row"><span id="phaseLab">DIASTOLE</span><span>·</span><span id="clock">00:00:00</span></div>
+    </div>
+
+    <div class="core">
+      <div class="lab"><span>CORE TEMP</span><span id="state">NOMINAL</span></div>
+      <div class="temp" id="tempBox"><span id="temp">36.6</span><small>°C</small></div>
+      <div class="scale"><div class="ticks"></div><div class="fill" id="bar"></div><div class="limit"></div>
+        <div class="nums"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div></div>
+    </div>
+
+    <div class="ops">
+      <div class="lab">OPERATIONS</div>
+      <button id="btnSound" aria-pressed="true">Sound<span>ON</span></button>
+      <button id="btnSpin" aria-pressed="true">Rotate<span>AUTO</span></button>
+      <button id="btnFlat" aria-pressed="false">Canvas<span>3D</span></button>
+      <button id="btnCool">Cool down<span>RESET</span></button>
+    </div>
+    <div class="status">DRAG TO ROTATE &nbsp;/&nbsp; TAP HEART TO RAISE BPM &nbsp;/&nbsp; <a class="home" href="../">STANDARD</a> &nbsp;/&nbsp; <a class="home" href="../../">HOME</a></div>
+  </div>
+</div>
+
+<div class="alarm" id="alarm">Warning · core temperature approaching 100°C</div>
+<div class="flash" id="flash"></div>
+
+<section class="epi" id="epi" aria-hidden="true">
+  <div class="wrap">
+    <div class="vert" lang="ja"><span>金</span><span>継</span><span>ぎ</span><small lang="en">KINTSUGI</small></div>
+    <div class="body">
+      <div class="eyebrow"><span>FILE 0610-B · POST-EVENT RECORD</span><span class="jp" lang="ja">漆・炭化</span></div>
+      <h3>Joined in gold.<br>Undone by <em>heat.</em></h3>
+      <p>In kintsugi, a broken vessel is not thrown away. Its pieces are bonded with <b>urushi</b>, the sap of the lacquer tree, and the seams are dusted with powdered gold. Mended this way, a bowl can outlive the hands that made it, and the break becomes the most precious part.</p>
+      <p>But the gold is only a surface. What holds the pieces together is the lacquer underneath, and lacquer has limits. Keep it cool and the seam can last for generations. In this work, <b>100°C</b> is the line: past it the urushi scorches and chars to carbon. The gold still shines, but nothing is holding it any more.</p>
+      <p>What is mended with gold can be eternal, but only under the right conditions. Past them, the same repair becomes a fragility you can't come back from. Cooling it down afterwards does not undo the burn.</p>
+      <div class="pair">
+        <div><span class="k">BELOW 100°C</span><span class="v gold">Eternal</span><span class="jp" lang="ja">永遠</span></div>
+        <div><span class="k">ABOVE 100°C</span><span class="v char">Irreversible</span><span class="jp" lang="ja">脆さ · 不可逆</span></div>
+      </div>
+      <div class="act"><button id="btnAgain">Begin again</button></div>
+      <div class="sig">“KEEP IT BELOW 100°C.” · KENNETHSOH24 · 2025</div>
+    </div>
+  </div>
+</section>
+
+<div class="gate" id="gate">
+  <div class="in">
+    <div class="pre" id="pre"></div>
+    <h2>Keep it below 100°C</h2>
+    <div class="han">KINTSUGI HEART</div>
+    <button class="go" id="go">TAP TO CONNECT</button>
+  </div>
+  <div class="note">HEADPHONES RECOMMENDED</div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+// clear colour is written straight into the linear buffer, so give it in linear space
+renderer.setClearColor(new THREE.Color(0x121110).convertSRGBToLinear());
+scene.fog = new THREE.Fog(0x121110, 6, 14);
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 50);
+camera.position.set(0, 0, 6.2);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enablePan = false;
+controls.minDistance = 3.2;
+controls.maxDistance = 9;
+controls.autoRotate = !reduced;
+controls.autoRotateSpeed = 0.9;
+
+// ---------- textures + anatomical model ----------
+const loader = new THREE.TextureLoader();
+const load = (u, srgb) => new Promise((res, rej) => loader.load(u, t => {
+  t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  res(t);
+}, undefined, rej));
+
+// heart.bin: [nVerts, nIndices] u32 · positions f32x3 · normals i8x3 · (ao, ventricle, atria, coronary) u8x4 · indices u16
+async function loadHeart(url) {
+  const buf = await (await fetch(url)).arrayBuffer();
+  const [nv, ni] = new Uint32Array(buf, 0, 2);
+  let o = 8;
+  const take = (Type, count, size) => { const a = new Type(buf.slice(o, o + count * size)); o += count * size; return a; };
+  const pos = take(Float32Array, nv * 3, 4);
+  const nrm = take(Int8Array, nv * 3, 1);
+  const att = take(Uint8Array, nv * 4, 1);
+  const idx = take(Uint16Array, ni, 2);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nrm, 3, true));
+  g.setAttribute('region', new THREE.BufferAttribute(att, 4, true));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.computeBoundingSphere();
+  return g;
+}
+
+const [colorTex, mapsTex, origTex, heartGeo] = await Promise.all([
+  load('../heart_color.png', true), load('../heart_maps.png', false), load('../heart_original.jpg', true), loadHeart('../heart.bin')
+]);
+
+const uniforms = {
+  uColor: { value: colorTex }, uMaps: { value: mapsTex },
+  uDepth: { value: 0 },          // 0 = pressed flat into the canvas, 1 = full volume
+  uVent: { value: 0 },           // ventricular contraction 0..1
+  uAtria: { value: 0 },          // atrial contraction 0..1
+  uFlow: { value: 0 },           // gold wave travelling out along the cracks
+  uHeat: { value: 0 },
+  uChar: { value: 0 },           // 0..1 how far the lacquer has burned (never goes back down)
+  uBurst: { value: 0 },          // seconds since the heart burst
+  uTime: { value: 0 },
+  uLight: { value: new THREE.Vector3(-0.55, 0.65, 0.9).normalize() },
+};
+
+const vert = /* glsl */`
+  uniform float uDepth, uVent, uAtria, uTime, uChar, uBurst;
+  attribute vec4 region;            // ao, ventricle, atria, coronary
+  attribute vec3 aCell;             // centre of the shard this triangle belongs to
+  attribute vec4 aRand;             // spin axis + random
+  vec3 rot(vec3 v, vec3 ax, float a){ return v*cos(a) + cross(ax, v)*sin(a) + ax*dot(ax, v)*(1.0-cos(a)); }
+  varying vec3 vObj; varying vec3 vObjN; varying vec3 vN; varying vec3 vView; varying vec4 vReg;
+  void main(){
+    vec3 p = position;
+    vec3 n = normal;
+    // ventricles squeeze toward their long axis and wring slightly; atria squeeze first
+    vec3 vc = vec3(0.02, -0.35, 0.0);
+    vec3 dv = p - vc;
+    float v = region.y * uVent;
+    p -= vec3(dv.x, dv.y * 0.35, dv.z) * 0.07 * v;
+    float tw = 0.08 * v * (vc.y - p.y);
+    p.xz = mat2(cos(tw), -sin(tw), sin(tw), cos(tw)) * p.xz;
+    vec3 ac = vec3(0.0, 0.2, -0.1);
+    p -= (p - ac) * 0.05 * region.z * uAtria;
+    // great vessels swell as blood is pushed out
+    float vessel = 1.0 - clamp(region.y + region.z, 0.0, 1.0);
+    p += n * 0.012 * vessel * uVent;
+    vObj = p; vObjN = n; vReg = region;
+    // charring: the shards start to loosen and tremble along their seams
+    float loose = uChar * uChar;
+    p += normalize(aCell + 1e-4) * 0.035 * loose;
+    p += aRand.xyz * 0.012 * loose * sin(uTime * 55.0 + aRand.w * 40.0);
+    // burst: every shard flies outward, spinning, pulled down, and shrinks away
+    if (uBurst > 0.0) {
+      float tb = uBurst;
+      vec3 ax = normalize(aRand.xyz + vec3(1e-3));
+      float ang = (0.6 + aRand.w * 2.4) * tb * 3.0;
+      vec3 local = rot(p - aCell, ax, ang);
+      n = rot(n, ax, ang);
+      vec3 dir = normalize(aCell + aRand.xyz * 0.5 + vec3(0.0, 0.25, 0.0));
+      float speed = 1.6 + 2.6 * fract(aRand.w * 7.13);
+      vec3 c = aCell + dir * speed * (1.0 - exp(-tb * 1.6)) / 1.6 * 2.2 + vec3(0.0, -0.35, 0.0) * tb * tb;
+      p = c + local * (1.0 - smoothstep(1.6, 5.0, tb));
+    }
+    p.z *= mix(0.03, 1.0, uDepth);
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    vView = -mv.xyz;
+    vN = normalize(normalMatrix * n);
+    gl_Position = projectionMatrix * mv;
+  }`;
+
+const frag = /* glsl */`
+  uniform sampler2D uColor, uMaps; uniform float uVent, uFlow, uHeat, uTime, uDepth, uChar, uBurst;
+  uniform vec3 uLight;
+  varying vec3 vObj; varying vec3 vObjN; varying vec3 vN; varying vec3 vView; varying vec4 vReg;
+
+  float hash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float noise(vec3 x){
+    vec3 i = floor(x), f = fract(x); f = f*f*(3.0-2.0*f);
+    return mix(mix(mix(hash(i), hash(i+vec3(1,0,0)), f.x), mix(hash(i+vec3(0,1,0)), hash(i+vec3(1,1,0)), f.x), f.y),
+               mix(mix(hash(i+vec3(0,0,1)), hash(i+vec3(1,0,1)), f.x), mix(hash(i+vec3(0,1,1)), hash(i+vec3(1,1,1)), f.x), f.y), f.z);
+  }
+  float fbm(vec3 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++){ s += a * noise(p); p *= 2.03; a *= 0.5; } return s; }
+
+  void main(){
+    vec3 N = normalize(vN);
+    vec3 V = normalize(vView);
+    vec3 L = normalize((viewMatrix * vec4(uLight, 0.)).xyz);
+    float ao = vReg.x, cor = vReg.w;
+    if (!gl_FrontFacing) N = -N;
+
+    // your painting, projected straight through the model from the front
+    vec2 uv = vObj.xy / 3.0 + 0.5;
+    vec4 paint = texture2D(uColor, uv);
+    vec4 maps = texture2D(uMaps, uv);
+    float facing = abs(normalize(vObjN).z);
+
+    // brushy painted flesh for everywhere the projection can't reach (sides, back, vessel tops)
+    vec3 q = vObj * vec3(3.0, 7.5, 3.0);                       // stretched noise = vertical brush strokes
+    float b = fbm(q + vec3(0.0, uTime * 0.02, 0.0));
+    float b2 = fbm(vObj * 14.0);
+    vec3 deep = vec3(0.30, 0.012, 0.018), mid = vec3(0.62, 0.03, 0.04), hot = vec3(0.92, 0.10, 0.08);
+    vec3 flesh = mix(deep, mid, smoothstep(0.30, 0.62, b));
+    flesh = mix(flesh, hot, smoothstep(0.58, 0.78, b) * 0.8);
+    flesh = mix(flesh, vec3(0.04, 0.005, 0.008), smoothstep(0.55, 0.30, b2) * 0.45);   // dark charcoal smudges
+    // coronary vessels: darker, bluish-purple, with a little yellow fat alongside
+    flesh = mix(flesh, vec3(0.30, 0.03, 0.10), cor * 0.8);
+    flesh = mix(flesh, vec3(0.75, 0.55, 0.30), smoothstep(0.0, 0.5, cor) * (1.0 - cor) * 0.25);
+
+    float useP = paint.a * smoothstep(0.15, 0.75, facing) * (1.0 - vReg.w * 0.6);
+    // the back gets a darker, mirrored echo of the painting
+    float back = step(vObjN.z, 0.0);
+    vec3 paintCol = mix(paint.rgb, paint.rgb * vec3(0.75, 0.6, 0.6), back);
+    vec3 base = mix(flesh, paintCol, useP * mix(0.92, 0.6, back));
+
+    // white chalky speckle, like the dry brush in the original
+    float speck = step(0.83, fbm(vObj * 42.0)) * step(0.45, b) * 0.55;
+    base = mix(base, vec3(0.95, 0.9, 0.88), speck * (1.0 - useP * 0.7));
+
+    // light: soft wrap diffuse with a red sub-surface bleed, wet double specular, red rim
+    float ndl = dot(N, L);
+    float diff = max(ndl, 0.0);
+    float wrap = max((ndl + 0.5) / 1.5, 0.0);
+    vec3 H = normalize(L + V);
+    float sp1 = pow(max(dot(N, H), 0.0), 90.0);
+    float sp2 = pow(max(dot(N, H), 0.0), 16.0) * 0.05;
+    float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+    vec3 col = base * (0.14 + 0.8 * diff) * ao + base * vec3(0.55, 0.05, 0.04) * wrap * 0.35;
+    col += (sp1 * 0.7 + sp2) * vec3(1.0, 0.8, 0.78) * (0.4 + 0.6 * ao) * mix(0.7, 1.0, b);
+    col += rim * vec3(0.85, 0.06, 0.05) * (0.25 + 0.35 * uVent + 0.45 * uHeat) * ao;
+    col *= 1.0 + uVent * 0.15 * vec3(1.0, 0.3, 0.3);
+
+    // kintsugi gold, projected from the painting through front and back
+    float g = maps.g * smoothstep(0.35, 0.7, facing);
+    float along = 1.0 - maps.a;
+    float wave = smoothstep(0.12, 0.0, abs(along - (1.0 - uFlow)));
+    float shimmer = 0.85 + 0.15 * sin(uTime * 3.0 + vObj.y * 30.0);
+    vec3 goldC = vec3(1.0, 0.76, 0.34);
+    col = mix(col, goldC * (0.55 + 2.0 * sp2 * 6.0 + 0.5 * diff), g * 0.9);
+    col += g * goldC * (0.3 * shimmer + 1.6 * wave * (0.6 + 0.4 * uHeat) + 0.6 * uHeat + 0.3 * uVent);
+
+    // charring: flesh goes to soot, the gold seams burn orange then die to carbon
+    float burn = smoothstep(0.0, 0.45, uChar);
+    float dead = smoothstep(0.55, 1.0, uChar);
+    float soot = fbm(vObj * 9.0 + 3.0);
+    col = mix(col, col * vec3(0.1, 0.05, 0.04) + vec3(0.03, 0.018, 0.012) * soot, burn * (0.7 + 0.3 * soot));
+    vec3 ember = vec3(1.0, 0.32, 0.06) * (1.2 + 0.8 * sin(uTime * 9.0 + vObj.y * 20.0));
+    col = mix(col, ember * (1.0 - dead) + vec3(0.03, 0.025, 0.02) * dead, g * burn);
+    col += vec3(1.0, 0.25, 0.04) * burn * (1.0 - dead) * smoothstep(0.62, 0.9, soot) * 0.35;
+    // inside faces of the shards: raw, dark, still glowing at the edges
+    if (!gl_FrontFacing) col = vec3(0.05, 0.012, 0.01) + vec3(0.9, 0.25, 0.05) * exp(-uBurst * 1.2) * 0.6;
+    gl_FragColor = vec4(col, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }`;
+
+// split the heart into shards: triangles grouped by nearest of ~90 random seeds on the surface
+function shatter(geo) {
+  const g = geo.toNonIndexed();
+  const pos = g.attributes.position.array, nTri = pos.length / 9;
+  const seeds = [];
+  for (let i = 0; i < 90; i++) { const v = Math.floor(Math.random() * (pos.length / 3)) * 3; seeds.push([pos[v], pos[v + 1], pos[v + 2]]); }
+  const rnd = seeds.map(() => { const a = new THREE.Vector3().randomDirection(); return [a.x, a.y, a.z, Math.random()]; });
+  const cell = new Float32Array(pos.length), rand = new Float32Array(nTri * 12);
+  for (let t = 0; t < nTri; t++) {
+    const o = t * 9;
+    const cx = (pos[o] + pos[o + 3] + pos[o + 6]) / 3, cy = (pos[o + 1] + pos[o + 4] + pos[o + 7]) / 3, cz = (pos[o + 2] + pos[o + 5] + pos[o + 8]) / 3;
+    let best = 0, bd = 1e9;
+    for (let k = 0; k < seeds.length; k++) {
+      const dx = cx - seeds[k][0], dy = cy - seeds[k][1], dz = cz - seeds[k][2], d = dx * dx + dy * dy + dz * dz;
+      if (d < bd) { bd = d; best = k; }
+    }
+    for (let v = 0; v < 3; v++) { cell.set(seeds[best], o + v * 3); rand.set(rnd[best], t * 12 + v * 4); }
+  }
+  g.setAttribute('aCell', new THREE.BufferAttribute(cell, 3));
+  g.setAttribute('aRand', new THREE.BufferAttribute(rand, 4));
+  return g;
+}
+const shardGeo = shatter(heartGeo);
+const heartMat = new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag, side: THREE.DoubleSide });
+const heartMesh = new THREE.Mesh(shardGeo, heartMat);
+heartMesh.frustumCulled = false;
+const heart = new THREE.Group();
+heart.add(heartMesh);
+scene.add(heart);
+
+// ---------- the canvas it lifts off ----------
+const canvasMat = new THREE.MeshBasicMaterial({ map: origTex, transparent: true, opacity: 1, fog: false, depthWrite: false });
+const canvasPlane = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), canvasMat);
+canvasPlane.position.z = 0.06;
+canvasPlane.renderOrder = 2;
+scene.add(canvasPlane);
+
+// ---------- embers + dust ----------
+const N = reduced ? 160 : 520;
+const pPos = new Float32Array(N * 3), pSeed = new Float32Array(N), pKind = new Float32Array(N);
+for (let i = 0; i < N; i++) {
+  pPos[i*3] = (Math.random() - .5) * 5; pPos[i*3+1] = (Math.random() - .5) * 5; pPos[i*3+2] = (Math.random() - .5) * 3;
+  pSeed[i] = Math.random(); pKind[i] = Math.random() < 0.35 ? 1 : 0;
+}
+const pGeo = new THREE.BufferGeometry();
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+pGeo.setAttribute('seed', new THREE.BufferAttribute(pSeed, 1));
+pGeo.setAttribute('kind', new THREE.BufferAttribute(pKind, 1));
+const pMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: uniforms.uTime, uHeat: uniforms.uHeat, uPix: { value: renderer.getPixelRatio() } },
+  vertexShader: `
+    uniform float uTime, uHeat, uPix; attribute float seed, kind; varying float vA; varying float vK;
+    void main(){
+      vec3 p = position;
+      float sp = mix(0.08, 0.35, seed) * (1.0 + 2.5*uHeat);
+      p.y = mod(p.y + 2.5 + uTime*sp, 5.0) - 2.5;
+      p.x += sin(uTime*0.6 + seed*30.0)*0.15;
+      vec4 mv = modelViewMatrix * vec4(p,1.0);
+      vA = smoothstep(2.5, 1.2, abs(p.y)) * (0.35 + 0.65*uHeat*kind + 0.3*(1.0-kind));
+      vK = kind;
+      gl_PointSize = uPix * mix(2.0, 5.0, seed) * (kind > 0.5 ? 1.4 + uHeat : 1.0) * (6.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    varying float vA; varying float vK;
+    void main(){
+      float d = length(gl_PointCoord - 0.5);
+      float a = smoothstep(0.5, 0.0, d) * vA;
+      vec3 c = vK > 0.5 ? vec3(1.0, 0.45, 0.12) : vec3(0.9, 0.88, 0.82);
+      gl_FragColor = vec4(c, a);
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const embers = new THREE.Points(pGeo, pMat);
+scene.add(embers);
+
+// ---------- burst dust ----------
+const DN = reduced ? 500 : 1800;
+const dPos = new Float32Array(DN * 3), dVel = new Float32Array(DN * 4);
+{
+  const hp = heartGeo.attributes.position.array;
+  for (let i = 0; i < DN; i++) {
+    const v = Math.floor(Math.random() * (hp.length / 3)) * 3;
+    dPos.set([hp[v], hp[v + 1], hp[v + 2]], i * 3);
+    const d = new THREE.Vector3(hp[v], hp[v + 1] + 0.2, hp[v + 2]).normalize().multiplyScalar(1.5 + Math.random() * 4.5)
+      .add(new THREE.Vector3().randomDirection().multiplyScalar(1.2));
+    dVel.set([d.x, d.y, d.z, Math.random()], i * 4);
+  }
+}
+const dGeo = new THREE.BufferGeometry();
+dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+dGeo.setAttribute('vel', new THREE.BufferAttribute(dVel, 4));
+const dMat = new THREE.ShaderMaterial({
+  uniforms: { uBurst: uniforms.uBurst, uPix: { value: renderer.getPixelRatio() } },
+  vertexShader: `
+    uniform float uBurst, uPix; attribute vec4 vel; varying float vA; varying float vK;
+    void main(){
+      float t = uBurst;
+      vec3 p = position + vel.xyz * (1.0 - exp(-t * 1.8)) / 1.8 + vec3(0.0, -0.4, 0.0) * t * t;
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      vK = vel.w;
+      vA = step(0.0001, t) * exp(-t * (0.5 + vel.w));
+      gl_PointSize = uPix * mix(2.0, 7.0, vel.w) * (6.0 / -mv.z);
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    varying float vA; varying float vK;
+    void main(){
+      float d = length(gl_PointCoord - 0.5);
+      vec3 c = mix(vec3(1.0, 0.82, 0.42), vec3(1.0, 0.3, 0.06), step(0.55, vK));
+      gl_FragColor = vec4(c * 1.6, smoothstep(0.5, 0.0, d) * vA);
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const dust = new THREE.Points(dGeo, dMat);
+dust.frustumCulled = false;
+scene.add(dust);
+
+// ---------- post ----------
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.6, 0.82);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+// ---------- heartbeat sound (synthesised, so it stays locked to the animation) ----------
+const audio = { ctx: null, out: null, lp: null, drone: null, noise: null, on: true };
+function initAudio() {
+  if (audio.ctx) { audio.ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  const ctx = new AC();
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.ratio.value = 4;
+  const out = ctx.createGain(); out.gain.value = audio.on ? 1 : 0;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 320; lp.Q.value = 0.7;  // heard through the chest wall
+  lp.connect(out); out.connect(comp); comp.connect(ctx.destination);
+  const nb = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+  const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  // low room tone underneath everything
+  const droneGain = ctx.createGain(); droneGain.gain.value = 0;
+  const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 140;
+  [41.2, 61.7, 82.4].forEach((f, i) => { const o = ctx.createOscillator(); o.frequency.value = f; o.detune.value = i * 4;
+    const g = ctx.createGain(); g.gain.value = [0.5, 0.25, 0.12][i]; o.connect(g).connect(dlp); o.start(); });
+  dlp.connect(droneGain).connect(out);
+  droneGain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 4);
+  Object.assign(audio, { ctx, out, lp, drone: droneGain, noise: nb });
+}
+function thump(strength, pitch) {
+  const { ctx, lp, noise } = audio; if (!ctx || !audio.on) return;
+  const t = ctx.currentTime + 0.005;
+  const o = ctx.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(pitch * 1.8, t);
+  o.frequency.exponentialRampToValueAtTime(pitch, t + 0.04);
+  o.frequency.exponentialRampToValueAtTime(pitch * 0.65, t + 0.22);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(strength, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+  o.connect(g).connect(lp); o.start(t); o.stop(t + 0.32);
+  const n = ctx.createBufferSource(); n.buffer = noise;
+  const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = pitch * 2.2; nf.Q.value = 1.2;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(strength * 0.6, t + 0.006); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+  n.connect(nf).connect(ng).connect(lp); n.start(t); n.stop(t + 0.1);
+}
+
+function crackle(amount) {
+  const { ctx, lp, noise } = audio; if (!ctx || !audio.on) return;
+  const t = ctx.currentTime + Math.random() * 0.03;
+  const n = ctx.createBufferSource(); n.buffer = noise; n.playbackRate.value = 0.6 + Math.random();
+  const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1800 + Math.random() * 2500;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05 + 0.25 * amount, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03 + Math.random() * 0.05);
+  n.connect(f).connect(g).connect(audio.out); n.start(t, Math.random()); n.stop(t + 0.1);
+}
+function boom() {
+  const { ctx, noise } = audio; if (!ctx || !audio.on) return;
+  const t = ctx.currentTime + 0.01;
+  const o = ctx.createOscillator(); o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(24, t + 1.4);
+  const og = ctx.createGain(); og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(1.0, t + 0.01); og.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+  o.connect(og).connect(audio.out); o.start(t); o.stop(t + 2.3);
+  const n = ctx.createBufferSource(); n.buffer = noise; n.loop = true;
+  const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(200, t + 1.8);
+  const ng = ctx.createGain(); ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(0.7, t + 0.005); ng.gain.exponentialRampToValueAtTime(0.0001, t + 2.5);
+  n.connect(f).connect(ng).connect(audio.out); n.start(t); n.stop(t + 2.6);
+  // shards tinkling down afterwards, like porcelain
+  for (let i = 0; i < 26; i++) {
+    const tt = t + 0.25 + Math.random() * 2.2;
+    const s = ctx.createOscillator(); s.type = 'triangle'; s.frequency.value = 1800 + Math.random() * 3800;
+    const sg = ctx.createGain(); sg.gain.setValueAtTime(0.0001, tt); sg.gain.exponentialRampToValueAtTime(0.03 + Math.random() * 0.05, tt + 0.003); sg.gain.exponentialRampToValueAtTime(0.0001, tt + 0.25 + Math.random() * 0.5);
+    s.connect(sg).connect(audio.out); s.start(tt); s.stop(tt + 0.8);
+  }
+  // the monitor flatlines
+  const fl = ctx.createOscillator(); fl.frequency.value = 880;
+  const fg = ctx.createGain(); fg.gain.setValueAtTime(0.0001, t + 1.0); fg.gain.exponentialRampToValueAtTime(0.06, t + 1.05); fg.gain.setValueAtTime(0.06, t + 4.5); fg.gain.exponentialRampToValueAtTime(0.0001, t + 6.5);
+  fl.connect(fg).connect(audio.out); fl.start(t + 1.0); fl.stop(t + 6.6);
+}
+
+// ---------- ECG trace ----------
+const ecg = document.getElementById('ecg'), ex = ecg.getContext('2d');
+const trace = new Float32Array(240); let traceHead = 0, traceAcc = 0;
+const gauss = (x, c, w) => Math.exp(-Math.pow((x - c) / w, 2));
+const ecgAt = p => 0.12 * gauss(p, 0.04, 0.025) - 0.12 * gauss(p, 0.13, 0.008) + 1.0 * gauss(p, 0.15, 0.009)
+                 - 0.28 * gauss(p, 0.17, 0.01) + 0.28 * gauss(p, 0.38, 0.045);
+function drawEcg(hot) {
+  const w = ecg.width, h = ecg.height;
+  ex.clearRect(0, 0, w, h);
+  ex.fillStyle = 'rgba(233,237,240,0.14)';
+  for (let x = 0; x < w; x += 24) for (let y = 6; y < h; y += 24) ex.fillRect(x, y, 2, 2);
+  ex.lineWidth = 2; ex.lineJoin = 'round';
+  ex.strokeStyle = hot ? '#ff3b30' : '#e9edf0';
+  ex.beginPath();
+  const n = trace.length;
+  for (let i = 0; i < n; i++) {
+    const v = trace[(traceHead + i) % n];
+    const x = i / (n - 1) * w, y = h * 0.66 - v * h * 0.55;
+    i ? ex.lineTo(x, y) : ex.moveTo(x, y);
+  }
+  ex.stroke();
+  const last = trace[(traceHead + n - 1) % n];
+  ex.fillStyle = '#f2d27a';
+  ex.beginPath(); ex.arc(w - 4, h * 0.66 - last * h * 0.55, 4, 0, 7); ex.fill();
+}
+
+// ---------- heartbeat + temperature ----------
+let bpm = 62, phase = 0, lastBeat = 0, flat = false, started = false, t0 = 0;
+let char = 0, burstAt = -1, epiShown = false;
+const restBpm = 62;
+const $ = id => document.getElementById(id);
+const tempEl = $('temp'), tempBox = $('tempBox'), barEl = $('bar'), bpmEl = $('bpm'), alarm = $('alarm'),
+      stateEl = $('state'), phaseLab = $('phaseLab'), clockEl = $('clock');
+const pulse = (t, c, w) => Math.exp(-Math.pow((t - c) / w, 2));
+
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!started || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+  ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  if (burstAt < 0 && ray.intersectObject(heartMesh)[0]) { bpm = Math.min(bpm + 14, 205); phase = 0.999; }  // a tap jolts the heart, and now it can go past 100°C
+});
+
+const press = (btn, on, a, b) => { btn.setAttribute('aria-pressed', on); btn.querySelector('span').textContent = on ? a : b; };
+controls.autoRotate = false;
+$('btnSound').onclick = e => { audio.on = !audio.on; press(e.currentTarget, audio.on, 'ON', 'OFF');
+  if (audio.on) initAudio(); if (audio.out) audio.out.gain.setTargetAtTime(audio.on ? 1 : 0, audio.ctx.currentTime, 0.05); };
+$('btnSpin').onclick = e => { controls.autoRotate = !controls.autoRotate; press(e.currentTarget, controls.autoRotate, 'AUTO', 'HOLD'); };
+$('btnFlat').onclick = e => { flat = !flat; press(e.currentTarget, flat, '2D', '3D');
+  if (flat) { controls.autoRotate = false; press($('btnSpin'), false, 'AUTO', 'HOLD'); } };
+$('btnCool').onclick = () => { if (burstAt < 0) bpm = restBpm; };   // cools the heart, but never un-burns the lacquer
+$('btnAgain').onclick = () => {
+  char = 0; burstAt = -1; epiShown = false; bpm = restBpm; phase = 0;
+  uniforms.uChar.value = 0; uniforms.uBurst.value = 0;
+  $('epi').classList.remove('on'); $('epi').setAttribute('aria-hidden', 'true');
+  t0 = clock.elapsedTime; uniforms.uDepth.value = 0;   // the painting is back on its canvas and lifts off again
+};
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  fit();
+});
+function fit(){ // keep the whole heart in frame on narrow phones
+  const need = innerWidth / innerHeight < 0.8 ? 6.6 / (innerWidth / innerHeight / 0.8) : 6.6;
+  controls.maxDistance = Math.max(9, need + 1);
+  camera.position.setLength(Math.max(camera.position.length(), need));
+}
+camera.position.set(0, 0, 6.6);
+fit();
+
+// ---------- opening ----------
+const gate = $('gate'), pre = $('pre');
+const line = 'K_WORKS  ·  KENNETHSOH24  ·  FILE 0610-B';
+let ci = 0;
+const typer = setInterval(() => { pre.textContent = line.slice(0, ++ci); if (ci >= line.length) { clearInterval(typer); gate.classList.add('ready'); } }, reduced ? 5 : 45);
+function connect() {
+  if (started) return;
+  started = true; t0 = clock.elapsedTime;
+  initAudio();
+  gate.classList.add('out');
+  document.body.classList.add('cine');
+  setTimeout(() => { document.body.classList.remove('cine'); document.body.classList.add('live');
+    if (!reduced) { controls.autoRotate = true; press($('btnSpin'), true, 'AUTO', 'HOLD'); } }, reduced ? 300 : 3600);
+}
+gate.addEventListener('click', connect);
+addEventListener('keydown', e => { if (!started && (e.key === 'Enter' || e.key === ' ')) connect(); });
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+  uniforms.uTime.value = t;
+  const st = started ? t - t0 : 0;
+
+  // intro: the painting rests on its canvas, then the heart swells out of it
+  const intro = Math.min(st / 3.2, 1);
+  const lift = THREE.MathUtils.smootherstep(intro, 0.2, 1);
+  const target = flat ? 0 : 1;
+  const dCur = uniforms.uDepth.value;
+  uniforms.uDepth.value = intro < 1 ? lift * target : dCur + (target - dCur) * Math.min(dt * 3, 1);
+  const vol = uniforms.uDepth.value;
+  canvasMat.opacity = 1 - THREE.MathUtils.smoothstep(vol, 0.0, 0.55);
+  canvasPlane.visible = canvasMat.opacity > 0.01;
+  if (flat) camera.position.lerp(new THREE.Vector3(0, 0, camera.position.length()), Math.min(dt * 2.5, 1));
+
+  // heart rate relaxes back toward rest; temperature follows
+  bpm += (restBpm - bpm) * dt * 0.06;
+  const cycle = 60 / bpm;
+  const prev = phase;
+  phase += dt / cycle;
+  const wrapped = phase >= 1;
+  if (wrapped) { phase -= 1; lastBeat = t; }
+  const crossed = c => wrapped ? (prev < c || phase >= c) : (prev < c && phase >= c);
+  const dead = burstAt >= 0;
+  const temp = dead ? Math.max(20, 36.6 - (t - burstAt) * 2) : 36.6 + (bpm - restBpm) / (178 - restBpm) * (99.4 - 36.6);
+  const heat = Math.min((temp - 36.6) / (100 - 36.6), 1.2);
+  // above 100°C the lacquer chars; it only ever goes up
+  if (!dead && temp >= 100) {
+    char = Math.min(char + dt / 3.0, 1);
+    if (Math.random() < dt * (8 + 40 * char)) crackle(char);
+  }
+  uniforms.uChar.value = char;
+  if (!dead && char >= 1) {
+    burstAt = t; boom();
+    $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
+    if (!reduced) { document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 800); }
+  }
+  uniforms.uBurst.value = dead ? t - burstAt : 0;
+  if (dead && !epiShown && t - burstAt > 3.2) { epiShown = true; $('epi').classList.add('on'); $('epi').setAttribute('aria-hidden', 'false'); }
+  if (started && !dead) {
+    if (crossed(0.15)) thump(0.95, 52 + heat * 10);   // S1 "lub": AV valves close
+    if (crossed(0.37)) thump(0.6, 66 + heat * 12);    // S2 "dub": aortic and pulmonary valves close
+    if (audio.lp) audio.lp.frequency.setTargetAtTime(320 + heat * 500, audio.ctx.currentTime, 0.2);
+  }
+  const k = reduced ? 0.35 : 1;
+  // atria contract just before the ventricles (lub), then the ventricles squeeze and relax (dub)
+  uniforms.uAtria.value = k * pulse(phase, 0.04, 0.05) * vol;
+  const vent = k * (pulse(phase, 0.2, 0.07) + 0.45 * pulse(phase, 0.36, 0.05));
+  uniforms.uVent.value = vent * vol;
+  uniforms.uFlow.value = Math.min((t - lastBeat) / (cycle * 0.9), 1);
+  uniforms.uHeat.value = heat;
+  heart.scale.setScalar(dead ? 1 : 1 + 0.02 * vent * vol);
+  bloom.strength = dead ? 0.5 + 2.5 * Math.exp(-(t - burstAt) * 2.5) : 0.4 + 0.35 * Math.min(heat, 1) + 0.15 * vent + 0.6 * char;
+
+  // HUD
+  traceAcc += dt * 110;                       // trace speed: samples per second
+  // sample the waveform at even time steps even when frames are slow, so the QRS spike never gets skipped
+  const nS = Math.floor(traceAcc); traceAcc -= nS;
+  for (let i = 0; i < nS; i++) {
+    const ph = ((phase - (nS - 1 - i) / 110 / cycle) % 1 + 1) % 1;
+    trace[traceHead] = dead ? (Math.random() - 0.5) * 0.02 : ecgAt(ph) * (1 - 0.5 * char) + (Math.random() - 0.5) * 0.25 * char; traceHead = (traceHead + 1) % trace.length;
+  }
+  drawEcg(heat > 0.85);
+  tempEl.textContent = temp.toFixed(1);
+  const level = dead ? 4 : temp >= 100 ? 3 : heat > 0.85 ? 2 : heat > 0.35 ? 1 : 0;
+  tempBox.style.color = ['', 'var(--gold)', 'var(--alarm)', 'var(--char)', 'var(--dim)'][level];
+  stateEl.textContent = dead ? 'SIGNAL LOST' : level === 3 ? `CARBONIZING ${Math.round(char * 100)}%`
+    : (char > 0 ? ['NOMINAL', 'ELEVATED', 'CRITICAL'][level] + ` · CHARRED ${Math.round(char * 100)}%` : ['NOMINAL', 'ELEVATED', 'CRITICAL'][level]);
+  barEl.style.width = Math.min(temp, 100).toFixed(1) + '%';
+  barEl.style.background = ['var(--line)', 'var(--gold)', 'var(--alarm)', 'var(--char)', 'var(--dim)'][level];
+  bpmEl.textContent = dead ? '---' : Math.round(bpm);
+  phaseLab.textContent = dead ? 'ASYSTOLE' : phase > 0.12 && phase < 0.4 ? 'SYSTOLE' : 'DIASTOLE';
+  const s = Math.floor(st);
+  clockEl.textContent = [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(n => String(n).padStart(2, '0')).join(':');
+  alarm.classList.toggle('on', !dead && temp > 92);
+  alarm.textContent = temp >= 100 ? 'Urushi carbonizing · irreversible · 炭化' : 'Warning · core temperature approaching 100°C';
+
+  embers.rotation.y = t * 0.03;
+  controls.update();
+  composer.render();
+});
+</script>
+</body>
+</html>
