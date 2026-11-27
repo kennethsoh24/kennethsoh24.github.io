@@ -298,6 +298,7 @@
   /* ---------- press start + opening movie ---------- */
   body.locked [data-theme], body.locked .field:has(#theme) { display: none !important; }
   body.bwed .no-bw { display: none; }
+  body:not(.bwed) .bw-only { display: none; }
   body.locked #title .opts:has([data-theme]) { display: none !important; }
   #boot { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--paper); transition: opacity .4s steps(4); }
   #boot.gone, #intro.gone { opacity: 0; pointer-events: none; }
@@ -894,7 +895,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 30</div>
+  <div class="build mono">Build 31</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -963,7 +964,7 @@
       <label class="field mono">Battle
         <select id="battle"><option value="full" selected>Full</option><option value="quick">Quick</option></select></label>
       <label class="field mono">Graphics
-        <select id="gfx"><option value="cinema" class="no-bw">Cinema</option><option value="high">High</option><option value="classic">Classic</option></select></label>
+        <select id="gfx"><option value="cinema" class="no-bw">Cinema</option><option value="anime" class="bw-only">Anime 2.5D</option><option value="high">High</option><option value="classic">Classic</option></select></label>
       <label class="field mono">Camera
         <select id="cam"><option value="cine" selected>Cinematic</option><option value="fixed">Fixed</option></select></label>
       <label class="field mono">Music
@@ -1095,7 +1096,11 @@ try { GFX = localStorage.getItem('cf-gfx') || 'cinema'; } catch (e) { /* storage
 if (GFX === 'ink') GFX = 'cinema';
 // the classic black & white edition keeps its paper look: no Cinema world there
 const BWED = new URLSearchParams(location.search).get('edition') === 'bw';
+const QGFX = new URLSearchParams(location.search).get('gfx');
+if (QGFX) GFX = QGFX;
 if (BWED && GFX === 'cinema') GFX = 'high';
+if (!BWED && GFX === 'anime') GFX = 'cinema';   // the anime render belongs to the Black & White edition
+const ANIME = () => GFX === 'anime';
 const HIGH = () => GFX === 'high' || GFX === 'cinema';
 const INK = () => false;
 const CINE = () => GFX === 'cinema' && !BWED && (THEME === 'mono' || THEME === 'ops');
@@ -1147,6 +1152,10 @@ resize();
    Ink-sketch materials: toon shading + inverted-hull outline
    ================================================================ */
 const grad = new THREE.DataTexture(new Uint8Array([60, 150, 255]), 3, 1, THREE.RedFormat);
+// anime cel ramp: one hard terminator between a flat shadow tone and full light
+const animeGrad = new THREE.DataTexture(new Uint8Array([96, 96, 255, 255]), 4, 1, THREE.RedFormat);
+animeGrad.minFilter = animeGrad.magFilter = THREE.NearestFilter;
+animeGrad.needsUpdate = true;
 grad.minFilter = grad.magFilter = THREE.NearestFilter;
 grad.needsUpdate = true;
 
@@ -1366,8 +1375,8 @@ class Rig {
       for (const pt of part.parts) {
         const mesh = new THREE.Mesh(pt.geo, transformMat(pt, U));
         mesh.receiveShadow = true;
-        if (!isMobile || which === 'chess') {
-          const ol = new THREE.Mesh(pt.geo, transformOutlineMat(U, HIGH() ? (which === 'chess' ? .007 : .0045) : (which === 'chess' ? .012 : .007)));
+        if (!isMobile || which === 'chess' || ANIME()) {
+          const ol = new THREE.Mesh(pt.geo, transformOutlineMat(U, ANIME() ? (which === 'chess' ? .016 : .011) : HIGH() ? (which === 'chess' ? .007 : .0045) : (which === 'chess' ? .012 : .007)));
           ol.raycast = () => {}; ol.userData.ol = true;
           mesh.add(ol);
         }
@@ -1794,7 +1803,7 @@ function transformMat(pt, U) {
         roughness: pt.rmMap ? .9 : .45, metalness: pt.rmMap ? .9 : .1,
         clearcoat: INK() ? .15 : .5, clearcoatRoughness: .3, envMapIntensity: INK() ? .3 : .55,
       })
-    : new THREE.MeshToonMaterial({ map, gradientMap: grad });
+    : new THREE.MeshToonMaterial({ map, gradientMap: ANIME() ? animeGrad : grad });
   if (HIGH() && pt.normalMap) m.normalScale.set(.8, .8);
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U);
@@ -1829,9 +1838,12 @@ function transformMat(pt, U) {
         #endif`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         vec3 tfHot = pow( mix( uAccent, vec3( 1.0 ), 0.35 ), vec3( 2.2 ) );
-        totalEmissiveRadiance += tfHot * ( tfEdge * 4.0 + tfSeam * 2.2 );`);
+        totalEmissiveRadiance += tfHot * ( tfEdge * 4.0 + tfSeam * 2.2 );` + (ANIME() ? `
+        // anime rim light: a crisp white band where the surface turns away from the camera
+        float animeRim = 1.0 - max( dot( normalize( vViewPosition ), normal ), 0.0 );
+        totalEmissiveRadiance += vec3( 0.55 ) * step( 0.68, animeRim ) * diffuseColor.rgb;` : ''));
   };
-  m.customProgramCacheKey = () => HIGH() ? 'tf-phys' : 'tf-toon';
+  m.customProgramCacheKey = () => HIGH() ? 'tf-phys' : ANIME() ? 'tf-anime' : 'tf-toon';
   return m;
 }
 function transformOutlineMat(U, th) {
@@ -1999,7 +2011,7 @@ function boardTexture() {
     }
   });
 }
-let boardMat, boardSide, boardMatHi, boardSideHi, boardBox, boardMatLam, boardSideLam;
+let boardMat, boardSide, boardMatHi, boardSideHi, boardBox, boardMatLam, boardSideLam, boardMatAnime, boardSideAnime;
 function buildBoard() {
   const tex = boardTexture();
   tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -2016,7 +2028,7 @@ function buildBoard() {
   const ol = new THREE.Mesh(box.geometry, OL); box.add(ol); ol.raycast = () => {};
 }
 buildBoard();
-document.fonts?.ready.then(() => { const t = boardTexture(); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); boardMat.map = t; boardMat.needsUpdate = true; boardMatHi.map = t; boardMatHi.needsUpdate = true; if (boardMatLam) { boardMatLam.map = t; boardMatLam.needsUpdate = true; } });
+document.fonts?.ready.then(() => { const t = boardTexture(); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); boardMat.map = t; boardMat.needsUpdate = true; boardMatHi.map = t; boardMatHi.needsUpdate = true; if (boardMatAnime) { boardMatAnime.map = t; boardMatAnime.needsUpdate = true; } if (boardMatLam) { boardMatLam.map = t; boardMatLam.needsUpdate = true; } });
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: .28, color: 0x01040c }));
 ground.rotation.x = -PI / 2; ground.position.y = -.37; ground.receiveShadow = true;
@@ -3707,6 +3719,24 @@ function applyGfx(rebuild = true) {
     boardMatLam.map = boardMatHi.map; boardMatLam.needsUpdate = true;
     boardSideLam.color.setHex(SC().side);
     top = boardMatLam; side = boardSideLam;
+  }
+  if (ANIME()) {
+    // flat cel board: hard two-tone shadows painted onto it
+    boardMatAnime ??= new THREE.MeshToonMaterial({ gradientMap: animeGrad });
+    boardSideAnime ??= new THREE.MeshToonMaterial({ gradientMap: animeGrad });
+    boardMatAnime.map = boardMat.map; boardMatAnime.needsUpdate = true;
+    boardSideAnime.color.setHex(SC().side);
+    top = boardMatAnime; side = boardSideAnime;
+  }
+  // hard-edged shadow shapes for the anime render, soft for the rest
+  const st = ANIME() ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  if (renderer.shadowMap.type !== st) {
+    renderer.shadowMap.type = st; renderer.shadowMap.needsUpdate = true;
+    scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
+  }
+  if (ANIME()) {
+    hemi.intensity = 1.25; sun.intensity = 2.6; sun.position.set(-6, 11, 6); rim.intensity = 0;
+    sun.shadow.radius = 1; ground.material.opacity = .32;
   }
   boardBox.material = [side, side, top, side, side, side];
   plinthTop.envMapIntensity = .6;
