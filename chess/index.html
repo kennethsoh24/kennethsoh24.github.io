@@ -895,7 +895,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 36</div>
+  <div class="build mono">Build 37</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1435,7 +1435,7 @@ class Rig {
         }
         g.add(sc);
         this.mixer = new THREE.AnimationMixer(sc);
-        this.clips = Object.fromEntries(part.skinned.animations.map(c => [c.name, c]));
+        this.clips = part.clips;
         return g;
       }
       for (const pt of part.parts) {
@@ -1828,14 +1828,15 @@ function makeRig(type, team) {
    ================================================================ */
 // ch/rh: height of the chess piece / mech in board units; cn/rn: the team colours each GLB was painted in
 const MODEL_SPEC = {
-  P: { chess: 'pawn_chess', robot: 'pawn', rig: 'pawn_rig', ch: 1.05, rh: 1.95, cn: 'b', rn: 'b', eye: [0, 1.58, .17] },
+  P: { chess: 'pawn_chess', robot: 'pawn', rig: 'pawn_rig', atk: 'Attack', ch: 1.05, rh: 1.95, cn: 'b', rn: 'b', eye: [0, 1.58, .17] },
   B: { chess: 'bishop_chess', robot: 'bishop', ch: 1.25, rh: 2.4, cn: 'b', rn: 'w' },
-  Q: { chess: 'queen_chess', robot: 'queen', ch: 1.42, rh: 2.6, cn: 'b', rn: 'b' },
-  K: { chess: 'king_chess', robot: 'king', ch: 1.52, rh: 2.65, cn: 'b', rn: 'b' },
-  N: { chess: 'knight_chess', robot: 'knight', ch: 1.12, rh: 2.15, cn: 'b', rn: 'b' },
-  R: { chess: 'rook_chess', robot: 'rook', ch: 1.0, rh: 1.65, cn: 'b', rn: 'b', muzzle: [0, 1.5, .3] },
+  Q: { chess: 'queen_chess', robot: 'queen', rig: 'queen_rig', atk: 'Charged_Spell_Cast', ch: 1.42, rh: 2.6, cn: 'b', rn: 'b' },
+  K: { chess: 'king_chess', robot: 'king', rig: 'king_rig', atk: 'Heavy_Hammer_Swing', still: /Arm|Hand|Shoulder/, amp: .55, ch: 1.52, rh: 2.65, cn: 'b', rn: 'b' },
+  N: { chess: 'knight_chess', robot: 'knight', rig: 'knight_rig', atk: 'Sword_Judgment', flat: true, ch: 1.12, rh: 2.15, cn: 'b', rn: 'b' },
+  R: { chess: 'rook_chess', robot: 'rook', rig: 'rook_rig', atk: 'Side_Shot', ch: 1.0, rh: 1.65, cn: 'b', rn: 'b', muzzle: [0, 1.5, .3] },
 };
 const MODELS = {};
+const RIG_V = 37;
 const ACCENT_SRGB = { w: new THREE.Vector3(.2, .42, .95), b: new THREE.Vector3(.96, .78, .12) };
 
 /* ---------- transformation shaders ---------- */
@@ -1985,13 +1986,34 @@ async function loadModels() {
   const loader = new GLTFLoader();
   const one = async (file, h) => { const g = await loader.loadAsync(`models/${file}.glb`); modelsLoaded++; loadProgress(); return normaliseModel(g, h); };
   // a rigged mech (Meshy auto-rig via Higgsfield): kept as a skinned scene with its animation clips
+  // the Pawn's file doubles as the shared clip library (stance / hit / death) for every rig: all rigs use the
+  // same named skeleton, so rotation tracks bind by bone name; the hip track is re-based on each rig's own hips
+  const lib = loader.loadAsync(`models/pawn_rig.glb?v=${RIG_V}`);
+  const hipsOf = g => { let h = null; g.scene.traverse(o => { if (!h && o.name === 'Hips') h = o.position.clone(); }); return h; };
   const rigged = async (spec) => {
     try {
-      const g = await loader.loadAsync(`models/${spec.rig}.glb?v=36`);
+      const g = spec.rig === 'pawn_rig' ? await lib : await loader.loadAsync(`models/${spec.rig}.glb?v=${RIG_V}`);
       const h0 = new THREE.Box3().setFromObject(g.scene, true).getSize(new V3()).y;
+      const clips = Object.fromEntries(g.animations.map(c => [c.name, c]));
+      if (g !== await lib) {
+        const L = await lib, d = hipsOf(g).sub(hipsOf(L));
+        for (const c of L.animations) if (!clips[c.name]) {
+          const cc = c.clone();
+          for (const tr of cc.tracks) if (tr.name === 'Hips.position') for (let i = 0; i < tr.values.length; i += 3) { tr.values[i] += d.x; tr.values[i + 1] += d.y; tr.values[i + 2] += d.z; }
+          clips[c.name] = cc;
+        }
+      }
+      if (clips[spec.atk] && spec.atk !== 'Attack') clips.Attack = clips[spec.atk];
+      if (spec.flat && clips.Attack) {   // keep the vault's height but let the game move the piece across the board
+        clips.Attack = clips.Attack.clone();
+        for (const tr of clips.Attack.tracks) if (tr.name === 'Hips.position') for (let i = 0; i < tr.values.length; i += 3) { tr.values[i] = tr.values[0]; tr.values[i + 2] = tr.values[2]; }
+      }
+      if (spec.still) for (const k in clips) {   // robes skinned to the arms tear when the arms swing: drive the body only
+        const c = clips[k].clone(); c.tracks = c.tracks.filter(tr => !spec.still.test(tr.name.split('.')[0])); clips[k] = c;
+      }
       modelsLoaded++; loadProgress();
-      return { skinned: g, h0 };
-    } catch (e) { console.warn('rig failed, falling back to the static mech', e); return one(spec.robot, spec.rh); }
+      return { skinned: g, h0, clips };
+    } catch (e) { console.warn('rig failed, falling back to the static mech', spec.rig, e); return one(spec.robot, spec.rh); }
   };
   await Promise.all(Object.entries(MODEL_SPEC).map(async ([type, spec]) => {
     try {
@@ -2709,8 +2731,9 @@ function clipAct(r, name, { fade = .12, loop = false, rate = 1, from = 0 } = {})
   a.reset(); a.time = from;
   a.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
   a.clampWhenFinished = !loop; a.timeScale = rate; a.enabled = true;
-  if (r.curAct && r.curAct !== a && fade > 0) { a.setEffectiveWeight(1); a.crossFadeFrom(r.curAct, fade, false); }
-  else { if (r.curAct && r.curAct !== a) r.curAct.stop(); a.setEffectiveWeight(1); }
+  const w = MODEL_SPEC[r.type].amp || 1;   // < 1 blends toward the bind pose (gentler motion for cloth-heavy mechs)
+  if (r.curAct && r.curAct !== a && fade > 0) { a.setEffectiveWeight(w); a.crossFadeFrom(r.curAct, fade, false); }
+  else { if (r.curAct && r.curAct !== a) r.curAct.stop(); a.setEffectiveWeight(w); }
   a.play(); r.curAct = a;
   return a;
 }
@@ -2770,11 +2793,125 @@ async function hit(vic, dir, power = 1, at = null) {
 }
 const towards = (a, b) => b.clone().sub(a).setY(0).normalize();
 
+// skeletal timeline helpers: wait for the playing clip to reach a time (clip seconds), find a bone, step along the line
+const waitClip = (act, t) => new Promise(res => { const chk = () => (!act || act.time >= t || !act.isRunning()) ? res() : requestAnimationFrame(chk); chk(); });
+function boneOf(r, name) { let b = null; r.robot && r.robot.traverse(o => { if (!b && o.isBone && o.name === name) b = o; }); return b; }
+function stepTo(a, base, dir, d, dur, ease = easeIO) {
+  const s = a.root.position.clone(), e = base.clone().addScaledVector(dir, d);
+  return tween(dur, k => { const y = a.root.position.y; a.root.position.lerpVectors(s, e, ease(k)); a.root.position.y = y; });
+}
 const CHOREO = {
+  // Knight (rigged): leaps high off its haunches, drives the lance down on landing, then a running thrust
+  async Nskel(a, v, dir, vp) {
+    const base = a.root.position.clone(), R = 1.35, step = Math.max(0, vp.distanceTo(base) - .9);
+    setPose(a, REST);
+    const act = clipAct(a, 'Attack', { rate: R, fade: .1, from: .3 });
+    servo(true, .3);
+    await waitClip(act, .55);
+    speedLines(true); swishSnd();
+    stepTo(a, base, dir, step, .45 / R);
+    await waitClip(act, 1.02); swishSnd();
+    await waitClip(act, 1.1);
+    speedLines(false);
+    slash(vp.clone().setY(1), -1.3, 2.6); shockwave(vp, 0, 1.4);
+    hit(v, dir, 1.3, vp.clone().setY(.5));
+    await waitClip(act, 1.4);
+    act.timeScale = R * 2.4;                     // hurry through the recovery
+    await waitClip(act, 3.05);
+    act.timeScale = R; swishSnd();
+    await waitClip(act, 3.4);
+    slash(vp.clone().setY(.9), .3, 2.4);
+    await hit(v, dir, 1.7, vp.clone().setY(.6));
+    await waitClip(act, 3.8);
+    toStance(a, .35);
+    await stepTo(a, base, dir, 0, .35);
+    return 'pierce';
+  },
+  // Rook (rigged): drops into a firing crouch and walks a volley onto the target, the last round charged
+  async Rskel(a, v, dir, vp) {
+    const base = a.root.position.clone(), R = 1.4;
+    setPose(a, REST);
+    const act = clipAct(a, 'Attack', { rate: R, fade: .12, from: .4 });
+    const hand = boneOf(a, 'RightHand');
+    const muzzle = () => hand ? worldOf(hand).add(new V3(0, .15, 0)) : a.yaw.localToWorld(new V3(...MODEL_SPEC.R.muzzle));
+    const shots = [.95, 1.45, 2.0, 2.9];
+    for (let i = 0; i < shots.length; i++) {
+      const big = i === shots.length - 1;
+      if (big) { servo(true, .25); await waitClip(act, shots[i] - .35); tween(.3, k => shake(.015)); }
+      await waitClip(act, shots[i]);
+      const from = muzzle(), to = vp.clone().setY(.7).add(new V3((Math.random() - .5) * .3, 0, (Math.random() - .5) * .3));
+      thud(big); burst(from, 8);
+      tween(.12, k => a.root.position.copy(base).addScaledVector(dir, -(big ? .3 : .12) * Math.sin(k * PI)));
+      const shell = new THREE.Mesh(G('shell', () => new THREE.SphereGeometry(.09, 10, 8)), new THREE.MeshBasicMaterial({ color: SC().fx }));
+      fxGroup.add(shell);
+      tween(big ? .22 : .18, k => { shell.position.lerpVectors(from, to, k); shell.position.y += Math.sin(k * PI) * (big ? .2 : .6); shell.scale.setScalar(big ? 2 : 1); })
+        .then(() => { shell.material.dispose(); shell.removeFromParent(); hit(v, dir, big ? 1.8 : .75); });
+    }
+    await wait(.4);
+    toStance(a, .4);
+    await wait(.2);
+    return 'launch';
+  },
+  // Queen (rigged): floats up, sweeps her arm down to call the needle rain, then raises both hands for the last spear
+  async Qskel(a, v, dir, vp) {
+    const base = a.root.position.clone(), R = 1.15;
+    setPose(a, REST);
+    servo(true, .4);
+    const act = clipAct(a, 'Attack', { rate: R, fade: .15, from: .1 });
+    await tween(.3, k => { a.root.position.y = Math.sin(k * PI / 2) * .45; });
+    const needle = (pos, big) => {
+      const m = new THREE.Mesh(G('needle', () => new THREE.ConeGeometry(.07, 1.6, 6).rotateX(PI)), new THREE.MeshBasicMaterial({ color: SC().fx }));
+      m.scale.setScalar(big ? 2.2 : 1); fxGroup.add(m);
+      return tween(.16, k => { m.position.copy(pos).setY(7 - 6.2 * k * k); }).then(() => { m.material.dispose(); m.removeFromParent(); });
+    };
+    await waitClip(act, .66);
+    swishSnd();
+    for (let i = 0; i < 5; i++) {
+      const off = new V3((Math.random() - .5) * .5, 0, (Math.random() - .5) * .5);
+      await needle(vp.clone().add(off), false);
+      hit(v, dir, .6, vp.clone().add(off).setY(.5));
+      await wait(.06);
+    }
+    await waitClip(act, 1.72);
+    swishSnd();
+    await waitClip(act, 1.86);
+    await needle(vp, true);
+    await hit(v, dir, 1.8);
+    await waitClip(act, 2.3);
+    toStance(a, .4);
+    await tween(.3, k => { a.root.position.y = .45 * (1 - k); });
+    a.root.position.copy(base);
+    return 'slam';
+  },
+  // King (rigged): two heavy steps, hauls the hammer back over the shoulder and brings it down with the pillar
+  async Kskel(a, v, dir, vp) {
+    const base = a.root.position.clone(), R = .95;
+    setPose(a, REST);
+    for (let i = 0; i < 2; i++) {
+      await tween(.2, k => a.root.position.copy(base).addScaledVector(dir, .125 * (i + easeIO(k))));
+      thud(true); shake(.03);
+    }
+    const act = clipAct(a, 'Attack', { rate: R, fade: .12, from: .35 });
+    servo(false, .5);
+    await waitClip(act, 1.15);
+    const pillar = new THREE.Mesh(G('pillar', () => new THREE.CylinderGeometry(.42, .42, 6, 6, 1, true).translate(0, 3, 0)),
+      new THREE.MeshBasicMaterial({ color: SC().fx, side: THREE.DoubleSide }));
+    pillar.position.copy(vp).setY(9); fxGroup.add(pillar);
+    await waitClip(act, 1.4);
+    swishSnd();
+    await tween(.2, k => { pillar.position.y = 9 * (1 - k * k); });
+    shockwave(vp, 0, 2.4);
+    await hit(v, dir, 2.2, vp.clone().setY(.3));
+    shake(.3);
+    tween(.5, k => { pillar.scale.set(1 - k, 1, 1 - k); }).then(() => { pillar.material.dispose(); pillar.removeFromParent(); });
+    await waitClip(act, 1.85);
+    toStance(a, .45);
+    await stepTo(a, base, dir, 0, .34);
+    return 'slam';
+  },
   // Pawn 2 (rigged): eye charge and two laser bursts, then the skeleton winds the spear up over its head,
   // steps in and drives it down through the target
-  async P(a, v, dir, vp) {
-    if (!skel(a)) return CHOREO.Pstatic(a, v, dir, vp);
+  async Pskel(a, v, dir, vp) {
     const eye = () => worldOf(a.fx.robotGlow);
     const g = a.fx.robotGlow, base = a.root.position.clone(), R = 1.2;
     setPose(a, REST);
@@ -2804,7 +2941,7 @@ const CHOREO = {
     return 'slam';
   },
   // Pawn 2 (static mech fallback): crouch and charge the eye, three recoiling laser bursts, then a coiled spear dash
-  async Pstatic(a, v, dir, vp) {
+  async P(a, v, dir, vp) {
     const eye = () => a.yaw.localToWorld(a.t > .5 ? new V3(...MODEL_SPEC.P.eye) : new V3(0, MODEL_SPEC.P.ch * .87, .12));
     const g = a.fx.robotGlow, base = a.root.position.clone();
     zap();
@@ -3117,7 +3254,8 @@ async function battleInner(att, vic, dir) {
   if (settings.cam === 'cine') camBehind(att, vp, { dist: isMobile ? 4.2 : 3.3, h: 2.2, side: 1.15, k: 6 });
   else { await camFocus(att.root.position.clone().lerp(vp, .55), isMobile ? 7.5 : 6.3); }
   speedLines(true); await wait(.12); speedLines(false);
-  const style = await CHOREO[att.type](att, vic, towards(att.root.position, vp), vp);
+  const play = skel(att) && CHOREO[att.type + 'skel'] ? att.type + 'skel' : att.type;
+  const style = await CHOREO[play](att, vic, towards(att.root.position, vp), vp);
   await finish(vic, towards(att.root.position, vp), style);
   if (att.pose) await poseTo(att, REST, .15);
   if (settings.cam !== 'cine') await camRestore();
