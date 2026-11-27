@@ -895,7 +895,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 32</div>
+  <div class="build mono">Build 33</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -964,7 +964,7 @@
       <label class="field mono">Battle
         <select id="battle"><option value="full" selected>Full</option><option value="quick">Quick</option></select></label>
       <label class="field mono">Graphics
-        <select id="gfx"><option value="cinema" class="no-bw">Cinema</option><option value="anime" class="bw-only">Anime 2.5D</option><option value="high">High</option><option value="classic">Classic</option></select></label>
+        <select id="gfx"><option value="cinema" class="no-bw">Cinema</option><option value="anime" class="bw-only">Anime 2.5D</option><option value="animefine" class="bw-only">Anime 2.5D · Fine line</option><option value="high">High</option><option value="classic">Classic</option></select></label>
       <label class="field mono">Camera
         <select id="cam"><option value="cine" selected>Cinematic</option><option value="fixed">Fixed</option></select></label>
       <label class="field mono">Music
@@ -1137,8 +1137,9 @@ const BWED = (new URLSearchParams(location.search).get('edition') || 'bw') === '
 const QGFX = new URLSearchParams(location.search).get('gfx');
 if (QGFX) GFX = QGFX;
 if (BWED && GFX === 'cinema') GFX = 'high';
-if (!BWED && GFX === 'anime') GFX = 'cinema';   // the anime render belongs to the Black & White edition
-const ANIME = () => GFX === 'anime';
+if (!BWED && GFX.startsWith('anime')) GFX = 'cinema';   // the anime render belongs to the Black & White edition
+const ANIME = () => GFX === 'anime' || GFX === 'animefine';
+const FINE = () => GFX === 'animefine';   // same cel render, fine black linework
 const HIGH = () => GFX === 'high' || GFX === 'cinema';
 const INK = () => false;
 const CINE = () => GFX === 'cinema' && !BWED && (THEME === 'mono' || THEME === 'ops');
@@ -1414,7 +1415,7 @@ class Rig {
         const mesh = new THREE.Mesh(pt.geo, transformMat(pt, U));
         mesh.receiveShadow = true;
         if (!isMobile || which === 'chess' || ANIME()) {
-          const ol = new THREE.Mesh(pt.geo, transformOutlineMat(U, ANIME() ? (which === 'chess' ? .016 : .011) : HIGH() ? (which === 'chess' ? .007 : .0045) : (which === 'chess' ? .012 : .007)));
+          const ol = new THREE.Mesh(pt.geo, transformOutlineMat(U, FINE() ? (which === 'chess' ? .0065 : .004) : ANIME() ? (which === 'chess' ? .016 : .011) : HIGH() ? (which === 'chess' ? .007 : .0045) : (which === 'chess' ? .012 : .007)));
           ol.raycast = () => {}; ol.userData.ol = true;
           mesh.add(ol);
         }
