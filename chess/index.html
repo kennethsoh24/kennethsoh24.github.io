@@ -985,7 +985,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 44</div>
+  <div class="build mono">Build 45</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1156,7 +1156,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=44';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=45';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -2496,12 +2496,13 @@ function updateSparks(dt) {
     pVel[j] *= .985; pVel[j + 2] *= .985;
     pPos[j] += pVel[j] * dt; pPos[j + 1] += pVel[j + 1] * dt; pPos[j + 2] += pVel[j + 2] * dt;
     if (pPos[j + 1] < .02) { pPos[j + 1] = .02; pVel[j + 1] *= -.35; }
-    const q = i * 4; pCol[q] = pBase[j]; pCol[q + 1] = pBase[j + 1]; pCol[q + 2] = pBase[j + 2]; pCol[q + 3] = Math.min(1, k * 1.6);
+    const q = i * 4, hb = SPARK_HDR(); pCol[q] = pBase[j] * hb; pCol[q + 1] = pBase[j + 1] * hb; pCol[q + 2] = pBase[j + 2] * hb; pCol[q + 3] = Math.min(1, k * 1.6);
   }
   sparkGeo.attributes.position.needsUpdate = true;
   sparkGeo.attributes.color.needsUpdate = true;
 }
-const sparkColor = () => SC().spark();
+const sparkColor = () => ABYSS() ? (Math.random() < .5 ? 0xffffff : Math.random() < .5 ? 0xcfe0ff : 0x9fb8e8) : SC().spark();
+const SPARK_HDR = () => ABYSS() ? 2.6 : 1;   // Monolith: sparks burn above white so the bloom catches them
 // sparks thrown off the glowing seams of a transforming piece
 function seamSparks(rig, n) {
   const spec = MODEL_SPEC[rig.type], H = rig.t < .5 ? spec.ch : spec.rh;
@@ -2872,7 +2873,12 @@ async function hit(vic, dir, power = 1, at = null) {
   const p = at || vic.root.position.clone().setY(.9);
   hitStop(45 + 45 * power); shake(.05 * power); screenFlash();
   metalHitSnd(power); cutSnd(power); if (power >= .7) electricSnd(power);
-  burst(p, Math.round(10 * power));
+  burst(p, Math.round((ABYSS() ? 22 : 10) * power));
+  if (ABYSS()) {   // a short cold flare and a light that rakes the nearby armour
+    flash(p, 0xdfe8ff, .7 + .35 * power);
+    const L = new THREE.PointLight(0xdfe8ff, 40 * power, 5, 2); L.position.copy(p); fxGroup.add(L);
+    tween(.28, k => { L.intensity = 40 * power * (1 - k) * (1 - k); }).then(() => L.removeFromParent());
+  }
   if (power >= 1.2) impactFrame(55 + 30 * power);
   if (power >= 1) shockwave(vic.root.position, 0, 1.2 * power);
   if (power >= 1.2) inkBurst(vic.root.position.clone(), 6);
@@ -4155,10 +4161,10 @@ function updateMist(dt) {
 }
 /* ---------- Monolith look: a canyon of dark voxel towers, backlit openings, light shafts, wet mirror floor ---------- */
 const abyss = new THREE.Group(); abyss.visible = false; scene.add(abyss);
-const ABYSS_FOG = new THREE.FogExp2(0x2a2f33, .046);
+const ABYSS_FOG = new THREE.FogExp2(0x353b41, .042);
 const skyAbyss = canvasTex(512, (g, s) => {
   const gr = g.createLinearGradient(0, 0, 0, s);
-  gr.addColorStop(0, '#040506'); gr.addColorStop(.28, '#0b0d0f'); gr.addColorStop(.44, '#1e2225'); gr.addColorStop(.5, '#2a2f33'); gr.addColorStop(1, '#2a2f33');
+  gr.addColorStop(0, '#040506'); gr.addColorStop(.28, '#0b0d0f'); gr.addColorStop(.44, '#282d31'); gr.addColorStop(.5, '#353b41'); gr.addColorStop(1, '#353b41');
   g.fillStyle = gr; g.fillRect(0, 0, s, s);
 });
 skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
@@ -4208,7 +4214,7 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
   im.receiveShadow = true; im.raycast = () => {};
   abyss.add(im);
   // light openings at the end of each avenue: blinding slits that the bloom spreads
-  const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.7, 1.78, 1.9), toneMapped: false, fog: false });
+  const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 2.7, 2.9), toneMapped: false, fog: false });
   const shaftMat = new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 }, uStr: { value: .16 }, uA: { value: new V3() }, uB: { value: new V3() }, uR: { value: new THREE.Vector2() } },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
@@ -4252,9 +4258,64 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
     shaft(new V3(x, h * .55, z), new V3(x * .25, 0, z * .25), h * .45, h * 1.6, i ? .008 : .014);
   });
   // a column of light falling on the board from far above
-  abyss.userData.column = shaft(new V3(0, 26, -1.5), new V3(0, -.3, 0), 2.2, 6.2, .03);
+  abyss.userData.column = shaft(new V3(0, 26, -1.5), new V3(0, -.3, 0), 2.2, 6.2, .045);
+  // light leaking out between the towers: many small slits at street level, each with a halo in the haze
+  // and a streak of light running across the wet floor toward the board (the reference look)
+  const streakTex = canvasTex(64, (g, s) => {
+    const gr = g.createLinearGradient(0, 0, 0, s); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.25, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, s, s);
+    const gx = g.createLinearGradient(0, 0, s, 0); gx.addColorStop(0, 'rgba(0,0,0,1)'); gx.addColorStop(.5, 'rgba(0,0,0,0)'); gx.addColorStop(1, 'rgba(0,0,0,1)');
+    g.globalCompositeOperation = 'destination-out'; g.fillStyle = gx; g.fillRect(0, 0, s, s);
+  });
+  const slitMats = [1.5, 2.1, 2.8].map(v => new THREE.MeshBasicMaterial({ color: new THREE.Color(v, v * 1.04, v * 1.1), toneMapped: false, fog: false }));
+  const NS = isMobile ? 22 : 38;
+  for (let i = 0; i < NS; i++) {
+    const a = rnd() * PI * 2, r = 19 + rnd() * 24;
+    const w = .25 + Math.pow(rnd(), 2) * 1.8, h = .35 + Math.pow(rnd(), 1.5) * 2.6;
+    const x = Math.cos(a) * r, z = Math.sin(a) * r;
+    const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, .2), slitMats[i % 3]);
+    g.position.set(x, -.37 + h / 2, z); g.lookAt(0, g.position.y, 0); g.raycast = () => {};
+    abyss.add(g);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xcfdcef, transparent: true, opacity: .05 + rnd() * .07,
+      blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    halo.position.set(x, -.37 + h * .5, z); halo.scale.set(w * 5 + 3, h * 3 + 2.5, 1); halo.raycast = () => {};
+    abyss.add(halo);
+    const len = 6 + rnd() * 9;
+    const st = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.3, len).translate(0, -len / 2, 0).rotateX(-PI / 2),
+      new THREE.MeshBasicMaterial({ map: streakTex, color: 0xb9c6d8, transparent: true, opacity: .1 + rnd() * .08, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    st.position.set(x, -.36, z); st.rotation.y = Math.atan2(x, z); st.raycast = () => {};
+    abyss.add(st);
+  }
   abyss.userData.shafts = abyss.children.filter(o => o.material && o.material.uniforms && o.material.uniforms.uStr);
 }
+// motes of dust hanging in the air: they catch the light inside the column over the board and twinkle
+const MOTES = isMobile ? 500 : 1100;
+const moteGeo = new THREE.BufferGeometry(), motePos = new Float32Array(MOTES * 3), moteSeed = new Float32Array(MOTES);
+for (let i = 0; i < MOTES; i++) {
+  const a = Math.random() * PI * 2, r = Math.sqrt(Math.random()) * 13;
+  motePos.set([Math.cos(a) * r, Math.random() * 9 - .3, Math.sin(a) * r - .8], i * 3); moteSeed[i] = Math.random();
+}
+moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3)); moteGeo.setAttribute('seed', new THREE.BufferAttribute(moteSeed, 1));
+const motes = new THREE.Points(moteGeo, new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 }, uPx: { value: renderer.getPixelRatio() } },
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: `attribute float seed; uniform float uTime; uniform float uPx; varying float vA;
+    void main() {
+      vec3 p = position;
+      p.x += sin( uTime * 0.13 + seed * 40.0 ) * 0.6; p.z += cos( uTime * 0.11 + seed * 31.0 ) * 0.6;
+      p.y = mod( p.y + uTime * ( 0.04 + seed * 0.06 ) + 0.3, 9.0 ) - 0.3;
+      float col = exp( - dot( p.xz - vec2( 0.0, -0.8 ), p.xz - vec2( 0.0, -0.8 ) ) / 14.0 );   // inside the column of light
+      float tw = 0.55 + 0.45 * sin( uTime * ( 1.0 + seed * 2.5 ) + seed * 60.0 );
+      vA = ( 0.1 + 0.9 * col ) * tw;
+      vec4 mv = modelViewMatrix * vec4( p, 1.0 );
+      vA *= smoothstep( 0.6, 2.5, -mv.z );                               // none right on the lens
+      gl_PointSize = uPx * ( 1.4 + seed * 2.6 ) * clamp( 9.0 / -mv.z, 0.6, 3.0 );
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `varying float vA;
+    void main() { float d = length( gl_PointCoord - 0.5 ); float a = smoothstep( 0.5, 0.0, d ) * vA; gl_FragColor = vec4( vec3( 0.85, 0.9, 1.0 ) * a * 0.9, 1.0 ); }`,
+}));
+motes.frustumCulled = false; motes.raycast = () => {}; abyss.add(motes);
 // the wet floor: a mirror under a dark, puddled skin; the mirror smears reflections into vertical streaks
 const floorAlpha = terrainRough.clone(); floorAlpha.needsUpdate = true; floorAlpha.repeat.set(34, 34);
 const abyssFloor = new THREE.Mesh(new THREE.PlaneGeometry(220, 220).rotateX(-PI / 2),
@@ -4460,16 +4521,17 @@ function applyGfx(rebuild = true) {
   // Monolith: the board stands in a canyon of dark towers lit only from above and from the openings behind
   const ab = ABYSS();
   PIECE_LIFT.value = ab ? .5 : 0;
+  sparks.material.blending = ab ? THREE.AdditiveBlending : THREE.NormalBlending; sparks.material.size = ab ? .07 : .09; sparks.material.needsUpdate = true;
   abyss.visible = ab; abyssSpot.intensity = ab ? 120 : 0;
   scene.environmentIntensity = ab ? .14 : 1;
   if (gradePass) { gradePass.uniforms.uAbyss.value = ab ? 1 : 0; gradePass.uniforms.uKeep.value = GLOW() ? 1 : 0; if (ab) gradePass.enabled = true; }
-  if (bloomPass && ab) { bloomPass.enabled = true; bloomPass.threshold = 2.2; bloomPass.strength = .26; bloomPass.radius = .12; /* a tight halo around the openings only */ }
+  if (bloomPass && ab) { bloomPass.enabled = true; bloomPass.threshold = 1.35; bloomPass.strength = .45; bloomPass.radius = .3; /* a tight halo around the openings only */ }
   if (ab) {
     skyDome.visible = true; skyDome.material.map = skyAbyss; skyDome.rotation.y = 0; skyDome.material.needsUpdate = true;
     groundFog.forEach(m => { m.visible = true; m.material.uniforms.uColor.value.setHex(0x272b2f); m.material.uniforms.uOpacity.value *= 1; });
     dust.visible = true; dust.material.color.setHex(0xdfe6ee); dust.material.opacity = .5; dust.material.size = 1.6; dust.material.sizeAttenuation = false; dust.material.needsUpdate = true;
     ground.visible = false; terrain.visible = false; rain.visible = false;
-    scene.fog = ABYSS_FOG; scene.background = new THREE.Color(0x2a2f33);
+    scene.fog = ABYSS_FOG; scene.background = new THREE.Color(0x353b41);
     renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .66;
     hemi.color.setHex(0x9aa6b4); hemi.groundColor.setHex(0x050607); hemi.intensity = .1;
     sun.color.setHex(0xe8eef6); sun.intensity = .8; sun.position.set(-2.5, 15, -3.5); sun.shadow.radius = 4;
@@ -4645,10 +4707,11 @@ function frame() {
   for (const m of groundFog) if (m.visible) m.material.uniforms.uTime.value = time;
   if (abyss.visible) {
     for (const m of abyss.userData.shafts) m.material.uniforms.uTime.value = time;
+    motes.material.uniforms.uTime.value = time;
     // the column of light fades away when the camera steps inside it, instead of fogging the lens
     const cp = camera.position, k = Math.min(1, Math.max(0, (cp.y + .3) / 26.3));
     const rAt = 6.2 + (2.2 - 6.2) * k, ax = -1.5 * k, d = Math.hypot(cp.x, cp.z - ax);
-    abyss.userData.column.material.uniforms.uStr.value = .03 * Math.min(1, Math.max(0, (d - rAt) / 2.5));
+    abyss.userData.column.material.uniforms.uStr.value = .045 * Math.min(1, Math.max(0, (d - rAt) / 2.5));
   }
   if (gradePass) gradePass.uniforms.uTime.value = time % 100;
   placeTag();
