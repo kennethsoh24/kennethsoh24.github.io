@@ -907,6 +907,10 @@
   body.monolith #cutin img { filter: grayscale(1) contrast(1.2) brightness(.92) drop-shadow(0 0 22px rgba(220,232,255,.35)) !important; }
   body.monolith #cutin .label, body.monolith #cutin .label2 { color: var(--ink); }
   body.monolith #lines { background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(230,236,242,.4) 0deg .5deg, transparent .5deg 7deg); }
+  /* impact: a short cold flicker instead of a full negative (a negative of a dark frame is a white-out) */
+  body.monolith #flash { background: rgba(220,230,245,.55); mix-blend-mode: soft-light; }
+  body.monolith #flash.on { animation: monoflash .14s ease-out both; }
+  @keyframes monoflash { 0% { opacity: .9; } 100% { opacity: 0; } }
   body.monolith .modal { background: rgba(5,6,8,.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   body.monolith .card, body.monolith #gallery { background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
   body.monolith input[type=range] { accent-color: #e9edf2; }
@@ -971,7 +975,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 40</div>
+  <div class="build mono">Build 41</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1142,7 +1146,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=40';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=41';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -4183,20 +4187,27 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
   im.receiveShadow = true; im.raycast = () => {};
   abyss.add(im);
   // light openings at the end of each avenue: blinding slits that the bloom spreads
-  const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(9, 9.4, 10), toneMapped: false, fog: false });
+  const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 5.2, 5.5), toneMapped: false, fog: false });
   const shaftMat = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uStr: { value: .16 } },
+    uniforms: { uTime: { value: 0 }, uStr: { value: .16 }, uA: { value: new V3() }, uB: { value: new V3() }, uR: { value: new THREE.Vector2() } },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
     vertexShader: `varying vec3 vN; varying vec3 vV; varying float vY; varying vec3 vW;
       void main() { vec4 w = modelMatrix * vec4( position, 1.0 ); vW = w.xyz; vN = normalize( mat3( modelMatrix ) * normal ); vV = normalize( cameraPosition - w.xyz ); vY = uv.y;
         gl_Position = projectionMatrix * viewMatrix * w; }`,
-    fragmentShader: `uniform float uTime; uniform float uStr; varying vec3 vN; varying vec3 vV; varying float vY; varying vec3 vW;
+    fragmentShader: `uniform float uTime; uniform float uStr; uniform vec3 uA; uniform vec3 uB; uniform vec2 uR; varying vec3 vN; varying vec3 vV; varying float vY; varying vec3 vW;
       float h( vec2 p ) { return fract( sin( dot( p, vec2( 12.9898, 78.233 ) ) ) * 43758.5453 ); }
       void main() {
         float face = pow( abs( dot( vN, vV ) ), 1.6 );                  // bright through the middle, soft at the edges
         float streak = 0.75 + 0.25 * sin( vW.x * 3.1 + vW.z * 2.3 + uTime * 0.25 ) * sin( vW.y * 0.7 - uTime * 0.18 );
         float a = face * streak * pow( vY, 1.4 ) * uStr;               // strongest at the source end
         a *= 1.0 - smoothstep( 4.0, 1.2, distance( vW, cameraPosition ) );   // never smear across the lens
+        // the cone vanishes when the camera stands inside it or near its skin (no white-out from within)
+        vec3 ax = uB - uA; float L = length( ax ); vec3 u = ax / L;
+        float t = dot( cameraPosition - uA, u );
+        float r = mix( uR.x, uR.y, clamp( t / L, 0.0, 1.0 ) );
+        float dAx = length( cameraPosition - uA - u * t );
+        float outside = ( t < -2.0 || t > L + 2.0 ) ? 1.0 : smoothstep( r * 1.15, r * 1.15 + 4.0, dAx );
+        a *= outside;
         gl_FragColor = vec4( vec3( 0.92, 0.96, 1.0 ) * a, 1.0 );
       }`,
   });
@@ -4206,6 +4217,7 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
     const geo = new THREE.CylinderGeometry(r0, r1, len, 24, 1, true).translate(0, -len / 2, 0);
     const m = new THREE.Mesh(geo, shaftMat.clone());
     m.material.uniforms.uStr.value = str;
+    m.material.uniforms.uA.value.copy(from); m.material.uniforms.uB.value.copy(to); m.material.uniforms.uR.value.set(r0, r1);
     m.position.copy(from); m.quaternion.setFromUnitVectors(new V3(0, -1, 0), to.clone().sub(from).normalize());
     m.renderOrder = 4; m.raycast = () => {};
     abyss.add(m); return m;
@@ -4293,7 +4305,7 @@ const GradeShader = {
         col += mix(vec3(-.012, .006, .02), vec3(.03, .012, -.02), smoothstep(.2, .8, l));   // teal shadows, warm highs
         col = col * .94 + .035;                                        // lifted blacks
       }
-      col = mix(col, vec3(1.0), uImpact * .45);                        // impact exposure flash
+      col = mix(col, vec3(1.0), uImpact * (.45 - .37 * uAbyss));   // Monolith keeps the dark: only a breath of light on impact                        // impact exposure flash
       col *= 1.0 - smoothstep(.45, .95, length(c * vec2(1.25, 1.0))) * (.55 + uAbyss * .3);  // vignette
       col += (hash(vUv * uRes + uTime) - .5) * (.045 + uAbyss * .02);                   // grain
       gl_FragColor = vec4(col, 1.0);
@@ -4428,7 +4440,7 @@ function applyGfx(rebuild = true) {
   abyss.visible = ab; abyssSpot.intensity = ab ? 240 : 0;
   scene.environmentIntensity = ab ? .22 : 1;
   if (gradePass) { gradePass.uniforms.uAbyss.value = ab ? 1 : 0; if (ab) gradePass.enabled = true; }
-  if (bloomPass && ab) { bloomPass.enabled = true; bloomPass.threshold = 3.0; bloomPass.strength = 1.0; bloomPass.radius = .75; }
+  if (bloomPass && ab) { bloomPass.enabled = true; bloomPass.threshold = 2.2; bloomPass.strength = .38; bloomPass.radius = .12; /* a tight halo around the openings only */ }
   if (ab) {
     skyDome.visible = true; skyDome.material.map = skyAbyss; skyDome.rotation.y = 0; skyDome.material.needsUpdate = true;
     groundFog.forEach(m => { m.visible = true; m.material.uniforms.uColor.value.setHex(0x3c4247); });
