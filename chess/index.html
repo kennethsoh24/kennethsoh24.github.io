@@ -210,7 +210,7 @@
   #gNote { padding: 10px 14px 0; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--grey); }
   .slider { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 14px; }
   input[type=range] { width: 100%; accent-color: var(--ink); }
-  #gallery .row { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--ink); }
+  #gallery .row { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--ink); }
   #gallery .row .btn { border: 0; border-right: 1px solid var(--ink); }
   #gallery .row .btn:last-child { border-right: 0; }
   body.gallery #panel, body.gallery #fab { display: none; }
@@ -986,7 +986,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 53</div>
+  <div class="build mono">Build 54</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1083,6 +1083,7 @@
   <div class="slider mono"><span>Chess</span><input id="gT" type="range" min="0" max="1" step="0.001" value="0" aria-label="transform amount"><span>Mech</span></div>
   <div class="row">
     <button class="btn" id="gGo">Transform</button>
+    <button class="btn" id="gAtk">Attack</button>
     <button class="btn" id="gTeam">Team</button>
     <button class="btn" id="gSpin">Spin</button>
     <button class="btn" id="gClose">Back</button>
@@ -1157,7 +1158,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=53';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=54';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -2484,7 +2485,7 @@ function inkBurst(pos, n = 14, color = SC().ink) {
 }
 // a fixed pool of point lights that always exists (intensity 0 when idle): adding or removing a light
 // at run time makes three.js recompile every material, which was the stutter on each hit
-const LIGHT_POOL = Array.from({ length: 3 }, () => { const L = new THREE.PointLight(0xffffff, 0, 5, 2); scene.add(L); return L; });
+const LIGHT_POOL = Array.from({ length: 2 }, () => { const L = new THREE.PointLight(0xffffff, 0, 5, 2); scene.add(L); return L; });
 let lightNext = 0;
 function pulseLight(pos, color, peak, dist = 5, dur = .3) {
   const L = LIGHT_POOL[lightNext]; lightNext = (lightNext + 1) % LIGHT_POOL.length;
@@ -4407,7 +4408,7 @@ const mistSheets = [];
     float mh( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
     float mn( vec2 p ) { vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
       return mix( mix( mh( i ), mh( i + vec2( 1, 0 ) ), f.x ), mix( mh( i + vec2( 0, 1 ) ), mh( i + vec2( 1, 1 ) ), f.x ), f.y ); }
-    float fbm( vec2 p ) { float v = 0.0, a = 0.5; for ( int i = 0; i < 4; i++ ) { v += a * mn( p ); p = p * 2.02 + 7.3; a *= 0.5; } return v; }
+    float fbm( vec2 p ) { float v = 0.0, a = 0.5; for ( int i = 0; i < 3; i++ ) { v += a * mn( p ); p = p * 2.02 + 7.3; a *= 0.5; } return v; }
     void main() {
       vec2 p = vUv * vec2( 3.2, 1.0 ) + vec2( uTime * 0.025 + uSeed * 9.0, uSeed * 4.0 );
       float f = fbm( p + 0.8 * fbm( p * 1.7 - uTime * 0.03 ) );
@@ -4448,7 +4449,7 @@ abyss.add(abyssFloor);
 let abyssMirror = null;
 if (!isMobile) {
   abyssMirror = new Reflector(new THREE.PlaneGeometry(220, 220), {
-    textureWidth: innerWidth * .5, textureHeight: innerHeight * .5, color: 0x3c3f43,
+    textureWidth: innerWidth * .35, textureHeight: innerHeight * .35, color: 0x3c3f43,
     shader: {
       name: 'WetReflector',
       uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null } },
@@ -4524,7 +4525,7 @@ function buildComposer() {
   const off = new URLSearchParams(location.search).get('nopost') || '';
   if (!isMobile && !off.includes('ao')) {
     gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
-    gtao.updateGtaoMaterial({ radius: .35, distanceExponent: 1.2, thickness: 1.2, scale: 1.1, samples: 12 });
+    gtao.updateGtaoMaterial({ radius: .35, distanceExponent: 1.2, thickness: 1.2, scale: 1.1, samples: 8 });
     gtao.blendIntensity = 1;
     // sprites and sparks would be read as solid quads by the AO pass: hide them while it samples
     const gRender = gtao.render.bind(gtao);
@@ -4560,7 +4561,7 @@ function applyGfx(rebuild = true) {
   // low key light = long dramatic shadows in Ink
   sun.position.set(...(INK() ? [-8, 8.5, 6] : [-5, 13, 7]));
   sun.shadow.radius = hi ? 3 : 1;
-  const ms = hi ? (isMobile ? 2048 : 4096) : (isMobile ? 1024 : 2048);
+  const ms = GFX.startsWith('monolith') ? (isMobile ? 1024 : 2048) : hi ? (isMobile ? 2048 : 4096) : (isMobile ? 1024 : 2048);
   if (sun.shadow.mapSize.x !== ms) { sun.shadow.mapSize.set(ms, ms); sun.shadow.map?.dispose(); sun.shadow.map = null; }
   rim.intensity = hi ? .9 : SC().rim[1];
   ground.material.opacity = INK() ? .6 : hi ? .38 : SC().shadow;
@@ -4718,12 +4719,12 @@ const CHARS = [
   { type: 'N', name: 'Knight', zh: '05', note: 'extra · designed in the same language' },
   { type: 'R', name: 'Rook', zh: '06', note: 'extra · tower on spider legs, the sketch-sheet cannon' },
 ];
-let galleryOn = false, gIdx = 0, gTeam = 'b', gRig = null, gSaved = null, gAnimating = false;
+let galleryOn = false, gIdx = 0, gTeam = 'b', gRig = null, gSaved = null, gAnimating = false, gVictim = null;
 const gChips = $('gChips');
 CHARS.forEach((c, i) => {
   const b = document.createElement('button');
   b.className = 'btn'; b.textContent = c.name;
-  b.onclick = () => { gIdx = i; buildGalleryRig(); setTimeout(galleryGo, 350); };
+  b.onclick = () => { if (gAnimating) return; gIdx = i; buildGalleryRig(); setTimeout(galleryGo, 350); };
   gChips.append(b);
 });
 function buildGalleryRig(keepT = false) {
@@ -4793,7 +4794,39 @@ function closeGallery() {
 $('bGallery').onclick = () => openGallery(false);
 $('gClose').onclick = closeGallery;
 $('gGo').onclick = galleryGo;
-$('gTeam').onclick = () => { gTeam = gTeam === 'w' ? 'b' : 'w'; buildGalleryRig(true); };
+$('gTeam').onclick = () => { if (gAnimating) return; gTeam = gTeam === 'w' ? 'b' : 'w'; buildGalleryRig(true); };
+// attack demo: a sparring Pawn of the other side steps in, and the selected piece performs its full attack on it
+async function galleryAttack() {
+  if (!gRig || gAnimating) return;
+  gAnimating = true;
+  const spin = controls.autoRotate; controls.autoRotate = false;
+  fxGroup.visible = true;
+  try {
+    if (gRig.t < .99) await morph(gRig, 1, 1.1);
+    const vic = makeRig('P', gTeam === 'w' ? 'b' : 'w');
+    vic.root.scale.setScalar(1.3); vic.root.position.set(0, 0, 3.2); vic.yaw.rotation.y = PI;
+    vic.t = 0; vic.apply(); galleryStage.add(vic.root); gVictim = vic;
+    // frame both from the side
+    const h = G_HEIGHT[CHARS[gIdx].type] * 1.3, mid = new V3(0, h * .45, 1.6);
+    const camTo = new V3(isMobile ? 8.6 : 7.2, h * .75 + .6, 1.6 + (isMobile ? 2.4 : 1.6));
+    const p0 = camera.position.clone(), t0 = controls.target.clone();
+    await Promise.all([morph(vic, 1, .9), tween(.8, k => { const e = easeIO(k); camera.position.lerpVectors(p0, camTo, e); controls.target.lerpVectors(t0, mid, e); })]);
+    const dir = new V3(0, 0, 1), vp = vic.root.position.clone();
+    const type = gRig.type, play = skel(gRig) && CHOREO[type + 'skel'] ? type + 'skel' : type;
+    const style = await CHOREO[play](gRig, vic, dir, vp);
+    await finish(vic, dir, style);
+    gVictim = null;
+    if (gRig.pose) await poseTo(gRig, REST, .2);
+    if (gRig.mech) await bonePose(gRig, {}, .3);
+    await tween(.35, k => { gRig.root.position.multiplyScalar(1 - k); gRig.root.position.y *= 1 - k; });
+    gRig.root.position.set(0, 0, 0); gRig.root.quaternion.identity(); gRig.yaw.rotation.y = 0;
+  } finally {
+    if (gVictim) { gVictim.dispose(); gVictim = null; }
+    fxGroup.visible = false; controls.autoRotate = spin; gAnimating = false;
+    frameGallery();
+  }
+}
+$('gAtk').onclick = galleryAttack;
 $('gSpin').onclick = () => { controls.autoRotate = !controls.autoRotate; };
 $('gT').oninput = e => { if (gRig && !gAnimating) gRig.t = +e.target.value; };
 addEventListener('keydown', e => {
@@ -4806,8 +4839,20 @@ addEventListener('keydown', e => {
    ================================================================ */
 const clock = new THREE.Clock();
 let lastFrame = performance.now();
+const DPR_MAX = Math.min(devicePixelRatio, isMobile ? 1.5 : 2), DPR_MIN = isMobile ? .75 : 1;
+let dprNow = DPR_MAX, ftAvg = 16, ftCheck = 0;
+function adaptResolution(ms) {
+  ftAvg += (Math.min(ms, 100) - ftAvg) * .05;
+  if (performance.now() < ftCheck) return;
+  let next = dprNow;
+  if (ftAvg > 22 && dprNow > DPR_MIN) next = Math.max(DPR_MIN, dprNow - .15);
+  else if (ftAvg < 13 && dprNow < DPR_MAX) next = Math.min(DPR_MAX, dprNow + .1);
+  if (next !== dprNow) { dprNow = next; renderer.setPixelRatio(dprNow); resize(); ftCheck = performance.now() + 1500; }
+}
 function frame() {
-  const dt = Math.min(.05, (performance.now() - lastFrame) / 1000); lastFrame = performance.now();
+  const dt = Math.min(.05, (performance.now() - lastFrame) / 1000);
+  if (!document.hidden) adaptResolution(performance.now() - lastFrame);
+  lastFrame = performance.now();
   const now = performance.now();
   const frozen = now < frozenUntil, fdt = now - (frame.prev || now); frame.prev = now;
   for (const tw of [...tweens]) {
@@ -4817,7 +4862,7 @@ function frame() {
     if (k >= 1) { tweens.delete(tw); tw.res(); }
   }
   const time = clock.getElapsedTime();
-  const list = galleryOn ? (gRig ? [gRig] : []) : allRigs();
+  const list = galleryOn ? [gRig, gVictim].filter(Boolean) : allRigs();
   for (const r of list) {
     if (r.t > 0 || r._lastT !== r.t || r.fade < 1) {
       r.apply();
