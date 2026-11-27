@@ -985,7 +985,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 43</div>
+  <div class="build mono">Build 44</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1156,7 +1156,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=43';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=44';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1914,6 +1914,8 @@ const MODEL_SPEC = {
   R: { chess: 'rook_chess', robot: 'rook', ch: 1.0, rh: 1.65, cn: 'b', rn: 'b', muzzle: [0, 1.5, .3] },
 };
 const MODELS = {};
+// Monolith: a light that only the pieces receive (self-lift + cold rim), so they read clearly in the dark world
+const PIECE_LIFT = { value: 0 };
 const ACCENT_SRGB = { w: new THREE.Vector3(.2, .42, .95), b: new THREE.Vector3(.96, .78, .12) };
 
 /* ---------- transformation shaders ---------- */
@@ -1965,14 +1967,14 @@ function transformMat(pt, U) {
     : new THREE.MeshToonMaterial({ map, gradientMap: ANIME() ? animeGrad : grad });
   if (HIGH() && pt.normalMap) m.normalScale.set(.8, .8);
   m.onBeforeCompile = sh => {
-    Object.assign(sh.uniforms, U);
+    Object.assign(sh.uniforms, U, { uLift: PIECE_LIFT });
     sh.vertexShader = TF_COMMON + sh.vertexShader
       .replace('#include <beginnormal_vertex>', `
         vec3 objectNormal = vec3( normal );
         { float a; tfTwist( position, a ); float c = cos( a ), s = sin( a ); objectNormal.xz = mat2( c, s, -s, c ) * objectNormal.xz; }`)
       .replace('#include <begin_vertex>', `float tfA; vec3 transformed = tfTwist( position, tfA ); vLoc = position / uH;`);
     sh.fragmentShader = TF_COMMON.replace(/vec3 tfTwist[\s\S]*$/, '\n') + `
-      uniform float uSeam; uniform vec3 uAccent; uniform float uInvert;` + TF_NOISE + sh.fragmentShader
+      uniform float uSeam; uniform vec3 uAccent; uniform float uInvert; uniform float uLift;` + TF_NOISE + sh.fragmentShader
       .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
         float tfN = tfField(), tfC = tfCut();
         if ( tfN > tfC ) discard;
@@ -1998,6 +2000,11 @@ function transformMat(pt, U) {
         #endif`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         vec3 tfHot = pow( mix( uAccent, vec3( 1.0 ), 0.35 ), vec3( 2.2 ) );
+        {
+          float pr = 1.0 - max( dot( normalize( vViewPosition ), normal ), 0.0 );
+          totalEmissiveRadiance += diffuseColor.rgb * uLift * ( 0.55 + 0.45 * max( normal.y, 0.0 ) )   // soft fill from above
+            + vec3( 0.75, 0.82, 0.95 ) * uLift * 0.5 * smoothstep( 0.55, 0.95, pr );             // cold rim around the silhouette
+        }
         totalEmissiveRadiance += tfHot * ( tfEdge * 4.0 + tfSeam * 2.2 );` + (GLOW() ? `
         // Monolith Glow: the original gold / blue trim burns like neon (HDR, so the bloom picks it up)
         totalEmissiveRadiance += pow( uAccent, vec3( 2.2 ) ) * tfAcc * 3.6 * uVis;` : '') + (ANIME() ? `
@@ -4201,7 +4208,7 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
   im.receiveShadow = true; im.raycast = () => {};
   abyss.add(im);
   // light openings at the end of each avenue: blinding slits that the bloom spreads
-  const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 3.35, 3.6), toneMapped: false, fog: false });
+  const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.7, 1.78, 1.9), toneMapped: false, fog: false });
   const shaftMat = new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 }, uStr: { value: .16 }, uA: { value: new V3() }, uB: { value: new V3() }, uR: { value: new THREE.Vector2() } },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
@@ -4242,7 +4249,7 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
     const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, .4), glowMat);
     g.position.set(x, -.37 + h / 2, z); g.lookAt(0, g.position.y, 0); g.raycast = () => {};
     abyss.add(g);
-    shaft(new V3(x, h * .55, z), new V3(x * .25, 0, z * .25), h * .45, h * 1.6, i ? .015 : .025);
+    shaft(new V3(x, h * .55, z), new V3(x * .25, 0, z * .25), h * .45, h * 1.6, i ? .008 : .014);
   });
   // a column of light falling on the board from far above
   abyss.userData.column = shaft(new V3(0, 26, -1.5), new V3(0, -.3, 0), 2.2, 6.2, .03);
@@ -4452,10 +4459,11 @@ function applyGfx(rebuild = true) {
   }
   // Monolith: the board stands in a canyon of dark towers lit only from above and from the openings behind
   const ab = ABYSS();
+  PIECE_LIFT.value = ab ? .5 : 0;
   abyss.visible = ab; abyssSpot.intensity = ab ? 120 : 0;
   scene.environmentIntensity = ab ? .14 : 1;
   if (gradePass) { gradePass.uniforms.uAbyss.value = ab ? 1 : 0; gradePass.uniforms.uKeep.value = GLOW() ? 1 : 0; if (ab) gradePass.enabled = true; }
-  if (bloomPass && ab) { bloomPass.enabled = true; bloomPass.threshold = 2.2; bloomPass.strength = .38; bloomPass.radius = .12; /* a tight halo around the openings only */ }
+  if (bloomPass && ab) { bloomPass.enabled = true; bloomPass.threshold = 2.2; bloomPass.strength = .26; bloomPass.radius = .12; /* a tight halo around the openings only */ }
   if (ab) {
     skyDome.visible = true; skyDome.material.map = skyAbyss; skyDome.rotation.y = 0; skyDome.material.needsUpdate = true;
     groundFog.forEach(m => { m.visible = true; m.material.uniforms.uColor.value.setHex(0x272b2f); m.material.uniforms.uOpacity.value *= 1; });
