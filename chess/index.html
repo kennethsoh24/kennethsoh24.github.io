@@ -895,7 +895,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 38</div>
+  <div class="build mono">Build 39</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -964,7 +964,7 @@
       <label class="field mono">Battle
         <select id="battle"><option value="full" selected>Full</option><option value="quick">Quick</option></select></label>
       <label class="field mono">Graphics
-        <select id="gfx"><option value="cinema" class="no-bw">Cinema</option><option value="anime" class="bw-only">Anime 2.5D</option><option value="animefine" class="bw-only">Anime 2.5D · Fine line</option><option value="high">High</option><option value="classic">Classic</option></select></label>
+        <select id="gfx"><option value="cinema" class="no-bw">Cinema</option><option value="anime" class="bw-only">Anime 2.5D</option><option value="animefine" class="bw-only">Anime 2.5D · Fine line</option><option value="monolith">Monolith</option><option value="high">High</option><option value="classic">Classic</option></select></label>
       <label class="field mono">Camera
         <select id="cam"><option value="cine" selected>Cinematic</option><option value="fixed">Fixed</option></select></label>
       <label class="field mono">Music
@@ -1066,7 +1066,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=38';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=39';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1074,6 +1074,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
 import * as E from './engine.js';
 
 // height fog: thick on the ground, thinning with altitude, warmer toward the sun, lighter in the low layer
@@ -1103,7 +1104,7 @@ THREE.ShaderChunk.fog_fragment = `#ifdef USE_FOG
     fogFactor *= mix( 0.42, 1.0, exp( - fogH * 0.35 ) );
     vec3 fogDir = normalize( vFogWorld - cameraPosition );
     float fogSun = pow( max( dot( fogDir, normalize( vec3( -0.6, 0.12, -0.8 ) ) ), 0.0 ), 5.0 );
-    vec3 fogCol = fogColor * ( 1.0 + 0.08 * exp( - fogH * 0.6 ) ) + fogSun * vec3( 0.10, 0.06, 0.02 );
+    vec3 fogCol = fogColor * ( 1.0 + 0.08 * exp( - fogH * 0.6 ) ) + fogSun * vec3( 0.10, 0.06, 0.02 ) * step( 0.08, fogColor.r );
     gl_FragColor.rgb = mix( gl_FragColor.rgb, fogCol, fogFactor );
   #else
     float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
@@ -1141,7 +1142,7 @@ if (BWED && GFX === 'cinema') GFX = 'high';
 if (!BWED && GFX.startsWith('anime')) GFX = 'cinema';   // the anime render belongs to the Black & White edition
 const ANIME = () => GFX === 'anime' || GFX === 'animefine';
 const FINE = () => GFX === 'animefine';   // same cel render, fine black linework
-const HIGH = () => GFX === 'high' || GFX === 'cinema';
+const HIGH = () => GFX === 'high' || GFX === 'cinema' || GFX === 'monolith';
 const INK = () => false;
 const CINE = () => GFX === 'cinema' && !BWED && (THEME === 'mono' || THEME === 'ops');
 const OPS = () => THEME === 'ops';
@@ -3620,7 +3621,7 @@ function setCameraForSide(side, animate = true) {
   const asp = innerWidth / innerHeight, vf = camera.fov * PI / 180;
   const hf = 2 * Math.atan(Math.tan(vf / 2) * asp);
   const dist = Math.max(12.6, 4.7 / Math.tan(hf / 2));
-  const elev = asp < 1 ? 1.0 : .87;
+  const elev = ABYSS() ? (asp < 1 ? .78 : .5) : asp < 1 ? 1.0 : .87;   // Monolith sits lower, so the towers rise behind the board
   const target = new V3(0, Math.sin(elev) * dist, Math.cos(elev) * dist * (flipped ? -1 : 1));
   if (!animate) { camera.position.copy(target); return; }
   const from = camera.position.clone();
@@ -3796,6 +3797,7 @@ $('gfx').onchange = e => {
   GFX = e.target.value;
   try { localStorage.setItem(GFX_KEY, GFX); } catch (er) { /* storage blocked */ }
   applyGfx(true);
+  if (!galleryOn) setCameraForSide(flipped ? 'b' : 'w');
 };
 $('theme').onchange = e => { tvStatic(220); applyTheme(e.target.value); };
 $('sound').onchange = e => { soundOn = e.target.value === '1'; };
@@ -3973,7 +3975,7 @@ function updateDust(dt, time) {
   if (!dust.visible) return;
   for (let i = 0; i < DUST; i++) {
     const j = i * 3;
-    dustPos[j] += (1.2 + Math.sin(time * .7 + i) * .4) * dt; dustPos[j + 1] += Math.sin(time * 1.3 + i * .37) * .12 * dt;
+    dustPos[j] += (1.2 + Math.sin(time * .7 + i) * .4) * dt * (ABYSS() ? .12 : 1); dustPos[j + 1] += Math.sin(time * 1.3 + i * .37) * .12 * dt;
     if (dustPos[j] > 15) { dustPos[j] = -15; dustPos[j + 1] = Math.random() * 5; dustPos[j + 2] = (Math.random() - .5) * 30; }
   }
   dustGeo.attributes.position.needsUpdate = true;
@@ -4050,19 +4052,161 @@ function updateMist(dt) {
   if (!mist.visible) return;
   for (const m of mist.children) { m.position.x += m.userData.v * dt; if (m.position.x > 16) m.position.x = -16; m.quaternion.copy(camera.quaternion); }
 }
+/* ---------- Monolith look: a canyon of dark voxel towers, backlit openings, light shafts, wet mirror floor ---------- */
+const abyss = new THREE.Group(); abyss.visible = false; scene.add(abyss);
+const ABYSS_FOG = new THREE.FogExp2(0x2a2f33, .046);
+const skyAbyss = canvasTex(512, (g, s) => {
+  const gr = g.createLinearGradient(0, 0, 0, s);
+  gr.addColorStop(0, '#040506'); gr.addColorStop(.28, '#0b0d0f'); gr.addColorStop(.44, '#1e2225'); gr.addColorStop(.5, '#2a2f33'); gr.addColorStop(1, '#2a2f33');
+  g.fillStyle = gr; g.fillRect(0, 0, s, s);
+});
+skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
+{
+  // seeded so the city is the same every visit
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const AVENUES = [PI * 1.5, PI * 1.5 + .75, PI * 1.5 - .95, .35, PI - .5];   // gaps that open onto the light; the main one sits behind Black
+  const inAvenue = (a, w) => AVENUES.some(v => Math.abs(Math.atan2(Math.sin(a - v), Math.cos(a - v))) < w);
+  const boxes = [];
+  const add = (x, z, w, d, y0, h) => boxes.push([x, z, w, d, y0, h]);
+  const N = isMobile ? 260 : 620;
+  for (let i = 0; i < N; i++) {
+    const band = rnd();
+    const a = rnd() * PI * 2;
+    let r, w, h;
+    if (band < .34) { r = 9.5 + rnd() * 7; w = .45 + rnd() * 1.6; h = .2 + Math.pow(rnd(), 2) * 3.2; }        // stepped rubble near the board
+    else if (band < .72) { r = 16 + rnd() * 13; w = 1 + rnd() * 2.6; h = 3 + Math.pow(rnd(), 1.5) * 14; if (inAvenue(a, .16)) continue; }
+    else { r = 29 + rnd() * 30; w = 2 + rnd() * 5; h = 10 + rnd() * 34; if (inAvenue(a, .12)) continue; }
+    const x = Math.cos(a) * r, z = Math.sin(a) * r, d = w * (.6 + rnd() * .9);
+    // towers are stacks of offset blocks, like the references
+    let y = -.37, k = 0;
+    while (y < h - .37 && k < 4) {
+      const seg = k === 0 ? h * (.35 + rnd() * .4) : (h - .37 - y) * (.4 + rnd() * .6) + .3;
+      const s = k === 0 ? 1 : .55 + rnd() * .4;
+      add(x + (rnd() - .5) * w * .4 * k, z + (rnd() - .5) * d * .4 * k, w * s, d * s, y, seg);
+      y += seg; k++;
+    }
+  }
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .92, metalness: 0 });
+  // concrete: world-space speckle so tall blocks are not stretched
+  mat.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vAW;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvAW = ( modelMatrix * instanceMatrix * vec4( transformed, 1.0 ) ).xyz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+      varying vec3 vAW;
+      float ah( vec3 p ) { p = fract( p * 0.3183099 + 0.1 ); p *= 17.0; return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) ); }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+      float sp = ah( floor( vAW * 14.0 ) ) * 0.5 + ah( floor( vAW * 3.0 ) ) * 0.5;
+      diffuseColor.rgb *= 0.72 + 0.4 * sp;`);
+  };
+  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, boxes.length);
+  const m4 = new THREE.Matrix4(), col = new THREE.Color();
+  boxes.forEach(([x, z, w, d, y0, h], i) => {
+    m4.makeScale(w, h, d).setPosition(x, y0 + h / 2, z); im.setMatrixAt(i, m4);
+    const v = .05 + rnd() * .05; im.setColorAt(i, col.setRGB(v, v, v * 1.04));
+  });
+  im.receiveShadow = true; im.raycast = () => {};
+  abyss.add(im);
+  // light openings at the end of each avenue: blinding slits that the bloom spreads
+  const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(9, 9.4, 10), toneMapped: false, fog: false });
+  const shaftMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uStr: { value: .16 } },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+    vertexShader: `varying vec3 vN; varying vec3 vV; varying float vY; varying vec3 vW;
+      void main() { vec4 w = modelMatrix * vec4( position, 1.0 ); vW = w.xyz; vN = normalize( mat3( modelMatrix ) * normal ); vV = normalize( cameraPosition - w.xyz ); vY = uv.y;
+        gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform float uTime; uniform float uStr; varying vec3 vN; varying vec3 vV; varying float vY; varying vec3 vW;
+      float h( vec2 p ) { return fract( sin( dot( p, vec2( 12.9898, 78.233 ) ) ) * 43758.5453 ); }
+      void main() {
+        float face = pow( abs( dot( vN, vV ) ), 1.6 );                  // bright through the middle, soft at the edges
+        float streak = 0.75 + 0.25 * sin( vW.x * 3.1 + vW.z * 2.3 + uTime * 0.25 ) * sin( vW.y * 0.7 - uTime * 0.18 );
+        float a = face * streak * pow( vY, 1.4 ) * uStr;               // strongest at the source end
+        a *= 1.0 - smoothstep( 4.0, 1.2, distance( vW, cameraPosition ) );   // never smear across the lens
+        gl_FragColor = vec4( vec3( 0.92, 0.96, 1.0 ) * a, 1.0 );
+      }`,
+  });
+  // a cone of light from point `from` toward `to`; uv.y = 1 at the source
+  const shaft = (from, to, r0, r1, str) => {
+    const len = from.distanceTo(to);
+    const geo = new THREE.CylinderGeometry(r0, r1, len, 24, 1, true).translate(0, -len / 2, 0);
+    const m = new THREE.Mesh(geo, shaftMat.clone());
+    m.material.uniforms.uStr.value = str;
+    m.position.copy(from); m.quaternion.setFromUnitVectors(new V3(0, -1, 0), to.clone().sub(from).normalize());
+    m.renderOrder = 4; m.raycast = () => {};
+    abyss.add(m); return m;
+  };
+  AVENUES.forEach((a, i) => {
+    const r = 42 + i * 3, w = i ? 2.5 + rnd() * 2 : 5, h = i ? 3 + rnd() * 3 : 7;
+    const x = Math.cos(a) * r, z = Math.sin(a) * r;
+    const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, .4), glowMat);
+    g.position.set(x, -.37 + h / 2, z); g.lookAt(0, g.position.y, 0); g.raycast = () => {};
+    abyss.add(g);
+    shaft(new V3(x, h * .55, z), new V3(x * .25, 0, z * .25), h * .45, h * 1.6, i ? .07 : .12);
+  });
+  // a column of light falling on the board from far above
+  abyss.userData.column = shaft(new V3(0, 26, -1.5), new V3(0, -.3, 0), 2.2, 6.2, .1);
+  abyss.userData.shafts = abyss.children.filter(o => o.material && o.material.uniforms && o.material.uniforms.uStr);
+}
+// the wet floor: a mirror under a dark, puddled skin; the mirror smears reflections into vertical streaks
+const floorAlpha = terrainRough.clone(); floorAlpha.needsUpdate = true; floorAlpha.repeat.set(34, 34);
+const abyssFloor = new THREE.Mesh(new THREE.PlaneGeometry(220, 220).rotateX(-PI / 2),
+  new THREE.MeshStandardMaterial({ color: 0x0c0d0f, roughness: .55, metalness: 0, transparent: true, alphaMap: floorAlpha, opacity: 1,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+abyssFloor.position.y = -.37; abyssFloor.receiveShadow = true; abyssFloor.raycast = () => {};
+abyss.add(abyssFloor);
+let abyssMirror = null;
+if (!isMobile) {
+  abyssMirror = new Reflector(new THREE.PlaneGeometry(220, 220), {
+    textureWidth: innerWidth * .5, textureHeight: innerHeight * .5, color: 0x3c3f43,
+    shader: {
+      name: 'WetReflector',
+      uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null } },
+      vertexShader: `uniform mat4 textureMatrix; varying vec4 vUv;
+        #include <common>
+        #include <logdepthbuf_pars_vertex>
+        void main() { vUv = textureMatrix * vec4( position, 1.0 ); gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+        #include <logdepthbuf_vertex>
+        }`,
+      fragmentShader: `uniform vec3 color; uniform sampler2D tDiffuse; varying vec4 vUv;
+        #include <logdepthbuf_pars_fragment>
+        void main() {
+          #include <logdepthbuf_fragment>
+          vec3 c = vec3( 0.0 ); float wsum = 0.0;
+          for ( int i = -6; i <= 6; i++ ) {                            // streak the reflection down the wet surface
+            float w = exp( - float( i * i ) / 14.0 );
+            c += texture2DProj( tDiffuse, vUv + vec4( 0.0, float( i ) * 0.006 * vUv.w, 0.0, 0.0 ) ).rgb * w; wsum += w;
+          }
+          gl_FragColor = vec4( c / wsum * color, 1.0 );
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+    },
+  });
+  abyssMirror.rotateX(-PI / 2); abyssMirror.position.y = -.375; abyssMirror.userData.noAO = true;
+  abyss.add(abyssMirror);
+}
+// a pool of light on the board, and the backlight from the main opening
+const abyssSpot = new THREE.SpotLight(0xeef3ff, 0, 0, .42, .7, 2);
+abyssSpot.position.set(0, 16, -1.5); abyssSpot.target.position.set(0, 0, 0);
+scene.add(abyssSpot, abyssSpot.target);
+const ABYSS = () => GFX === 'monolith';
 // film grade: muted palette, teal shadows / warm highlights, lifted blacks, vignette, grain, chromatic aberration on impact
 const GradeShader = {
-  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uImpact: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uOps: { value: 0 } },
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uImpact: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uOps: { value: 0 }, uAbyss: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uTime; uniform float uImpact; uniform vec2 uRes; uniform float uOps; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float uTime; uniform float uImpact; uniform vec2 uRes; uniform float uOps; uniform float uAbyss; varying vec2 vUv;
     float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main() {
       vec2 c = vUv - .5;
       float ca = .0012 + uImpact * .006;
       vec3 col = vec3(texture2D(tDiffuse, vUv + c * ca).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - c * ca).b);
       float l = dot(col, vec3(.299, .587, .114));
-      if (uOps > .5) {
+      if (uAbyss > .5) {
+        // Monolith: monochrome, a breath of cold blue, crushed blacks, a filmic S-curve
+        col = mix(vec3(l), col, .12) * vec3(.97, 1.0, 1.04);
+        col = clamp((col - .035) / .965, 0.0, 1.0);
+        col = col * col * (3.0 - 2.0 * col) * .5 + col * .5;
+      } else if (uOps > .5) {
         // Tactical: sun-bleached, warm highlights, olive shadows, harder contrast
         col = mix(vec3(l), col, .7);
         col += mix(vec3(-.01, .0, -.025), vec3(.06, .025, -.04), smoothstep(.25, .85, l));
@@ -4074,8 +4218,8 @@ const GradeShader = {
         col = col * .94 + .035;                                        // lifted blacks
       }
       col = mix(col, vec3(1.0), uImpact * .45);                        // impact exposure flash
-      col *= 1.0 - smoothstep(.45, .95, length(c * vec2(1.25, 1.0))) * .55;  // vignette
-      col += (hash(vUv * uRes + uTime) - .5) * .045;                   // grain
+      col *= 1.0 - smoothstep(.45, .95, length(c * vec2(1.25, 1.0))) * (.55 + uAbyss * .3);  // vignette
+      col += (hash(vUv * uRes + uTime) - .5) * (.045 + uAbyss * .02);                   // grain
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
@@ -4093,7 +4237,7 @@ function buildComposer() {
     const gRender = gtao.render.bind(gtao);
     gtao.render = (...a) => {
       const hidden = [];
-      scene.traverse(o => { if ((o.isSprite || o.isPoints) && o.visible) { o.visible = false; hidden.push(o); } });
+      scene.traverse(o => { if ((o.isSprite || o.isPoints || o.userData.noAO || (o.material && o.material.blending === THREE.AdditiveBlending)) && o.visible) { o.visible = false; hidden.push(o); } });
       gRender(...a);
       hidden.forEach(o => { o.visible = true; });
     };
@@ -4111,7 +4255,7 @@ function buildComposer() {
   inkPass.enabled = INK();
   composer.addPass(inkPass);
 }
-function usePost() { return HIGH() && (THEME === 'mono' || THEME === 'ops'); }
+function usePost() { return ABYSS() || (HIGH() && (THEME === 'mono' || THEME === 'ops')); }
 function applyGfx(rebuild = true) {
   const hi = HIGH();
   renderer.toneMapping = hi ? THREE.NeutralToneMapping : THREE.NoToneMapping;
@@ -4129,12 +4273,12 @@ function applyGfx(rebuild = true) {
   ground.material.opacity = INK() ? .6 : hi ? .38 : SC().shadow;
   if (inkPass) inkPass.enabled = INK();
   // matte board in Ink: no sheen, no reflections
-  const matte = INK() || BWED;   // the Black & White edition has a fully matte board
+  const matte = INK() || (BWED && !ABYSS());   // the Black & White edition has a fully matte board
   boardMatHi.roughness = matte ? 1 : .6; boardMatHi.clearcoat = matte ? 0 : .35; boardMatHi.envMapIntensity = matte ? 0 : .25;
   boardSideHi.roughness = matte ? 1 : .45; boardSideHi.clearcoat = matte ? 0 : .4; boardSideHi.envMapIntensity = matte ? 0 : .3;
   boardMatHi.needsUpdate = boardSideHi.needsUpdate = true;
   let top = hi ? boardMatHi : boardMat, side = hi ? boardSideHi : boardSide;
-  if (BWED) {
+  if (BWED && !ABYSS()) {
     // Black & White: purely diffuse board, no specular term at all
     boardMatLam ??= new THREE.MeshLambertMaterial();
     boardSideLam ??= new THREE.MeshLambertMaterial();
@@ -4198,11 +4342,31 @@ function applyGfx(rebuild = true) {
     boardMatHi.color.setHex(0x8e8b85); boardMatHi.roughness = .85; boardMatHi.clearcoat = .25; boardMatHi.clearcoatRoughness = .35; boardMatHi.envMapIntensity = .35;
     boardSideHi.color.setHex(0x3a3d3e); boardSideHi.roughness = .95; boardSideHi.clearcoat = 0;
     boardMatHi.needsUpdate = boardSideHi.needsUpdate = true;
-  } else {
+  } else if (!ABYSS()) {
     hemi.color.setHex(SC().hemi[0]); hemi.groundColor.setHex(SC().hemi[1]);
     sun.color.setHex(0xffffff); rim.color.setHex(SC().rim[0]);
     boardMatHi.color.setHex(0xffffff); boardSideHi.color.setHex(SC().side);
   }
+  // Monolith: the board stands in a canyon of dark towers lit only from above and from the openings behind
+  const ab = ABYSS();
+  abyss.visible = ab; abyssSpot.intensity = ab ? 240 : 0;
+  scene.environmentIntensity = ab ? .22 : 1;
+  if (gradePass) { gradePass.uniforms.uAbyss.value = ab ? 1 : 0; if (ab) gradePass.enabled = true; }
+  if (bloomPass && ab) { bloomPass.enabled = true; bloomPass.threshold = 3.0; bloomPass.strength = 1.0; bloomPass.radius = .75; }
+  if (ab) {
+    skyDome.visible = true; skyDome.material.map = skyAbyss; skyDome.rotation.y = 0; skyDome.material.needsUpdate = true;
+    groundFog.forEach(m => { m.visible = true; m.material.uniforms.uColor.value.setHex(0x3c4247); });
+    dust.visible = true; dust.material.color.setHex(0xdfe6ee); dust.material.opacity = .5; dust.material.size = 1.6; dust.material.sizeAttenuation = false; dust.material.needsUpdate = true;
+    ground.visible = false; terrain.visible = false; rain.visible = false;
+    scene.fog = ABYSS_FOG; scene.background = new THREE.Color(0x2a2f33);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .9;
+    hemi.color.setHex(0x9aa6b4); hemi.groundColor.setHex(0x050607); hemi.intensity = .12;
+    sun.color.setHex(0xe8eef6); sun.intensity = 1.1; sun.position.set(-2.5, 15, -3.5); sun.shadow.radius = 4;
+    rim.color.setHex(0xdfe9ff); rim.intensity = 2.6; rim.position.set(1, 3.5, -12);
+    boardMatHi.color.setHex(0x55585c); boardMatHi.roughness = .55; boardMatHi.clearcoat = .5; boardMatHi.clearcoatRoughness = .18; boardMatHi.envMapIntensity = .6;
+    boardSideHi.color.setHex(0x121315); boardSideHi.roughness = .6; boardSideHi.clearcoat = .4;
+    boardMatHi.needsUpdate = boardSideHi.needsUpdate = true;
+  } else { dust.material.color.setHex(0xe8c99a); dust.material.opacity = .55; dust.material.size = .05; dust.material.sizeAttenuation = true; dust.material.needsUpdate = true; rim.position.set(6, 5, -8); }
   document.querySelectorAll('[data-gfx]').forEach(b => b.setAttribute('aria-pressed', b.dataset.gfx === GFX));
   if ($('gfx')) $('gfx').value = GFX;
   if (rebuild) {
@@ -4365,6 +4529,13 @@ function frame() {
   updateSparks(dt);
   updateRain(dt); updateMist(dt); updateDust(dt, time);
   for (const m of groundFog) if (m.visible) m.material.uniforms.uTime.value = time;
+  if (abyss.visible) {
+    for (const m of abyss.userData.shafts) m.material.uniforms.uTime.value = time;
+    // the column of light fades away when the camera steps inside it, instead of fogging the lens
+    const cp = camera.position, k = Math.min(1, Math.max(0, (cp.y + .3) / 26.3));
+    const rAt = 6.2 + (2.2 - 6.2) * k, ax = -1.5 * k, d = Math.hypot(cp.x, cp.z - ax);
+    abyss.userData.column.material.uniforms.uStr.value = .1 * Math.min(1, Math.max(0, (d - rAt) / 2.5));
+  }
   if (gradePass) gradePass.uniforms.uTime.value = time % 100;
   placeTag();
   if (inkPass) inkPass.uniforms.uTime.value = Math.floor(time * 8) / 8;
