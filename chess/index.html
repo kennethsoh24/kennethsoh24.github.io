@@ -890,6 +890,7 @@
   body.monolith #moves li span.last, body.monolith #status.check, body.monolith #status.over, body.monolith #hudtop .tcode, body.monolith .screen .tc,
     body.monolith .screen .castname, body.monolith #tag { background: #e9edf2; color: #07080a; }
   body.monolith #tag { border-left-color: #07080a; }
+  body.monolith #tag span { color: #4c535b; }
   body.monolith header .wm { text-shadow: 0 0 24px rgba(220,232,255,.25); }
   body.monolith .live::before { background: #f2f6ff; box-shadow: var(--glow); }
   /* gear up: a slab of light */
@@ -986,7 +987,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 54</div>
+  <div class="build mono">Build 55</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1158,7 +1159,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=54';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=55';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -2269,7 +2270,7 @@ function showDots(moves) {
     if (seen.has(m.to)) continue;
     seen.add(m.to);
     const cap = !!m.captured;
-    const d = cap ? flatSprite(ringTex, SC().mark, .98, 1) : flatSprite(inkTex, accentHex(), .3, .85);
+    const d = ABYSS() ? glowHint(cap, m) : cap ? flatSprite(ringTex, SC().mark, .98, 1) : flatSprite(inkTex, accentHex(), .3, .85);
     d.position.copy(sqPos(m.to)).setY(.012);
     d.userData.pulse = Math.random() * 6;
     markGroup.add(d);
@@ -2277,6 +2278,27 @@ function showDots(moves) {
   }
 }
 const accentHex = () => SC().mark;
+// Monolith: move hints are light, not ink. A soft glowing orb on each reachable square over a faint lit tile,
+// and a glowing ring on captures; cold white, or the mover's gold / blue in Glow and Chrome
+function hintColor(team, k) {
+  const c = GLOW() || CHROME() ? (team === 'w' ? new THREE.Color(.35, .6, 1.6) : new THREE.Color(1.6, 1.15, .35)) : new THREE.Color(1.5, 1.6, 1.8);
+  return c.multiplyScalar(k);
+}
+function glowHint(cap, m) {
+  const team = E.colorOf(m.piece), g = new THREE.Group();
+  const add = (tex, size, k, op) => {
+    const s = flatSprite(tex, 0xffffff, size, op);
+    s.material.color.copy(hintColor(team, k)); s.material.blending = THREE.AdditiveBlending; s.material.toneMapped = false; s.material.fog = false;
+    g.add(s); return s;
+  };
+  const tile = new THREE.Mesh(new THREE.PlaneGeometry(.94, .94).rotateX(-PI / 2), new THREE.MeshBasicMaterial({ color: hintColor(team, .09),
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false }));
+  tile.raycast = () => {}; tile.renderOrder = 2; g.add(tile);
+  if (cap) { add(softRingTex, 1.15, 1.1, 1); add(glowTex, .9, .35, .8); }
+  else { add(glowTex, .62, .9, 1); add(dotTex, .16, 1.3, 1); }
+  g.raycast = () => {};
+  return g;
+}
 
 /* ================================================================
    Tweens & sound
@@ -3595,7 +3617,10 @@ function select(s) {
   selMark.material.color.setHex(accentHex());
   selMark.position.copy(sqPos(s)).setY(.01);
   if (THEME !== 'moon') {
-    selMark.material.map = bracketTex; selMark.material.color.setHex((E.fileOf(s) + E.rankOf(s)) % 2 === 0 ? 0xffffff : 0x0d0d0d); selMark.material.needsUpdate = true;
+    selMark.material.map = bracketTex; selMark.material.color.setHex((E.fileOf(s) + E.rankOf(s)) % 2 === 0 ? 0xffffff : 0x0d0d0d);
+    if (ABYSS()) { selMark.material.color.copy(hintColor(E.colorOf(state.board[s]), 1.2)); selMark.material.blending = THREE.AdditiveBlending; selMark.material.toneMapped = false; }
+    else { selMark.material.blending = THREE.NormalBlending; selMark.material.toneMapped = true; }
+    selMark.material.needsUpdate = true;
     tween(.22, k => selMark.scale.setScalar(1.6 - .6 * easeIO(k)));
     const p = state.board[s];
     const nm = { P: 'Pawn 2', B: 'Bishop 2.0', N: 'Knight', R: 'Rook', Q: 'Queen', K: 'King' }[p.toUpperCase()];
