@@ -895,7 +895,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 34</div>
+  <div class="build mono">Build 35</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1403,7 +1403,7 @@ class Rig {
     const mk = (part, which) => {
       const spec = MODEL_SPEC[this.type];
       const U = {
-        uK: { value: 0 }, uVis: { value: 1 }, uSeam: { value: 0 },
+        uK: { value: 0 }, uVis: { value: 1 }, uSeam: { value: 0 }, uBend: { value: new THREE.Vector2() }, uTw: { value: 0 },
         uH: { value: which === 'chess' ? spec.ch : spec.rh },
         uDir: { value: which === 'chess' ? 1 : -1 },
         uInvert: { value: (which === 'chess' ? spec.cn : spec.rn) !== this.team ? 1 : 0 },
@@ -1809,6 +1809,7 @@ const ACCENT_SRGB = { w: new THREE.Vector3(.2, .42, .95), b: new THREE.Vector3(.
 /* ---------- transformation shaders ---------- */
 const TF_COMMON = `
   uniform float uK; uniform float uH; uniform float uVis; uniform float uDir;
+  uniform vec2 uBend; uniform float uTw;
   varying vec3 vLoc;
   vec3 tfTwist( vec3 p, out float ang ) {
     float h = clamp( p.y / uH, 0.0, 0.999 );
@@ -1820,6 +1821,15 @@ const TF_COMMON = `
     q.xz = mat2( c, s, -s, c ) * q.xz;
     q.xz *= 1.0 + uK * 0.4;
     q.y += ( band - 2.5 ) * uK * 0.07 * uH + uK * 0.1 * uH;
+    // body pose: the upper body twists and bends while the feet stay planted
+    float hb = clamp( p.y / uH, 0.0, 1.0 );
+    float tw = uTw * smoothstep( 0.2, 1.0, hb );
+    float c2 = cos( tw ), s2 = sin( tw );
+    q.xz = mat2( c2, s2, -s2, c2 ) * q.xz;
+    ang += tw;
+    float bw = pow( hb, 1.7 );
+    q.xz += uBend * bw * uH;
+    q.y -= dot( uBend, uBend ) * 0.4 * bw * uH;
     return q;
   }
 `;
@@ -2273,6 +2283,8 @@ function glide(rig, to, { jump = 0, steps = 0, dur } = {}) {
     const e = easeIO(k);
     rig.root.position.lerpVectors(from, to, e);
     rig.root.position.y = jump ? Math.sin(PI * k) * jump : Math.abs(Math.sin(e * steps * PI)) * .07 * (.3 + rig.t);
+    // lean into the move, tuck on a jump
+    setPose(rig, jump ? { lean: .25 * Math.sin(PI * k), sq: 1 - .18 * Math.sin(PI * k) } : { lean: .15 * Math.sin(PI * k), sq: 1 - .05 * Math.abs(Math.sin(e * steps * PI)) });
   });
 }
 
@@ -2648,7 +2660,35 @@ function beam(from, to, dur = .16, color = 0xff2a14, width = 1) {
   return tween(dur, k => { const s = Math.sin(k * PI); b.material.opacity = s; b.scale.x = b.scale.y = width * (.4 + s * 1.4); })
     .then(() => { b.material.dispose(); b.removeFromParent(); });
 }
+/* ---------- body poses: lean (forward = toward the target), side, twist, squash/stretch ---------- */
+const REST = { lean: 0, side: 0, tw: 0, sq: 1 };
+function setPose(r, p) {
+  r.pose = Object.assign(r.pose || { ...REST }, p);
+  const { lean, side, tw, sq } = r.pose;
+  for (const g of [r.chess, r.robot]) if (g) { const U = g.userData.U; U.uBend.value.set(side, lean); U.uTw.value = tw; }
+  const s = Math.max(.45, sq), w = 1 / Math.sqrt(s);   // volume-preserving squash & stretch
+  r.yaw.scale.set(w, s, w);
+}
+function poseTo(r, p, dur, ease = easeIO) {
+  const from = { ...REST, ...(r.pose || {}) };
+  return tween(dur, k => { const e = ease(k), o = {}; for (const key in p) o[key] = from[key] + (p[key] - from[key]) * e; setPose(r, o); });
+}
+// settle back to rest with a damped overshoot (mechanical spring)
+function springRest(r, dur = .55, freq = 2.2) {
+  const from = { ...REST, ...(r.pose || {}) };
+  return tween(dur, k => {
+    const f = Math.exp(-5 * k) * Math.cos(2 * PI * freq * k), o = {};
+    for (const key in REST) o[key] = REST[key] + (from[key] - REST[key]) * f;
+    setPose(r, o);
+  }).then(() => setPose(r, REST));
+}
+const easeOut = k => 1 - Math.pow(1 - k, 3);
+const pm = () => (Math.random() < .5 ? -1 : 1);
 function hitReact(vic, dir, power = 1) {
+  // the body snaps back, twists and compresses, then rings back like a struck frame
+  const p = Math.min(2.2, power);
+  setPose(vic, { lean: -.22 * p, tw: pm() * .28 * p, side: pm() * .08 * p, sq: 1 - .1 * p });
+  springRest(vic, .5 + .1 * p, 2.6);
   vic._home ??= { p: vic.root.position.clone(), q: vic.root.quaternion.clone() };
   const base = vic._home.p, q0 = vic._home.q;
   const axis = new V3(dir.z, 0, -dir.x);
@@ -2672,69 +2712,102 @@ async function hit(vic, dir, power = 1, at = null) {
 const towards = (a, b) => b.clone().sub(a).setY(0).normalize();
 
 const CHOREO = {
-  // Pawn 2: charge the eye, three laser bursts, then a spear dash
+  // Pawn 2: crouch and charge the eye, three recoiling laser bursts, then a coiled spear dash
   async P(a, v, dir, vp) {
     const eye = () => a.yaw.localToWorld(a.t > .5 ? new V3(...MODEL_SPEC.P.eye) : new V3(0, MODEL_SPEC.P.ch * .87, .12));
-    const g = a.fx.robotGlow;
+    const g = a.fx.robotGlow, base = a.root.position.clone();
     zap();
-    await tween(.35, k => { if (g) g.scale.setScalar(.24 + k * .6); shake(.01); });
+    await Promise.all([
+      poseTo(a, { sq: .84, lean: -.14 }, .3),
+      tween(.38, k => { if (g) g.scale.setScalar(.24 + k * .6); shake(.01); setPose(a, { side: Math.sin(k * 70) * .025 }); }),
+    ]);
     for (let i = 0; i < 3; i++) {
       zap();
+      poseTo(a, { lean: -.24, sq: .9, side: pm() * .05 }, .05).then(() => poseTo(a, { lean: -.1, sq: .94, side: 0 }, .12));
       await beam(eye(), vp.clone().setY(.6 + i * .3), .14, 0xff2a14, 1 + i * .4);
       hit(v, dir, .7);
     }
     if (g) g.scale.setScalar(.24);
-    const base = a.root.position.clone();
-    await tween(.14, k => a.root.position.copy(base).addScaledVector(dir, -.28 * easeIO(k)));
-    speedLines(true); servo(true, .12);
-    await tween(.1, k => a.root.position.copy(base).addScaledVector(dir, -.28 + 1.0 * easeIO(k)));
+    // coil: twist the spear arm back and sink
+    await Promise.all([poseTo(a, { tw: -.75, lean: -.22, sq: .76, side: 0 }, .2),
+      tween(.2, k => a.root.position.copy(base).addScaledVector(dir, -.28 * easeIO(k)))]);
+    speedLines(true); servo(true, .12); swishSnd();
+    // release: stretch, lunge and unwind the twist through the target
+    await Promise.all([poseTo(a, { tw: .6, lean: .45, sq: 1.2 }, .1, easeOut),
+      tween(.1, k => a.root.position.copy(base).addScaledVector(dir, -.28 + 1.0 * easeOut(k)))]);
     speedLines(false);
     slash(vp.clone().setY(1), -.6, 2.4);
     await hit(v, dir, 1.5);
-    await tween(.22, k => a.root.position.copy(base).addScaledVector(dir, .72 * (1 - easeIO(k))));
+    await Promise.all([springRest(a, .6), tween(.3, k => a.root.position.copy(base).addScaledVector(dir, .72 * (1 - easeIO(k))))]);
     return 'launch';
   },
-  // Bishop 2.0: spinning leap, dive slash, a two-hit combo and a rising cut
+  // Bishop 2.0: deep crouch, spinning leap, a diving cut, a swinging two-hit combo and a rising finisher
   async B(a, v, dir, vp) {
     const base = a.root.position.clone(), y0 = a.yaw.rotation.y;
+    await poseTo(a, { sq: .72, lean: -.12 }, .14);
     servo(true, .3);
-    await tween(.36, k => { a.root.position.y = Math.sin(k * PI / 2) * 1.6; a.yaw.rotation.y = y0 + easeIO(k) * PI * 2; });
-    speedLines(true);
-    await tween(.13, k => { a.root.position.copy(base).addScaledVector(dir, .6 * k); a.root.position.y = 1.6 * (1 - k); });
+    await tween(.36, k => {
+      a.root.position.y = Math.sin(k * PI / 2) * 1.6; a.yaw.rotation.y = y0 + easeIO(k) * PI * 2;
+      setPose(a, { sq: .72 + .55 * Math.sin(k * PI / 2), lean: -.12 + .2 * k, side: Math.sin(k * PI * 2) * .1 });
+    });
+    speedLines(true); swishSnd();
+    await Promise.all([poseTo(a, { lean: .5, sq: 1.2, tw: .5, side: 0 }, .13, easeOut),
+      tween(.13, k => { a.root.position.copy(base).addScaledVector(dir, .6 * k); a.root.position.y = 1.6 * (1 - k); })]);
     speedLines(false);
-    slash(vp.clone().setY(1.2), -1.2, 2.6); await hit(v, dir, 1.2);
-    slash(vp.clone().setY(1), 2.0, 2.2); await hit(v, dir, .8);
-    slash(vp.clone().setY(.9), .4, 2.2); await hit(v, dir, .8);
-    await tween(.16, k => { a.root.position.y = Math.sin(k * PI) * .5; });
+    slash(vp.clone().setY(1.2), -1.2, 2.6);
+    poseTo(a, { sq: .78, lean: .3 }, .06);
+    await hit(v, dir, 1.2);
+    // combo: the whole body swings the spear right, then left
+    for (const sgn of [1, -1]) {
+      await poseTo(a, { tw: -sgn * .7, lean: .1, side: -sgn * .12, sq: .9 }, .07);
+      swishSnd();
+      await poseTo(a, { tw: sgn * .85, lean: .32, side: sgn * .16, sq: 1.05 }, .07, easeOut);
+      slash(vp.clone().setY(sgn > 0 ? 1 : .9), sgn > 0 ? 2.0 : .4, 2.2);
+      await hit(v, dir, .8);
+    }
+    // rising cut: sink, then explode upward and arch back
+    await poseTo(a, { sq: .7, lean: .25, tw: -.4, side: 0 }, .1);
+    swishSnd();
+    await Promise.all([poseTo(a, { sq: 1.3, lean: -.28, tw: 1.1 }, .16, easeOut), tween(.16, k => { a.root.position.y = Math.sin(k * PI) * .5; })]);
     slash(vp.clone().setY(1.4), 1.2, 3.2); await hit(v, dir, 1.6);
-    await tween(.22, k => a.root.position.copy(base).addScaledVector(dir, .6 * (1 - easeIO(k))));
+    await Promise.all([springRest(a, .65), tween(.26, k => a.root.position.copy(base).addScaledVector(dir, .6 * (1 - easeIO(k))))]);
     return 'launch';
   },
-  // Knight: rear up, vault high and drive the lance down
+  // Knight: rears up like a horse, tucks into a high vault, then drives the lance down with its whole body
   async N(a, v, dir, vp) {
-    const base = a.root.position.clone(), axis = new V3(dir.z, 0, -dir.x), q0 = a.root.quaternion.clone();
-    await tween(.22, k => a.root.quaternion.copy(q0).premultiply(new THREE.Quaternion().setFromAxisAngle(axis, -.35 * Math.sin(k * PI))));
+    const base = a.root.position.clone();
+    await poseTo(a, { lean: -.5, sq: 1.15, tw: .15 }, .22, easeOut);
+    await poseTo(a, { lean: .1, sq: .72, tw: 0 }, .12);
     servo(true, .3);
     const top = vp.clone().addScaledVector(dir, -.2);
-    await tween(.4, k => { a.root.position.lerpVectors(base, top, easeIO(k) * .85); a.root.position.y = Math.sin(k * PI * .5) * 2.4; });
-    speedLines(true);
-    swishSnd();
-    await tween(.12, k => { a.root.position.y = 2.4 * (1 - k * k) + .3 * k; });
+    await tween(.4, k => {
+      a.root.position.lerpVectors(base, top, easeIO(k) * .85); a.root.position.y = Math.sin(k * PI * .5) * 2.4;
+      setPose(a, { sq: .72 + .2 * k, lean: .1 - .35 * Math.sin(k * PI), tw: Math.sin(k * PI) * .3 });
+    });
+    speedLines(true); swishSnd();
+    await Promise.all([poseTo(a, { lean: .6, sq: 1.28, tw: 0 }, .12, easeOut), tween(.12, k => { a.root.position.y = 2.4 * (1 - k * k) + .3 * k; })]);
     speedLines(false);
+    setPose(a, { sq: .7, lean: .45 });
     await hit(v, dir, 1.3, vp.clone().setY(.4));
+    await poseTo(a, { lean: .3, sq: .95, tw: -.5 }, .07);
+    await poseTo(a, { lean: .55, sq: .75, tw: .55 }, .07, easeOut);
     await hit(v, dir, 1.7, vp.clone().setY(.4));
     const land = a.root.position.clone();
-    await tween(.3, k => { a.root.position.lerpVectors(land, base, easeIO(k)); a.root.position.y = Math.sin(k * PI) * .8 + .3 * (1 - k); });
+    await Promise.all([springRest(a, .6), tween(.32, k => { a.root.position.lerpVectors(land, base, easeIO(k)); a.root.position.y = Math.sin(k * PI) * .8 + .3 * (1 - k); })]);
     return 'pierce';
   },
-  // Rook: three-shell barrage with recoil, then a full-charge blast
+  // Rook: braces on its legs, every shot kicks the tower back, the last one is charged and slams it nearly over
   async R(a, v, dir, vp) {
     const base = a.root.position.clone();
     const muzzle = () => a.yaw.localToWorld(new V3(...(a.t > .5 ? MODEL_SPEC.R.muzzle : [0, .9, .2])));
+    await poseTo(a, { sq: .86, lean: .07 }, .16);
     for (let i = 0; i < 4; i++) {
       const big = i === 3, from = muzzle(), to = vp.clone().setY(.7).add(new V3((Math.random() - .5) * .3, 0, (Math.random() - .5) * .3));
-      if (big) { await tween(.3, k => shake(.015)); }
+      await poseTo(a, { tw: (Math.random() - .5) * .3 }, .06);   // traverse onto the target
+      if (big) await tween(.34, k => { shake(.015); setPose(a, { sq: .86 - .1 * k, lean: .07 + .08 * k, side: Math.sin(k * 80) * .02 }); });
       thud(big); burst(from, 8);
+      setPose(a, { lean: big ? -.42 : -.2, sq: big ? 1.12 : 1.04, side: 0 });
+      poseTo(a, { lean: .05, sq: .88 }, big ? .4 : .16);
       tween(.12, k => a.root.position.copy(base).addScaledVector(dir, -(big ? .35 : .15) * Math.sin(k * PI)));
       const shell = new THREE.Mesh(G('shell', () => new THREE.SphereGeometry(.09, 10, 8)), new THREE.MeshBasicMaterial({ color: SC().fx }));
       fxGroup.add(shell);
@@ -2742,45 +2815,54 @@ const CHOREO = {
       shell.material.dispose(); shell.removeFromParent();
       await hit(v, dir, big ? 1.8 : .75);
     }
+    await springRest(a, .5);
     return 'launch';
   },
-  // Queen: raise the sceptre and rain needles of light down on the target
+  // Queen: rises tall, conducts the needle rain with swaying sweeps, arches back and brings the last one down
   async Q(a, v, dir, vp) {
     const base = a.root.position.clone();
     servo(true, .4);
-    await tween(.35, k => { a.root.position.y = Math.sin(k * PI / 2) * .5; });
+    await Promise.all([poseTo(a, { sq: 1.2, lean: -.12 }, .35), tween(.35, k => { a.root.position.y = Math.sin(k * PI / 2) * .5; })]);
     const needle = (pos, big) => {
       const m = new THREE.Mesh(G('needle', () => new THREE.ConeGeometry(.07, 1.6, 6).rotateX(PI)), new THREE.MeshBasicMaterial({ color: SC().fx }));
       m.scale.setScalar(big ? 2.2 : 1); fxGroup.add(m);
       return tween(.16, k => { m.position.copy(pos).setY(7 - 6.2 * k * k); }).then(() => { m.material.dispose(); m.removeFromParent(); });
     };
     for (let i = 0; i < 5; i++) {
-      const off = new V3((Math.random() - .5) * .5, 0, (Math.random() - .5) * .5);
+      const s = i % 2 ? 1 : -1, off = new V3((Math.random() - .5) * .5, 0, (Math.random() - .5) * .5);
+      poseTo(a, { side: s * .22, tw: -s * .35, lean: .05 }, .1, easeOut);
       await needle(vp.clone().add(off), false);
       hit(v, dir, .6, vp.clone().add(off).setY(.5));
       await wait(.05);
     }
-    await wait(.15);
+    await poseTo(a, { side: 0, tw: 0, lean: -.32, sq: 1.28 }, .22);
+    await wait(.08);
+    poseTo(a, { lean: .38, sq: .88 }, .12, easeOut);
     await needle(vp, true);
     await hit(v, dir, 1.8);
-    await tween(.25, k => { a.root.position.y = .5 * (1 - k); });
+    await Promise.all([springRest(a, .6), tween(.28, k => { a.root.position.y = .5 * (1 - k); })]);
     a.root.position.copy(base);
     return 'slam';
   },
-  // King: a slow advance, then a black pillar crushes the target
+  // King: two heavy steps, raises its arms to summon, then hauls its whole body down as the pillar falls
   async K(a, v, dir, vp) {
     const base = a.root.position.clone();
-    await tween(.4, k => { a.root.position.copy(base).addScaledVector(dir, .25 * easeIO(k)); shake(.008); });
+    for (let i = 0; i < 2; i++) {
+      await tween(.2, k => { a.root.position.copy(base).addScaledVector(dir, .125 * (i + easeIO(k))); setPose(a, { sq: 1 - .08 * Math.sin(k * PI), lean: .1 * Math.sin(k * PI), side: (i ? 1 : -1) * .06 * Math.sin(k * PI) }); });
+      thud(true); shake(.03);
+    }
     servo(false, .5);
-    await tween(.3, k => { a.root.position.y = Math.sin(k * PI / 2) * .4; });
+    await Promise.all([poseTo(a, { lean: -.36, sq: 1.22, tw: .12, side: 0 }, .32), tween(.32, k => { a.root.position.y = Math.sin(k * PI / 2) * .4; })]);
+    await tween(.18, k => setPose(a, { side: Math.sin(k * 50) * .03 }));   // straining
     const pillar = new THREE.Mesh(G('pillar', () => new THREE.CylinderGeometry(.42, .42, 6, 6, 1, true).translate(0, 3, 0)),
       new THREE.MeshBasicMaterial({ color: SC().fx, side: THREE.DoubleSide }));
     pillar.position.copy(vp).setY(9); fxGroup.add(pillar);
+    poseTo(a, { lean: .48, sq: .78, tw: 0, side: 0 }, .2, easeOut);
     await tween(.2, k => { pillar.position.y = 9 * (1 - k * k); });
     await hit(v, dir, 2.2, vp.clone().setY(.3));
     shake(.3);
     tween(.5, k => { pillar.scale.set(1 - k, 1, 1 - k); }).then(() => { pillar.material.dispose(); pillar.removeFromParent(); });
-    await tween(.3, k => { a.root.position.copy(base).addScaledVector(dir, .25 * (1 - easeIO(k))); a.root.position.y = .4 * (1 - k); });
+    await Promise.all([springRest(a, .7, 1.8), tween(.34, k => { a.root.position.copy(base).addScaledVector(dir, .25 * (1 - easeIO(k))); a.root.position.y = .4 * (1 - k); })]);
     return 'slam';
   },
 };
@@ -2793,12 +2875,14 @@ async function finish(vic, dir, style) {
   shockwave(base, 0, 3.2);
   burst(base.clone().setY(1), 40);
   const burn = wait(style === 'slam' ? .12 : .28).then(() => tween(.5, k => { vic.fade = 1 - k; }));
+  const tw0 = pm();
   if (style === 'slam') {
-    await tween(.28, k => vic.root.scale.set(PIECE_SCALE * (1 + .35 * k), PIECE_SCALE * (1 - .8 * easeIO(k)), PIECE_SCALE * (1 + .35 * k)));
+    await tween(.28, k => { vic.root.scale.set(PIECE_SCALE * (1 + .35 * k), PIECE_SCALE * (1 - .8 * easeIO(k)), PIECE_SCALE * (1 + .35 * k)); setPose(vic, { side: Math.sin(k * 40) * .1 * (1 - k), tw: tw0 * .4 * k }); });
   } else if (style === 'pierce') {
-    await tween(.35, k => { vic.root.quaternion.copy(q0).premultiply(new THREE.Quaternion().setFromAxisAngle(axis, easeIO(k) * PI / 2)); });
+    await tween(.35, k => { vic.root.quaternion.copy(q0).premultiply(new THREE.Quaternion().setFromAxisAngle(axis, easeIO(k) * PI / 2)); setPose(vic, { lean: .4 * easeIO(k), tw: tw0 * .5 * k, sq: 1 - .2 * k }); });
   } else {
     await tween(.6, k => {
+      setPose(vic, { lean: -.55 * Math.sin(k * PI), tw: tw0 * 1.4 * k, side: Math.sin(k * 30) * .08, sq: 1 + .2 * Math.sin(k * PI) });
       vic.root.position.copy(base).addScaledVector(dir, 1.8 * k);
       vic.root.position.y = Math.sin(k * PI) * 1.8;
       vic.root.quaternion.copy(q0).premultiply(new THREE.Quaternion().setFromAxisAngle(axis, k * PI * 1.6));
@@ -2938,6 +3022,7 @@ async function battleInner(att, vic, dir) {
   speedLines(true); await wait(.12); speedLines(false);
   const style = await CHOREO[att.type](att, vic, towards(att.root.position, vp), vp);
   await finish(vic, towards(att.root.position, vp), style);
+  if (att.pose) await poseTo(att, REST, .15);
   if (settings.cam !== 'cine') await camRestore();
 }
 
@@ -4361,7 +4446,7 @@ frame();
 
 // small hook for automated checks
 window.__chess = { get state() { return state; }, play: m => play(m), E, openGallery, closeGallery, gearUp, settings,
-  setT: t => { if (gRig) { gRig.t = t; } }, setGallery: (i, team) => { gIdx = i; gTeam = team; buildGalleryRig(); }, get busy() { return busy; }, dc: { transmit, episode, rollCredits, get txBusy() { return txBusy; } }, get music() { return musicEl && { paused: musicEl.paused, src: musicEl.dataset.src, vol: musicEl.volume }; } };
+  setT: t => { if (gRig) { gRig.t = t; } }, setGallery: (i, team) => { gIdx = i; gTeam = team; buildGalleryRig(); }, get busy() { return busy; }, pose: p => { if (gRig) setPose(gRig, p); }, dc: { transmit, episode, rollCredits, get txBusy() { return txBusy; } }, get music() { return musicEl && { paused: musicEl.paused, src: musicEl.dataset.src, vol: musicEl.volume }; } };
 </script>
 </body>
 </html>
