@@ -117,6 +117,12 @@
   #status.over { background: var(--ink); color: var(--white); padding: 2px 6px; }
   .tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
   .tools .btn { margin-left: -1px; padding: 8px 4px; }
+  /* Monolith finish switch: Mono / Glow / Chrome, switchable at any time */
+  .styles { display: none; grid-template-columns: repeat(3, 1fr); margin-top: 6px; }
+  body.monolith .styles { display: grid; }
+  .styles .btn { margin-left: -1px; padding: 7px 4px; }
+  body.glow .styles [data-gfx="monolithglow"][aria-pressed="true"] { color: #07080a; }
+  #panel { overflow-y: auto; overscroll-behavior: contain; }
   details summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; }
   details summary::-webkit-details-marker { display: none; }
   details summary::after { content: "+"; font-family: var(--mono); }
@@ -230,7 +236,13 @@
     .mi .t { font-size: 28px; }
     header .wm { font-size: 24px; }
     #hudtop { display: none; }
-    #panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 42vh; border-left: 0; border-right: 0; border-bottom: 0; }
+    #panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 42vh; border-left: 0; border-right: 0; border-bottom: 0; -webkit-overflow-scrolling: touch; }
+    #panel:has(#settings[open]) { max-height: 62vh; }
+    #settings[open] { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; }
+    #settings summary { grid-column: 1 / -1; }
+    #settings .field { grid-template-columns: 50px minmax(0, 1fr); gap: 5px; margin-top: 5px; font-size: 10px; }
+    #settings select { padding: 4px 3px; font-size: 10.5px; min-width: 0; }
+    .styles .btn { padding: 6px 2px; }
     #panel section { padding: 7px 10px; }
     .players { display: grid; grid-template-columns: 1fr 1fr; }
     .player { margin-top: 0; margin-left: -1px; padding: 5px 7px; }
@@ -987,7 +999,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 55</div>
+  <div class="build mono">Build 56</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1044,6 +1056,9 @@
       <button class="btn" id="bFlip" title="Flip board">Flip</button>
       <button class="btn" id="bGallery" title="Character gallery">Cast</button>
       <button class="btn" id="bNew" title="Restart">Retry</button>
+    </div>
+    <div class="styles" id="styles" role="group" aria-label="Piece finish">
+      <button class="btn" data-gfx="monolith">Mono</button><button class="btn" data-gfx="monolithglow">Glow</button><button class="btn" data-gfx="monolithchrome">Chrome</button>
     </div>
   </section>
   <section>
@@ -1159,7 +1174,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=55';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=56';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -3996,6 +4011,14 @@ $('bMenu').onclick = () => {
 $('speed').onchange = e => { SPEED = +e.target.value; };
 $('battle').onchange = e => { settings.battle = e.target.value; };
 $('cam').onchange = e => { settings.cam = e.target.value; };
+let pendingGfx = null;
+function setGfx(v) {
+  if (busy) { pendingGfx = v; return; }   // switch as soon as the current move finishes
+  GFX = v; pendingGfx = null;
+  try { localStorage.setItem(GFX_KEY, GFX); } catch (er) { /* storage blocked */ }
+  applyGfx(true);
+}
+document.querySelectorAll('#styles [data-gfx]').forEach(b => b.onclick = () => { tvStatic(160); setGfx(b.dataset.gfx); });
 $('gfx').onchange = e => {
   if (busy) { e.target.value = GFX; return; }
   GFX = e.target.value;
@@ -4877,6 +4900,7 @@ function adaptResolution(ms) {
 function frame() {
   const dt = Math.min(.05, (performance.now() - lastFrame) / 1000);
   if (!document.hidden) adaptResolution(performance.now() - lastFrame);
+  if (pendingGfx && !busy && !galleryOn) setGfx(pendingGfx);
   lastFrame = performance.now();
   const now = performance.now();
   const frozen = now < frozenUntil, fdt = now - (frame.prev || now); frame.prev = now;
