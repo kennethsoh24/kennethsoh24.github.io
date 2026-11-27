@@ -974,7 +974,7 @@
     // Monolith graphics in the Black & White edition: the whole interface goes dark to match the canyon
     var g = q.get('gfx'); try { g = g || localStorage.getItem(q.get('edition') ? 'cf-gfx' : 'cf-gfx-home3'); } catch (x) {}
     if (!g && !q.get('edition')) g = 'monolith';   // the home link opens in Monolith
-    if (t === 'bw' && g === 'monolithglow') document.body.classList.add('glow');
+    if (t === 'bw' && (g === 'monolithglow' || g === 'monolithchrome')) document.body.classList.add('glow');
     if (t === 'bw' && g && g.indexOf('monolith') === 0) { document.body.classList.add('monolith'); document.querySelector('meta[name=theme-color]').setAttribute('content', '#08090b'); }
   })();
 </script>
@@ -986,7 +986,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 47</div>
+  <div class="build mono">Build 48</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1055,7 +1055,7 @@
       <label class="field mono">Battle
         <select id="battle"><option value="full" selected>Full</option><option value="quick">Quick</option></select></label>
       <label class="field mono">Graphics
-        <select id="gfx"><option value="cinema" class="no-bw">Cinema</option><option value="anime" class="bw-only">Anime 2.5D</option><option value="animefine" class="bw-only">Anime 2.5D · Fine line</option><option value="monolith">Monolith</option><option value="monolithglow">Monolith · Glow</option><option value="high">High</option><option value="classic">Classic</option></select></label>
+        <select id="gfx"><option value="cinema" class="no-bw">Cinema</option><option value="anime" class="bw-only">Anime 2.5D</option><option value="animefine" class="bw-only">Anime 2.5D · Fine line</option><option value="monolith">Monolith</option><option value="monolithglow">Monolith · Glow</option><option value="monolithchrome">Monolith · Chrome</option><option value="high">High</option><option value="classic">Classic</option></select></label>
       <label class="field mono">Camera
         <select id="cam"><option value="cine" selected>Cinematic</option><option value="fixed">Fixed</option></select></label>
       <label class="field mono">Music
@@ -1157,7 +1157,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=47';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=48';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1234,7 +1234,8 @@ if (!BWED && GFX.startsWith('anime')) GFX = 'cinema';   // the anime render belo
 const ANIME = () => GFX === 'anime' || GFX === 'animefine';
 const FINE = () => GFX === 'animefine';   // same cel render, fine black linework
 const HIGH = () => GFX === 'high' || GFX === 'cinema' || GFX.startsWith('monolith');
-const GLOW = () => GFX === 'monolithglow';   // Monolith with the gold / blue trim glowing
+const GLOW = () => GFX === 'monolithglow';
+const CHROME = () => GFX === 'monolithchrome';   // Monolith with mirror-chrome pieces: gold for Black, blue for White   // Monolith with the gold / blue trim glowing
 const INK = () => false;
 const CINE = () => GFX === 'cinema' && !BWED && (THEME === 'mono' || THEME === 'ops');
 const OPS = () => THEME === 'ops';
@@ -1967,6 +1968,11 @@ function transformMat(pt, U) {
       })
     : new THREE.MeshToonMaterial({ map, gradientMap: ANIME() ? animeGrad : grad });
   if (HIGH() && pt.normalMap) m.normalScale.set(.8, .8);
+  if (CHROME()) {   // polished mirror metal: the texture only keeps its light and shade, the team colour is the metal itself
+    m.metalness = 1; m.roughness = .14; m.metalnessMap = null; m.roughnessMap = null;
+    m.clearcoat = 1; m.clearcoatRoughness = .05; m.envMapIntensity = 7;
+    if (pt.normalMap) m.normalScale.set(.5, .5);
+  }
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U, { uLift: PIECE_LIFT });
     sh.vertexShader = TF_COMMON + sh.vertexShader
@@ -1996,7 +2002,11 @@ function transformMat(pt, U) {
           vec3 o = s;
           if ( blue || gold ) { o = uAccent * clamp( 0.3 + mx * 1.05, 0.0, 1.25 ); tfAcc = smoothstep( 0.28, 0.5, sat ); }
           else if ( !red && uInvert > 0.5 ) o = vec3( mix( 1.0 - L * 0.8, ( 1.0 - L ) * 0.38, smoothstep( 0.35, 0.6, L ) ) );
-          else if ( !red ) o = vec3( L * 0.9 );
+          else if ( !red ) o = vec3( L * 0.9 );` + (CHROME() ? `
+          if ( !red ) {
+            vec3 chromeTint = uAccent.b > uAccent.r ? vec3( 0.5, 0.7, 1.0 ) : vec3( 1.0, 0.76, 0.32 );   // White: blue chrome, Black: gold chrome
+            o = chromeTint * mix( 0.45, 1.05, L ) * ( blue || gold ? 1.15 : 1.0 );
+          }` : '') + `
           diffuseColor.rgb *= pow( o, vec3( 2.2 ) );
         #endif`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
@@ -2013,7 +2023,7 @@ function transformMat(pt, U) {
         float animeRim = 1.0 - max( dot( normalize( vViewPosition ), normal ), 0.0 );
         totalEmissiveRadiance += vec3( 0.55 ) * step( 0.68, animeRim ) * diffuseColor.rgb;` : ''));
   };
-  m.customProgramCacheKey = () => (HIGH() ? 'tf-phys' : ANIME() ? 'tf-anime' : 'tf-toon') + (GLOW() ? '-glow' : '');
+  m.customProgramCacheKey = () => (HIGH() ? 'tf-phys' : ANIME() ? 'tf-anime' : 'tf-toon') + (GLOW() ? '-glow' : '') + (CHROME() ? '-chrome' : '');
   return m;
 }
 function transformOutlineMat(U, th) {
@@ -4564,7 +4574,7 @@ function applyGfx(rebuild = true) {
   sparks.material.blending = ab ? THREE.AdditiveBlending : THREE.NormalBlending; sparks.material.size = ab ? .07 : .09; sparks.material.needsUpdate = true;
   abyss.visible = ab; abyssSpot.intensity = ab ? 120 : 0;
   scene.environmentIntensity = ab ? .14 : 1;
-  if (gradePass) { gradePass.uniforms.uAbyss.value = ab ? 1 : 0; gradePass.uniforms.uKeep.value = GLOW() ? 1 : 0; if (ab) gradePass.enabled = true; }
+  if (gradePass) { gradePass.uniforms.uAbyss.value = ab ? 1 : 0; gradePass.uniforms.uKeep.value = GLOW() || CHROME() ? 1 : 0; if (ab) gradePass.enabled = true; }
   if (bloomPass && ab) { bloomPass.enabled = true; bloomPass.threshold = 1.35; bloomPass.strength = .45; bloomPass.radius = .3; /* a tight halo around the openings only */ }
   if (ab) {
     skyDome.visible = true; skyDome.material.map = skyAbyss; skyDome.rotation.y = 0; skyDome.material.needsUpdate = true;
@@ -4581,7 +4591,7 @@ function applyGfx(rebuild = true) {
     boardMatHi.needsUpdate = boardSideHi.needsUpdate = true;
   } else { dust.material.color.setHex(0xe8c99a); dust.material.opacity = .55; dust.material.size = .05; dust.material.sizeAttenuation = true; dust.material.needsUpdate = true; rim.position.set(6, 5, -8); }
   document.body.classList.toggle('monolith', ab && BWED);
-  document.body.classList.toggle('glow', GLOW() && BWED);
+  document.body.classList.toggle('glow', (GLOW() || CHROME()) && BWED);
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', ab && BWED ? '#08090b' : '#f2f1ed');
   document.querySelectorAll('[data-gfx]').forEach(b => b.setAttribute('aria-pressed', b.dataset.gfx === GFX));
   if ($('gfx')) $('gfx').value = GFX;
