@@ -895,7 +895,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 33</div>
+  <div class="build mono">Build 34</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1128,8 +1128,8 @@ const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 120);
 // Graphics: 'high' = lacquered PBR pieces, studio reflections, soft contact shadows, AO + bloom; 'classic' = flat toon + ink outlines
 // /chess/ with no edition is the home edition: Black & White, Anime 2.5D (its own saved graphics choice)
 const HOMEPAGE = !new URLSearchParams(location.search).get('edition');
-const GFX_KEY = HOMEPAGE ? 'cf-gfx-home' : 'cf-gfx';
-let GFX = HOMEPAGE ? 'anime' : 'cinema';
+const GFX_KEY = HOMEPAGE ? 'cf-gfx-home2' : 'cf-gfx';   // new key so the new home default (fine line) applies
+let GFX = HOMEPAGE ? 'animefine' : 'cinema';
 try { GFX = localStorage.getItem(GFX_KEY) || GFX; } catch (e) { /* storage blocked */ }
 if (GFX === 'ink') GFX = 'cinema';
 // the classic black & white edition keeps its paper look: no Cinema world there
