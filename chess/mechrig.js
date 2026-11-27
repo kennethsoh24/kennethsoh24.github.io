@@ -48,7 +48,8 @@ export const RIGS = {
     L('foreP', 'armP', [.21, 1.0, .03], [.21, .98, .03], [.23, .68, .03], .095),
     L('lance', 'foreN', [-.34, .73, .08], [-.57, .37, .18], [.59, 2.14, -.32], .05),
   ] },
-  B: { kind: 'biped', bones: [
+  // staff, arm and cape are fused in this mesh: they ride the chest as one rigid unit (lock)
+  B: { kind: 'biped', lock: ['armN', 'robe', 'staff', 'staffHead'], bones: [
     L('hips', null, [.05, .9, -.03], [.05, .84, -.03], [.05, 1.0, -.03], .13, .8, 1.06),
     L('thighN', 'hips', [0, .88, -.03], [0, .88, -.03], [0, .45, -.03], .07, -9, .9),
     L('shinN', 'thighN', [0, .45, -.03], [0, .45, -.03], [0, 0, -.03], .075),
@@ -58,7 +59,8 @@ export const RIGS = {
     L('robe', 'chest', [.02, 1.08, -.03], [.02, .62, -.08], [.02, 1.06, -.08], .45, .5, 1.08, .16),   // lower cape: a shell around the legs, hung from the chest so it never tears
     L('head', 'chest', [.03, 1.94, .0], [.03, 1.98, .02], [.03, 2.3, .05], .2, 1.92),
     L('armN', 'chest', [-.13, 1.6, 0], [-.15, 1.58, .02], [-.36, 1.57, .14], .075, 1.45, 1.72),
-    L('staff', 'armN', [-.385, 1.57, .15], [-.36, .2, -.12], [-.415, 2.4, .29], .07),
+    { ...L('staff', 'armN', [-.385, 1.57, .15], [-.36, .2, -.12], [-.415, 2.4, .29], .045), hard: .055 },   // a thin shaft: never steals the cape it touches
+    L('staffHead', 'staff', [-.41, 2.1, .24], [-.405, 1.86, .2], [-.415, 2.4, .29], .11, 1.82),   // the wide ornament
   ] },
   Q: { kind: 'robe', bones: [
     L('gown', null, [0, .9, .02], [0, .05, .02], [0, 1.25, .04], .62, -9, 1.36),
@@ -105,12 +107,37 @@ export function weightGeometry(geo, spec, tau = .07) {
   const pos = geo.attributes.position, n = pos.count, B = spec.bones;
   const A = B.map(b => new THREE.Vector3(...b.a)), Bv = B.map(b => new THREE.Vector3(...b.b));
   const si = new Uint16Array(n * 4), sw = new Float32Array(n * 4), v = new THREE.Vector3();
+  // thin "hard" bones (a staff touching a cape) keep only the vertices joined through the mesh to their core
+  const best = new Int16Array(n), skip = new Uint8Array(n * B.length);
+  for (let i = 0; i < n; i++) {
+    v.fromBufferAttribute(pos, i);
+    let s1 = 1e9, i1 = 0;
+    for (let k = 0; k < B.length; k++) { const s = segDist(v, A[k], Bv[k]) / B[k].r + (v.y < B[k].y0 || v.y > B[k].y1 ? 50 : 0); if (s < s1) { s1 = s; i1 = k; } }
+    best[i] = i1;
+  }
+  B.forEach((b, k) => {
+    if (!b.hard) return;
+    const key = i => `${Math.round(pos.getX(i) * 4000)},${Math.round(pos.getY(i) * 4000)},${Math.round(pos.getZ(i) * 4000)}`;
+    const weld = new Map(), id = new Int32Array(n);
+    for (let i = 0; i < n; i++) { const kk = key(i); if (!weld.has(kk)) weld.set(kk, weld.size); id[i] = weld.get(kk); }
+    const adj = new Map(), link = (x, y) => { (adj.get(x) || adj.set(x, []).get(x)).push(y); };
+    const idx = geo.index ? geo.index.array : null, tri = idx ? idx.length : n;
+    for (let t = 0; t < tri; t += 3) {
+      const a = idx ? idx[t] : t, c = idx ? idx[t + 1] : t + 1, d = idx ? idx[t + 2] : t + 2;
+      for (const [x, y] of [[a, c], [c, d], [d, a]]) if (best[x] === k && best[y] === k) { link(id[x], id[y]); link(id[y], id[x]); }
+    }
+    const reach = new Set(), q = [];
+    for (let i = 0; i < n; i++) if (best[i] === k) { v.fromBufferAttribute(pos, i); if (segDist(v, A[k], Bv[k]) < b.hard * .45 && !reach.has(id[i])) { reach.add(id[i]); q.push(id[i]); } }
+    while (q.length) { const x = q.pop(); for (const y of adj.get(x) || []) if (!reach.has(y)) { reach.add(y); q.push(y); } }
+    for (let i = 0; i < n; i++) if (best[i] === k && !reach.has(id[i])) skip[i * B.length + k] = 1;
+  });
   for (let i = 0; i < n; i++) {
     v.fromBufferAttribute(pos, i);
     let s1 = 1e9, s2 = 1e9, i1 = 0, i2 = 0;
     for (let k = 0; k < B.length; k++) {
+      if (skip[i * B.length + k]) continue;
       const dd = segDist(v, A[k], Bv[k]);
-      const s = dd / B[k].r + (v.y < B[k].y0 || v.y > B[k].y1 || dd < B[k].rin ? 50 : 0);
+      const s = dd / B[k].r + (v.y < B[k].y0 || v.y > B[k].y1 || dd < B[k].rin || dd > (B[k].hard || 9) ? 50 : 0);
       if (s < s1) { s2 = s1; i2 = i1; s1 = s; i1 = k; } else if (s < s2) { s2 = s; i2 = k; }
     }
     // blend only across a real joint (parent <-> child); neighbouring limbs never pull on each other

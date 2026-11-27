@@ -1433,7 +1433,7 @@ class Rig {
         }
         g.add(mesh);
       }
-      if (mech) this.mech = Object.assign(mech, { kind: rigSpec.kind });
+      if (mech) this.mech = Object.assign(mech, { kind: rigSpec.kind, lock: rigSpec.lock });
       return g;
     };
     this.chess = mk(src.chess, 'chess');
@@ -2308,7 +2308,7 @@ function glide(rig, to, { jump = 0, steps = 0, dur } = {}) {
 }
 // mech gait: legs stride, arms counter-swing, the turret walks on diagonal leg pairs; env fades it in and out
 function walkPose(r, ph, env, jump) {
-  const B = r.mech.bones, set = (n, x, y = 0, z = 0) => { if (B[n]) B[n].rotation.set(x * env, y * env, z * env, 'YXZ'); };
+  const B = r.mech.bones, lock = r.mech.lock || [], set = (n, x, y = 0, z = 0) => { if (B[n] && !lock.includes(n)) B[n].rotation.set(x * env, y * env, z * env, 'YXZ'); };
   const s = Math.sin(ph), c = Math.cos(ph);
   if (jump) { set('thighN', -1.1); set('thighP', -1.0); set('shinN', 1.6); set('shinP', 1.5); set('chest', .15); return; }
   if (r.mech.kind === 'biped') {
@@ -2703,7 +2703,8 @@ function beam(from, to, dur = .16, color = 0xff2a14, width = 1) {
 const skel = r => !!(r.mech && r.t > .5);
 function bonePose(r, pose, dur = .2, ease = easeIO) {
   if (!r.mech) return Promise.resolve();
-  const from = poseNow(r.mech), to = poseTarget(r.mech, pose || {});
+  pose = Object.assign({}, pose); for (const n of r.mech.lock || []) delete pose[n];   // fused parts never move on their own
+  const from = poseNow(r.mech), to = poseTarget(r.mech, pose);
   const id = r._bp = (r._bp || 0) + 1;   // a newer pose takes over the bones
   return tween(dur, k => { if (r._bp === id) blendPose(r.mech, from, to, ease(k)); });
 }
@@ -2846,33 +2847,32 @@ const CHOREO = {
   async Bskel(a, v, dir, vp) {
     const base = a.root.position.clone(), y0 = a.yaw.rotation.y;
     setPose(a, REST);
-    const cape = p => ({ ...p, robe: [(p.robe ? p.robe[0] : 0) - .8 * (p.chest ? p.chest[0] : 0), -.5 * (p.chest ? p.chest[1] : 0), 0] });
-    const bp = (r, p, ...x) => bonePose(r, cape(p), ...x);   // the cape keeps hanging when the chest bends
-    const crouch = { thighN: [-.7, 0, 0], shinN: [1.2, 0, 0], thighP: [-.7, 0, 0], shinP: [1.2, 0, 0], chest: [.25, 0, 0], robe: [-.2, 0, 0] };
-    await bp(a, { ...crouch, armN: [0, -.6, .3] }, .14);
+    // the staff, arm and cape are one rigid unit with the chest: every swing is a full-torso twist from the hips
+    const crouch = { thighN: [-.7, 0, 0], shinN: [1.2, 0, 0], thighP: [-.7, 0, 0], shinP: [1.2, 0, 0], hips: [.1, 0, 0], chest: [.15, 0, 0] };
+    await bonePose(a, { ...crouch, chest: [.15, -.5, 0], hips: [.1, -.3, 0] }, .14);
     servo(true, .3);
-    bp(a, { thighN: [-1.3, 0, 0], shinN: [2, 0, 0], thighP: [-1.1, 0, 0], shinP: [1.8, 0, 0], chest: [-.1, 0, 0], robe: [-.35, 0, 0], armN: [0, -.9, -.6], head: [-.2, 0, 0] }, .25);
+    bonePose(a, { thighN: [-1.3, 0, 0], shinN: [2, 0, 0], thighP: [-1.1, 0, 0], shinP: [1.8, 0, 0], chest: [-.1, -.6, 0], head: [-.2, 0, 0] }, .25);
     await tween(.36, k => { a.root.position.y = Math.sin(k * PI / 2) * 1.6; a.yaw.rotation.y = y0 + easeIO(k) * PI * 2; });
     speedLines(true); swishSnd();
-    await Promise.all([bp(a, { chest: [.45, .3, 0], head: [.2, 0, 0], armN: [0, 1.4, .5], thighN: [-.3, 0, 0], shinN: [.4, 0, 0], thighP: [.3, 0, 0], robe: [.15, 0, 0] }, .13, easeOut),
+    await Promise.all([bonePose(a, { chest: [.35, .8, 0], hips: [.1, .4, 0], head: [.15, -.3, 0], thighN: [-.3, 0, 0], shinN: [.4, 0, 0], thighP: [.3, 0, 0] }, .13, easeOut),
       tween(.13, k => { a.root.position.copy(base).addScaledVector(dir, .6 * k); a.root.position.y = 1.6 * (1 - k); })]);
     speedLines(false);
     slash(vp.clone().setY(1.2), -1.2, 2.6);
-    bp(a, { ...crouch, armN: [0, 1.5, .6] }, .06);
+    bonePose(a, { ...crouch, chest: [.3, .9, 0], hips: [.15, .4, 0] }, .06);
     await hit(v, dir, 1.2);
     for (const sgn of [1, -1]) {
-      await bp(a, { ...crouch, chest: [.1, -sgn * .6, 0], armN: [0, sgn > 0 ? -.8 : 1.5, sgn > 0 ? .2 : -.1] }, .07);
+      await bonePose(a, { ...crouch, chest: [.1, -sgn * .9, 0], hips: [.1, -sgn * .45, 0], head: [0, sgn * .3, 0] }, .08);
       swishSnd();
-      await bp(a, { ...crouch, chest: [.2, sgn * .7, 0], head: [0, sgn * .3, 0], armN: [0, sgn > 0 ? 1.6 : -.9, 0] }, .07, easeOut);
+      await bonePose(a, { ...crouch, chest: [.2, sgn * 1.0, sgn * .1], hips: [.1, sgn * .5, 0], head: [0, -sgn * .3, 0] }, .07, easeOut);
       slash(vp.clone().setY(sgn > 0 ? 1 : .9), sgn > 0 ? 2.0 : .4, 2.2);
       await hit(v, dir, .8);
     }
-    await bp(a, { ...crouch, armN: [0, .4, .9] }, .1);
+    await bonePose(a, { ...crouch, chest: [.4, -.3, 0], hips: [.2, -.2, 0] }, .1);
     swishSnd();
-    await Promise.all([bp(a, { chest: [-.35, .2, 0], head: [-.3, 0, 0], armN: [0, .3, -1.2], thighN: [.2, 0, 0], thighP: [-.4, 0, 0], shinP: [.3, 0, 0], robe: [.2, 0, 0] }, .16, easeOut),
+    await Promise.all([bonePose(a, { chest: [-.3, .5, 0], hips: [-.1, .3, 0], head: [-.3, 0, 0], thighN: [.2, 0, 0], thighP: [-.4, 0, 0], shinP: [.3, 0, 0] }, .16, easeOut),
       tween(.16, k => { a.root.position.y = Math.sin(k * PI) * .5; })]);
     slash(vp.clone().setY(1.4), 1.2, 3.2); await hit(v, dir, 1.6);
-    await Promise.all([bp(a, {}, .4), tween(.26, k => a.root.position.copy(base).addScaledVector(dir, .6 * (1 - easeIO(k))))]);
+    await Promise.all([bonePose(a, {}, .4), tween(.26, k => a.root.position.copy(base).addScaledVector(dir, .6 * (1 - easeIO(k))))]);
     return 'launch';
   },
   // Rook: drops on its four legs and levels the cannon; every round slides the barrel back and rocks the tower
