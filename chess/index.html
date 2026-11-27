@@ -986,7 +986,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 49</div>
+  <div class="build mono">Build 50</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1157,7 +1157,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=49';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=50';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1241,6 +1241,23 @@ const CINE = () => GFX === 'cinema' && !BWED && (THEME === 'mono' || THEME === '
 const OPS = () => THEME === 'ops';
 const pmrem = new THREE.PMREMGenerator(renderer);
 const envTex = pmrem.fromScene(new RoomEnvironment(), .04).texture;
+// Monolith studio: soft round lights in a dark gradient dome, so mirror metal shows smooth highlights (no square light panels)
+const envSoft = (() => {
+  const sc = new THREE.Scene();
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(10, 48, 24), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false,
+    vertexShader: `varying vec3 vD; void main() { vD = normalize( position ); gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
+    fragmentShader: `varying vec3 vD;
+      void main() {
+        float y = vD.y;
+        vec3 c = mix( vec3( 0.015, 0.017, 0.02 ), vec3( 0.16, 0.18, 0.2 ), smoothstep( -0.2, 0.7, y ) );
+        c += vec3( 0.9, 0.95, 1.0 ) * 2.2 * pow( max( dot( vD, normalize( vec3( -0.3, 0.9, -0.3 ) ) ), 0.0 ), 40.0 );   // soft key from above
+        c += vec3( 0.8, 0.86, 0.95 ) * 0.9 * pow( max( dot( vD, normalize( vec3( 0.2, 0.15, -1.0 ) ) ), 0.0 ), 22.0 );   // backlight from the openings
+        c += vec3( 0.6, 0.65, 0.7 ) * 0.35 * exp( - abs( y - 0.05 ) * 18.0 );                                         // a thin horizon band
+        gl_FragColor = vec4( c, 1.0 );
+      }` }));
+  sc.add(dome);
+  return pmrem.fromScene(sc, .02).texture;
+})();
 let composer = null, inkPass = null, gradePass = null, bloomPass = null;
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
@@ -1518,7 +1535,7 @@ class Rig {
           if (!mech.root.parent) mesh.add(mech.root);
           mesh.updateMatrixWorld(true); mesh.bind(mech.skeleton);
         }
-        if (!isMobile || which === 'chess' || ANIME()) {
+        if ((!isMobile || which === 'chess' || ANIME()) && !(CHROME() && this.team === 'w')) {   // Chrome: White pieces have no ink outline
           const th = FINE() ? (which === 'chess' ? .0065 : .004) : ANIME() ? (which === 'chess' ? .016 : .011) : HIGH() ? (which === 'chess' ? .007 : .0045) : (which === 'chess' ? .012 : .007);
           const ol = mech ? new THREE.SkinnedMesh(pt.geo, transformOutlineMat(U, th)) : new THREE.Mesh(pt.geo, transformOutlineMat(U, th));
           if (mech) { ol.bind(mech.skeleton, mesh.bindMatrix); ol.frustumCulled = false; }
@@ -4477,7 +4494,7 @@ function applyGfx(rebuild = true) {
   const hi = HIGH();
   renderer.toneMapping = hi ? THREE.NeutralToneMapping : THREE.NoToneMapping;
   renderer.toneMappingExposure = hi ? 1.0 : 1;
-  scene.environment = hi ? envTex : null;
+  scene.environment = hi ? (GFX.startsWith('monolith') ? envSoft : envTex) : null;
   // lacquered studio light vs flat ink light
   hemi.intensity = INK() ? .42 : hi ? .75 : SC().hemi[2];
   sun.intensity = INK() ? 3.2 : hi ? 2.9 : 2.4;
