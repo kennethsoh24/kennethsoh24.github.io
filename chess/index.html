@@ -899,7 +899,8 @@
   body.monolith #fab.on { background: linear-gradient(180deg, #f4f7fb, #c3cad2); color: #07080a; box-shadow: 0 0 40px rgba(220,232,255,.45); }
   /* banners and cut-ins */
   body.monolith #toast .bar { background: linear-gradient(90deg, rgba(7,8,10,.2), rgba(7,8,10,.92) 20%, rgba(7,8,10,.92) 80%, rgba(7,8,10,.2));
-    border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge); }
+    border-top: 1px solid transparent; border-bottom: 1px solid transparent; }
+  body.monolith #toast.show .bar { border-color: var(--edge); }   /* the collapsed banner must not leave a hairline across the screen */
   body.monolith #toast .txt, body.monolith #toast .sub { color: #eef2f6; text-shadow: 0 0 30px rgba(220,232,255,.55); }
   body.monolith #cutin .panel { background: radial-gradient(ellipse 60% 120% at 75% 40%, #2a3036 0%, #0b0d10 60%, #050607 100%); }
   body.monolith #cutin .stripe { background: linear-gradient(90deg, rgba(235,240,245,.0), rgba(235,240,245,.92) 18%, rgba(235,240,245,.92) 70%, rgba(235,240,245,0)); }
@@ -985,7 +986,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 46</div>
+  <div class="build mono">Build 47</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1156,7 +1157,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=46';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=47';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
