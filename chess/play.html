@@ -891,7 +891,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 28</div>
+  <div class="build mono">Build 29</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -2508,10 +2508,63 @@ function metalHitSnd(power = 1) {
   } catch (e) { /* audio blocked */ }
 }
 // the finishing blow: deep impact, the frame collapsing, debris rattling down
+// the blade biting into armour: a sharp 'shhk' and a bright ringing edge
+function cutSnd(power = 1) {
+  if (!soundOn) return;
+  try {
+    const a = ac(), t = a.currentTime;
+    const n = a.createBufferSource(); n.buffer = noiseBuf(.16, 1.2);
+    const f = a.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2.5;
+    f.frequency.setValueAtTime(7500, t); f.frequency.exponentialRampToValueAtTime(1800, t + .14);
+    const g = a.createGain(); g.gain.setValueAtTime(.5 * Math.min(1.3, power), t); g.gain.exponentialRampToValueAtTime(.001, t + .16);
+    n.connect(f).connect(g).connect(out()); n.start(t);
+    for (const [fr, d, v] of [[3150, .35, .03], [4720, .28, .022], [6900, .18, .012]]) {
+      const o = a.createOscillator(), og = a.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(fr, t + .01); o.frequency.exponentialRampToValueAtTime(fr * .992, t + d);
+      og.gain.setValueAtTime(v, t + .01); og.gain.exponentialRampToValueAtTime(.0003, t + d);
+      o.connect(og).connect(out()); o.start(t + .01); o.stop(t + d + .02);
+    }
+  } catch (e) { /* audio blocked */ }
+}
+// broken machinery shorting out: crackling arcs, a sputtering mains buzz and a thin arc hiss
+function electricSnd(power = 1, delay = .04) {
+  if (!soundOn) return;
+  try {
+    const a = ac(), t = a.currentTime + delay, p = Math.min(2.4, power), len = .35 + p * .35;
+    // sputtering buzz: a 100 Hz sawtooth chopped on and off at random
+    const o = a.createOscillator(), o2 = a.createOscillator(), bf = a.createBiquadFilter(), bg = a.createGain();
+    o.type = 'sawtooth'; o.frequency.value = 100 + Math.random() * 20; o2.type = 'square'; o2.frequency.value = 151;
+    bf.type = 'bandpass'; bf.frequency.value = 1400; bf.Q.value = .9;
+    bg.gain.setValueAtTime(0, t);
+    let tt = t;
+    while (tt < t + len) {
+      const on = .015 + Math.random() * .06, v = (.05 + Math.random() * .07) * Math.min(1.3, p) * (1 - (tt - t) / len);
+      bg.gain.setValueAtTime(v, tt); bg.gain.setValueAtTime(0, tt + on);
+      tt += on + Math.random() * .05;
+    }
+    o.connect(bf); o2.connect(bf); bf.connect(bg).connect(out());
+    o.start(t); o2.start(t); o.stop(t + len + .05); o2.stop(t + len + .05);
+    // arc crackles: tiny bright noise pops
+    const pops = Math.round(10 + p * 14);
+    for (let i = 0; i < pops; i++) {
+      const st = t + Math.random() * len;
+      const s = a.createBufferSource(); s.buffer = noiseBuf(.006 + Math.random() * .014, 1);
+      const sf = a.createBiquadFilter(); sf.type = 'highpass'; sf.frequency.value = 2500 + Math.random() * 4000;
+      const sg = a.createGain(); sg.gain.value = .1 + Math.random() * .16;
+      s.connect(sf).connect(sg).connect(out()); s.start(st);
+    }
+    // arc hiss: high whine that wavers
+    const w = a.createOscillator(), wl = a.createOscillator(), wlg = a.createGain(), wg = a.createGain();
+    w.type = 'sine'; w.frequency.value = 6200; wl.frequency.value = 37; wlg.gain.value = 900;
+    wl.connect(wlg).connect(w.frequency);
+    wg.gain.setValueAtTime(0, t); wg.gain.linearRampToValueAtTime(.012 * p, t + .03); wg.gain.exponentialRampToValueAtTime(.0003, t + len);
+    w.connect(wg).connect(out()); w.start(t); wl.start(t); w.stop(t + len); wl.stop(t + len);
+  } catch (e) { /* audio blocked */ }
+}
 function breakdownSnd() {
   if (!soundOn) return;
   try {
-    metalHitSnd(2.4);
+    metalHitSnd(2.4); cutSnd(1.4); electricSnd(2.4, .06); electricSnd(1.4, .55);
     const a = ac(), t = a.currentTime;
     for (let i = 0; i < 9; i++) {
       const st = t + .15 + i * .07 + Math.random() * .05;
@@ -2555,7 +2608,7 @@ async function hit(vic, dir, power = 1, at = null) {
   if (DC && navigator.vibrate) try { navigator.vibrate(Math.round(20 + 25 * power)); } catch (e) { /* not supported */ }
   const p = at || vic.root.position.clone().setY(.9);
   hitStop(45 + 45 * power); shake(.05 * power); screenFlash();
-  metalHitSnd(power);
+  metalHitSnd(power); cutSnd(power); if (power >= .7) electricSnd(power);
   burst(p, Math.round(10 * power));
   if (power >= 1.2) impactFrame(55 + 30 * power);
   if (power >= 1) shockwave(vic.root.position, 0, 1.2 * power);
@@ -3639,8 +3692,9 @@ function applyGfx(rebuild = true) {
   ground.material.opacity = INK() ? .6 : hi ? .38 : SC().shadow;
   if (inkPass) inkPass.enabled = INK();
   // matte board in Ink: no sheen, no reflections
-  boardMatHi.roughness = INK() ? 1 : .6; boardMatHi.clearcoat = INK() ? 0 : .35; boardMatHi.envMapIntensity = INK() ? 0 : .25;
-  boardSideHi.roughness = INK() ? 1 : .45; boardSideHi.clearcoat = INK() ? 0 : .4; boardSideHi.envMapIntensity = INK() ? 0 : .3;
+  const matte = INK() || BWED;   // the Black & White edition has a fully matte board
+  boardMatHi.roughness = matte ? 1 : .6; boardMatHi.clearcoat = matte ? 0 : .35; boardMatHi.envMapIntensity = matte ? 0 : .25;
+  boardSideHi.roughness = matte ? 1 : .45; boardSideHi.clearcoat = matte ? 0 : .4; boardSideHi.envMapIntensity = matte ? 0 : .3;
   boardMatHi.needsUpdate = boardSideHi.needsUpdate = true;
   const top = hi ? boardMatHi : boardMat, side = hi ? boardSideHi : boardSide;
   boardBox.material = [side, side, top, side, side, side];
