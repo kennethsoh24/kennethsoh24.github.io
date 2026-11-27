@@ -986,7 +986,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 50</div>
+  <div class="build mono">Build 51</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1157,7 +1157,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=50';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=51';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -2019,8 +2019,9 @@ function transformMat(pt, U) {
           if ( blue || gold ) o = ( uAccent.b > uAccent.r ? vec3( 0.55, 0.74, 1.0 ) : vec3( 1.0, 0.8, 0.36 ) ) * mix( 0.8, 1.1, mx );   // chrome trim tint` : '') + `
           diffuseColor.rgb *= pow( o, vec3( 2.2 ) );
         #endif`)
-      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>' + (CHROME() ? `
-        metalnessFactor = mix( metalnessFactor * 0.3, 1.0, tfAcc );
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>' + (GFX.startsWith('monolith') && !CHROME() ? `
+        metalnessFactor *= 0.15; roughnessFactor = max( roughnessFactor, 0.6 );` : '') + (CHROME() ? `
+        metalnessFactor = mix( metalnessFactor * 0.15, 1.0, tfAcc );
         roughnessFactor = mix( max( roughnessFactor, 0.72 ), 0.07, tfAcc );` : ''))
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         vec3 tfHot = pow( mix( uAccent, vec3( 1.0 ), 0.35 ), vec3( 2.2 ) );
@@ -2036,7 +2037,7 @@ function transformMat(pt, U) {
         float animeRim = 1.0 - max( dot( normalize( vViewPosition ), normal ), 0.0 );
         totalEmissiveRadiance += vec3( 0.55 ) * step( 0.68, animeRim ) * diffuseColor.rgb;` : ''));
   };
-  m.customProgramCacheKey = () => (HIGH() ? 'tf-phys' : ANIME() ? 'tf-anime' : 'tf-toon') + (GLOW() ? '-glow' : '') + (CHROME() ? '-chrome' : '');
+  m.customProgramCacheKey = () => (HIGH() ? 'tf-phys' : ANIME() ? 'tf-anime' : 'tf-toon') + (GLOW() ? '-glow' : '') + (CHROME() ? '-chrome' : GFX.startsWith('monolith') ? '-mono' : '');
   return m;
 }
 function transformOutlineMat(U, th) {
@@ -4238,7 +4239,18 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
   im.receiveShadow = true; im.raycast = () => {};
   abyss.add(im);
   // light openings at the end of each avenue: blinding slits that the bloom spreads
-  const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 2.7, 2.9), toneMapped: false, fog: false });
+  // light openings: soft-edged slits (a bright core fading to the edges) instead of hard boxes, so no square hotspot
+  const softSlit = I => new THREE.ShaderMaterial({ uniforms: { uI: { value: I } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide, fog: false, toneMapped: false,
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
+    fragmentShader: `uniform float uI; varying vec2 vUv;
+      void main() {
+        vec2 d = abs( vUv - 0.5 ) * 2.0;
+        float x = 1.0 - smoothstep( 0.25, 1.0, d.x ), y = ( 1.0 - smoothstep( 0.35, 1.0, d.y ) ) * mix( 1.0, 0.55, vUv.y );
+        float a = x * x * y;                                   // rounded falloff on every side
+        gl_FragColor = vec4( vec3( 0.9, 0.95, 1.0 ) * uI * a, 1.0 );
+      }` });
+  const glowMat = softSlit(2.4);
   const shaftMat = new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 }, uStr: { value: .16 }, uA: { value: new V3() }, uB: { value: new V3() }, uR: { value: new THREE.Vector2() } },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
@@ -4276,7 +4288,7 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
   AVENUES.forEach((a, i) => {
     const r = 42 + i * 3, w = i ? 2.5 + rnd() * 2 : 5, h = i ? 3 + rnd() * 3 : 7;
     const x = Math.cos(a) * r, z = Math.sin(a) * r;
-    const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, .4), glowMat);
+    const g = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.6, h * 1.25), glowMat);
     g.position.set(x, -.37 + h / 2, z); g.lookAt(0, g.position.y, 0); g.raycast = () => {};
     abyss.add(g);
     shaft(new V3(x, h * .55, z), new V3(x * .25, 0, z * .25), h * .45, h * 1.6, i ? .008 : .014);
@@ -4291,13 +4303,13 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
     const gx = g.createLinearGradient(0, 0, s, 0); gx.addColorStop(0, 'rgba(0,0,0,1)'); gx.addColorStop(.5, 'rgba(0,0,0,0)'); gx.addColorStop(1, 'rgba(0,0,0,1)');
     g.globalCompositeOperation = 'destination-out'; g.fillStyle = gx; g.fillRect(0, 0, s, s);
   });
-  const slitMats = [1.5, 2.1, 2.8].map(v => new THREE.MeshBasicMaterial({ color: new THREE.Color(v, v * 1.04, v * 1.1), toneMapped: false, fog: false }));
+  const slitMats = [1.4, 1.9, 2.5].map(softSlit);
   const NS = isMobile ? 22 : 38;
   for (let i = 0; i < NS; i++) {
     const a = rnd() * PI * 2, r = 19 + rnd() * 24;
     const w = .25 + Math.pow(rnd(), 2) * 1.8, h = .35 + Math.pow(rnd(), 1.5) * 2.6;
     const x = Math.cos(a) * r, z = Math.sin(a) * r;
-    const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, .2), slitMats[i % 3]);
+    const g = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.7, h * 1.3), slitMats[i % 3]);
     g.position.set(x, -.37 + h / 2, z); g.lookAt(0, g.position.y, 0); g.raycast = () => {};
     abyss.add(g);
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xcfdcef, transparent: true, opacity: .05 + rnd() * .07,
@@ -4584,6 +4596,7 @@ function applyGfx(rebuild = true) {
   // Monolith: the board stands in a canyon of dark towers lit only from above and from the openings behind
   const ab = ABYSS();
   PIECE_LIFT.value = ab ? .5 : 0;
+  if (gtao) gtao.blendIntensity = ab ? .55 : 1;   // softer AO in the dark world (no muddy blotches on the armour)
   sparks.material.blending = ab ? THREE.AdditiveBlending : THREE.NormalBlending; sparks.material.size = ab ? .07 : .09; sparks.material.needsUpdate = true;
   abyss.visible = ab; abyssSpot.intensity = ab ? 120 : 0;
   scene.environmentIntensity = ab ? .14 : 1;
