@@ -986,7 +986,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 51</div>
+  <div class="build mono">Build 52</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1157,7 +1157,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=51';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=52';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -2483,12 +2483,22 @@ function inkBurst(pos, n = 14, color = SC().ink) {
   const life = INK() ? 30 : 4;
   tween(life, k => { splat.material.opacity = .9 * (1 - Math.pow(k, INK() ? 3 : 2)); }).then(() => { splat.material.dispose(); splat.removeFromParent(); });
 }
+// a fixed pool of point lights that always exists (intensity 0 when idle): adding or removing a light
+// at run time makes three.js recompile every material, which was the stutter on each hit
+const LIGHT_POOL = Array.from({ length: 3 }, () => { const L = new THREE.PointLight(0xffffff, 0, 5, 2); scene.add(L); return L; });
+let lightNext = 0;
+function pulseLight(pos, color, peak, dist = 5, dur = .3) {
+  const L = LIGHT_POOL[lightNext]; lightNext = (lightNext + 1) % LIGHT_POOL.length;
+  L.color.set(color); L.distance = dist; L.position.copy(pos);
+  const id = L.userData.id = (L.userData.id || 0) + 1;
+  return tween(dur, k => { if (L.userData.id === id) L.intensity = peak * (1 - k) * (1 - k); }).then(() => { if (L.userData.id === id) L.intensity = 0; });
+}
 function flash(pos, color = 0xffffff, size = 1.4) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
   s.position.copy(pos); fxGroup.add(s);
-  const L = new THREE.PointLight(color, 6, 4); L.position.copy(pos); fxGroup.add(L);
-  return tween(.35, k => { s.scale.setScalar(size * (0.3 + k)); s.material.opacity = 1 - k; L.intensity = 6 * (1 - k); })
-    .then(() => { s.removeFromParent(); L.removeFromParent(); });
+  pulseLight(pos, color, 6, 4, .35);
+  return tween(.35, k => { s.scale.setScalar(size * (0.3 + k)); s.material.opacity = 1 - k; })
+    .then(() => { s.material.dispose(); s.removeFromParent(); });
 }
 function worldOf(obj) { obj.updateWorldMatrix(true, false); return obj.getWorldPosition(new V3()); }
 
@@ -2899,17 +2909,54 @@ async function hit(vic, dir, power = 1, at = null) {
   hitStop(45 + 45 * power); shake(.05 * power); screenFlash();
   metalHitSnd(power); cutSnd(power); if (power >= .7) electricSnd(power);
   burst(p, Math.round((ABYSS() ? 22 : 10) * power));
-  if (ABYSS()) {   // a short cold flare and a light that rakes the nearby armour
-    flash(p, 0xdfe8ff, .7 + .35 * power);
-    const L = new THREE.PointLight(0xdfe8ff, 40 * power, 5, 2); L.position.copy(p); fxGroup.add(L);
-    tween(.28, k => { L.intensity = 40 * power * (1 - k) * (1 - k); }).then(() => L.removeFromParent());
-  }
+  if (ABYSS()) impactVFX(p, vic.root.position, power);
   if (power >= 1.2) impactFrame(55 + 30 * power);
   if (power >= 1) shockwave(vic.root.position, 0, 1.2 * power);
   if (power >= 1.2) inkBurst(vic.root.position.clone(), 6);
   await hitReact(vic, dir, power);
 }
 const towards = (a, b) => b.clone().sub(a).setY(0).normalize();
+// Monolith impact: a cold core flare, an anamorphic lens streak, a light ring racing over the floor,
+// a pillar of light on heavy blows, and a light that rakes the armour; all soft-edged, nothing hard-lined
+const streakSpriteTex = canvasTex(256, (g, s) => {
+  const gr = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.2, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, s, s);
+});
+const softRingTex = canvasTex(256, (g, s) => {
+  const gr = g.createRadialGradient(s / 2, s / 2, s * .28, s / 2, s / 2, s / 2);
+  gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.55, 'rgba(255,255,255,.9)'); gr.addColorStop(.7, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, s, s);
+});
+function fxSprite(tex, color, op) {
+  const m = new THREE.SpriteMaterial({ map: tex, color, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const sp = new THREE.Sprite(m); fxGroup.add(sp); return sp;
+}
+function impactVFX(p, ground, power) {
+  const P = Math.min(2, power), c = new THREE.Color(1.6, 1.7, 1.9);   // gently HDR so only the core blooms
+  const core = fxSprite(glowTex, c, 1), streak = fxSprite(streakSpriteTex, c, .85);
+  core.position.copy(p); streak.position.copy(p);
+  tween(.32, k => { core.scale.setScalar((.5 + .6 * P) * (.4 + k)); core.material.opacity = 1 - k;
+    streak.scale.set((2.2 + 2 * P) * (.5 + k * .8), .16 + .1 * P, 1); streak.material.opacity = .85 * (1 - k); })
+    .then(() => { for (const o of [core, streak]) { o.material.dispose(); o.removeFromParent(); } });
+  // light ring racing over the floor
+  const ring = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-PI / 2), new THREE.MeshBasicMaterial({ map: softRingTex, color: 0xcfdcf0,
+    transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false }));
+  ring.position.copy(ground).setY(.03); fxGroup.add(ring);
+  tween(.6, k => { ring.scale.setScalar(.6 + easeOut(k) * (2.6 + 1.6 * P)); ring.material.opacity = .55 * (1 - k); })
+    .then(() => { ring.geometry.dispose(); ring.material.dispose(); ring.removeFromParent(); });
+  // a pillar of light on heavy blows
+  if (power >= 1.2) {
+    const pil = fxSprite(streakSpriteTex, new THREE.Color(1.2, 1.3, 1.45), .6);
+    pil.position.copy(ground).setY(2.2);
+    tween(.5, k => { pil.scale.set(.55 * (1 - k * .6), 5.5 * (.6 + k * .4), 1); pil.material.opacity = .6 * (1 - k); })
+      .then(() => { pil.material.dispose(); pil.removeFromParent(); });
+    shockwave(ground, 0, 1.6 * power);
+  }
+  pulseLight(p, 0xdfe8ff, 30 * P, 6, .32);
+  // a second, slower fan of embers that float down
+  for (let i = 0; i < 10 * P; i++) emitSpark(p, new V3((Math.random() - .5) * 2.4, 1.5 + Math.random() * 2.5, (Math.random() - .5) * 2.4), 0xcfe0ff, .8 + Math.random() * .7);
+}
 
 function stepTo(a, base, dir, d, dur, ease = easeIO) {
   const s = a.root.position.clone(), e = base.clone().addScaledVector(dir, d);
@@ -4262,7 +4309,8 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
       void main() {
         float face = pow( abs( dot( vN, vV ) ), 1.6 );                  // bright through the middle, soft at the edges
         float streak = 0.75 + 0.25 * sin( vW.x * 3.1 + vW.z * 2.3 + uTime * 0.25 ) * sin( vW.y * 0.7 - uTime * 0.18 );
-        float a = face * streak * pow( vY, 1.4 ) * uStr;               // strongest at the source end
+        float a = face * face * streak * pow( vY, 1.4 ) * uStr;        // strongest at the source end, very soft sides
+        a *= smoothstep( -0.37, 1.4, vW.y ) * smoothstep( 0.0, 0.25, vY );   // no hard line where the cone meets the floor
         a *= 1.0 - smoothstep( 4.0, 1.2, distance( vW, cameraPosition ) );   // never smear across the lens
         // the cone vanishes when the camera stands inside it or near its skin (no white-out from within)
         vec3 ax = uB - uA; float L = length( ax ); vec3 u = ax / L;
@@ -4360,7 +4408,7 @@ const mistSheets = [];
     float mh( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
     float mn( vec2 p ) { vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
       return mix( mix( mh( i ), mh( i + vec2( 1, 0 ) ), f.x ), mix( mh( i + vec2( 0, 1 ) ), mh( i + vec2( 1, 1 ) ), f.x ), f.y ); }
-    float fbm( vec2 p ) { float v = 0.0, a = 0.5; for ( int i = 0; i < 5; i++ ) { v += a * mn( p ); p = p * 2.02 + 7.3; a *= 0.5; } return v; }
+    float fbm( vec2 p ) { float v = 0.0, a = 0.5; for ( int i = 0; i < 4; i++ ) { v += a * mn( p ); p = p * 2.02 + 7.3; a *= 0.5; } return v; }
     void main() {
       vec2 p = vUv * vec2( 3.2, 1.0 ) + vec2( uTime * 0.025 + uSeed * 9.0, uSeed * 4.0 );
       float f = fbm( p + 0.8 * fbm( p * 1.7 - uTime * 0.03 ) );
@@ -4722,6 +4770,8 @@ function openGallery(fromTitle = false) {
   boardGroup.visible = false; fxGroup.visible = false; ground.position.y = -.37;
   galleryStage.visible = true;
   $('gallery').hidden = false;
+  // a battle camera may still be holding the controls: release it so the gallery can orbit and zoom
+  camFollow = null; camHome = null; camReturning = false; controls.enabled = true; controls.minDistance = 2; controls.maxDistance = 30;
   gSaved = { pos: camera.position.clone(), target: controls.target.clone() };
   frameGallery();
   controls.autoRotate = true; controls.autoRotateSpeed = 1.4;
@@ -4735,7 +4785,7 @@ function closeGallery() {
   boardGroup.visible = true; fxGroup.visible = true;
   galleryStage.visible = false;
   $('gallery').hidden = true;
-  controls.autoRotate = false;
+  controls.autoRotate = false; controls.minDistance = 5;
   camera.position.copy(gSaved.pos); controls.target.copy(gSaved.target);
   resize();
   updateTurnUI();
