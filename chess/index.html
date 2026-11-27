@@ -895,7 +895,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 35</div>
+  <div class="build mono">Build 36</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1066,6 +1066,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1411,6 +1412,32 @@ class Rig {
       };
       const g = new THREE.Group();
       g.userData.U = U;
+      if (part.skinned) {
+        // real skeleton: clone the rigged scene, keep the shader working in the rig's own units
+        const k = U.uH.value / part.h0;
+        U.uH.value = part.h0;
+        const sc = SkeletonUtils.clone(part.skinned.scene);
+        sc.scale.setScalar(k);
+        const th = FINE() ? .004 : ANIME() ? .011 : HIGH() ? .0045 : .007;
+        const skins = [];
+        sc.traverse(o => { if (o.isSkinnedMesh) skins.push(o); });
+        for (const o of skins) {
+          const om = o.material;
+          o.material = transformMat({ map: om.map, normalMap: om.normalMap, rmMap: om.roughnessMap || om.metalnessMap }, U);
+          o.receiveShadow = true; o.frustumCulled = false;
+          if (!isMobile || ANIME()) {
+            const ol = new THREE.SkinnedMesh(o.geometry, transformOutlineMat(U, th / k));
+            ol.bind(o.skeleton, o.bindMatrix);
+            ol.position.copy(o.position); ol.quaternion.copy(o.quaternion); ol.scale.copy(o.scale);
+            ol.raycast = () => {}; ol.userData.ol = true; ol.frustumCulled = false;
+            o.parent.add(ol);
+          }
+        }
+        g.add(sc);
+        this.mixer = new THREE.AnimationMixer(sc);
+        this.clips = Object.fromEntries(part.skinned.animations.map(c => [c.name, c]));
+        return g;
+      }
       for (const pt of part.parts) {
         const mesh = new THREE.Mesh(pt.geo, transformMat(pt, U));
         mesh.receiveShadow = true;
@@ -1433,7 +1460,12 @@ class Rig {
       glow.position.set(...spec.eye);
       this.robot.add(glow);
       this.fx.robotGlow = glow;
+      if (this.mixer) {   // ride the head bone so the eye follows the skeleton
+        let head = null; this.robot.traverse(o => { if (o.isBone && o.name === 'Head') head = o; });
+        if (head) { this.root.updateMatrixWorld(true); head.attach(glow); }
+      }
     }
+    if (this.mixer) clipAct(this, 'Combat_Stance', { loop: true, fade: 0 });
     this.apply();
   }
   dispose() {
@@ -1796,7 +1828,7 @@ function makeRig(type, team) {
    ================================================================ */
 // ch/rh: height of the chess piece / mech in board units; cn/rn: the team colours each GLB was painted in
 const MODEL_SPEC = {
-  P: { chess: 'pawn_chess', robot: 'pawn', ch: 1.05, rh: 1.95, cn: 'b', rn: 'b', eye: [0, 1.58, .17] },
+  P: { chess: 'pawn_chess', robot: 'pawn', rig: 'pawn_rig', ch: 1.05, rh: 1.95, cn: 'b', rn: 'b', eye: [0, 1.58, .17] },
   B: { chess: 'bishop_chess', robot: 'bishop', ch: 1.25, rh: 2.4, cn: 'b', rn: 'w' },
   Q: { chess: 'queen_chess', robot: 'queen', ch: 1.42, rh: 2.6, cn: 'b', rn: 'b' },
   K: { chess: 'king_chess', robot: 'king', ch: 1.52, rh: 2.65, cn: 'b', rn: 'b' },
@@ -1952,9 +1984,18 @@ function loadProgress() {
 async function loadModels() {
   const loader = new GLTFLoader();
   const one = async (file, h) => { const g = await loader.loadAsync(`models/${file}.glb`); modelsLoaded++; loadProgress(); return normaliseModel(g, h); };
+  // a rigged mech (Meshy auto-rig via Higgsfield): kept as a skinned scene with its animation clips
+  const rigged = async (spec) => {
+    try {
+      const g = await loader.loadAsync(`models/${spec.rig}.glb?v=36`);
+      const h0 = new THREE.Box3().setFromObject(g.scene, true).getSize(new V3()).y;
+      modelsLoaded++; loadProgress();
+      return { skinned: g, h0 };
+    } catch (e) { console.warn('rig failed, falling back to the static mech', e); return one(spec.robot, spec.rh); }
+  };
   await Promise.all(Object.entries(MODEL_SPEC).map(async ([type, spec]) => {
     try {
-      const [chess, robot] = await Promise.all([one(spec.chess, spec.ch), one(spec.robot, spec.rh)]);
+      const [chess, robot] = await Promise.all([one(spec.chess, spec.ch), spec.rig ? rigged(spec) : one(spec.robot, spec.rh)]);
       MODELS[type] = { chess, robot };
       for (const r of allRigs()) if (r.type === type) r.attachModels(MODELS[type]);
       if (gRig && gRig.type === type) gRig.attachModels(MODELS[type]);
@@ -2661,6 +2702,20 @@ function beam(from, to, dur = .16, color = 0xff2a14, width = 1) {
     .then(() => { b.material.dispose(); b.removeFromParent(); });
 }
 /* ---------- body poses: lean (forward = toward the target), side, twist, squash/stretch ---------- */
+/* ---------- skeletal clips (rigged mechs): cross-fade between the rig's animation actions ---------- */
+function clipAct(r, name, { fade = .12, loop = false, rate = 1, from = 0 } = {}) {
+  if (!r.mixer || !r.clips || !r.clips[name]) return null;
+  const a = r.mixer.clipAction(r.clips[name]);
+  a.reset(); a.time = from;
+  a.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+  a.clampWhenFinished = !loop; a.timeScale = rate; a.enabled = true;
+  if (r.curAct && r.curAct !== a && fade > 0) { a.setEffectiveWeight(1); a.crossFadeFrom(r.curAct, fade, false); }
+  else { if (r.curAct && r.curAct !== a) r.curAct.stop(); a.setEffectiveWeight(1); }
+  a.play(); r.curAct = a;
+  return a;
+}
+const skel = r => !!(r.mixer && r.t > .5);
+const toStance = (r, fade = .3) => clipAct(r, 'Combat_Stance', { loop: true, fade });
 const REST = { lean: 0, side: 0, tw: 0, sq: 1 };
 function setPose(r, p) {
   r.pose = Object.assign(r.pose || { ...REST }, p);
@@ -2687,6 +2742,10 @@ const pm = () => (Math.random() < .5 ? -1 : 1);
 function hitReact(vic, dir, power = 1) {
   // the body snaps back, twists and compresses, then rings back like a struck frame
   const p = Math.min(2.2, power);
+  if (skel(vic)) {   // the skeleton convulses with the current, then settles back into its stance
+    const act = clipAct(vic, 'Electrocution_Reaction', { rate: 1.5, fade: .05, from: .7 + Math.random() * 2 });
+    wait(.32 + .12 * p).then(() => { if (vic.curAct === act && !vic._dying) toStance(vic, .3); });
+  }
   setPose(vic, { lean: -.22 * p, tw: pm() * .28 * p, side: pm() * .08 * p, sq: 1 - .1 * p });
   springRest(vic, .5 + .1 * p, 2.6);
   vic._home ??= { p: vic.root.position.clone(), q: vic.root.quaternion.clone() };
@@ -2712,8 +2771,40 @@ async function hit(vic, dir, power = 1, at = null) {
 const towards = (a, b) => b.clone().sub(a).setY(0).normalize();
 
 const CHOREO = {
-  // Pawn 2: crouch and charge the eye, three recoiling laser bursts, then a coiled spear dash
+  // Pawn 2 (rigged): eye charge and two laser bursts, then the skeleton winds the spear up over its head,
+  // steps in and drives it down through the target
   async P(a, v, dir, vp) {
+    if (!skel(a)) return CHOREO.Pstatic(a, v, dir, vp);
+    const eye = () => worldOf(a.fx.robotGlow);
+    const g = a.fx.robotGlow, base = a.root.position.clone(), R = 1.2;
+    setPose(a, REST);
+    zap();
+    await tween(.34, k => { if (g) g.scale.setScalar(.24 + k * .6); shake(.01); });
+    for (let i = 0; i < 2; i++) {
+      zap();
+      await beam(eye(), vp.clone().setY(.7 + i * .35), .13, 0xff2a14, 1 + i * .4);
+      hit(v, dir, .7);
+    }
+    if (g) g.scale.setScalar(.24);
+    const step = Math.max(0, vp.distanceTo(base) - 1.05);
+    clipAct(a, 'Attack', { rate: R, fade: .1, from: .15 });
+    servo(true, .25);
+    // wind-up (clip .15 → .92): spear rises overhead while the body creeps forward
+    await tween(.77 / R, k => a.root.position.copy(base).addScaledVector(dir, step * .3 * easeIO(k)));
+    speedLines(true); swishSnd();
+    // the slam (clip .92 → 1.13)
+    await tween(.21 / R, k => a.root.position.copy(base).addScaledVector(dir, step * (.3 + .7 * easeOut(k))));
+    speedLines(false);
+    slash(vp.clone().setY(.9), -1.45, 2.8);
+    shockwave(vp, 0, 1.6);
+    await hit(v, dir, 1.6, vp.clone().setY(.5));
+    await wait(.45);
+    toStance(a, .4);
+    await tween(.4, k => a.root.position.copy(base).addScaledVector(dir, step * (1 - easeIO(k))));
+    return 'slam';
+  },
+  // Pawn 2 (static mech fallback): crouch and charge the eye, three recoiling laser bursts, then a coiled spear dash
+  async Pstatic(a, v, dir, vp) {
     const eye = () => a.yaw.localToWorld(a.t > .5 ? new V3(...MODEL_SPEC.P.eye) : new V3(0, MODEL_SPEC.P.ch * .87, .12));
     const g = a.fx.robotGlow, base = a.root.position.clone();
     zap();
@@ -2874,9 +2965,15 @@ async function finish(vic, dir, style) {
   inkBurst(base.clone(), 20);
   shockwave(base, 0, 3.2);
   burst(base.clone().setY(1), 40);
-  const burn = wait(style === 'slam' ? .12 : .28).then(() => tween(.5, k => { vic.fade = 1 - k; }));
+  const dies = skel(vic);
+  const burn = wait(dies ? .8 : style === 'slam' ? .12 : .28).then(() => tween(.5, k => { vic.fade = 1 - k; }));
   const tw0 = pm();
-  if (style === 'slam') {
+  if (dies) {
+    // a real collapse: the rig plays its death, knocked back along the blow
+    vic._dying = true; setPose(vic, REST);
+    clipAct(vic, 'Dead', { rate: 1.35, fade: .06 });
+    await tween(1.05, k => vic.root.position.copy(base).addScaledVector(dir, .55 * easeOut(Math.min(1, k * 2))));
+  } else if (style === 'slam') {
     await tween(.28, k => { vic.root.scale.set(PIECE_SCALE * (1 + .35 * k), PIECE_SCALE * (1 - .8 * easeIO(k)), PIECE_SCALE * (1 + .35 * k)); setPose(vic, { side: Math.sin(k * 40) * .1 * (1 - k), tw: tw0 * .4 * k }); });
   } else if (style === 'pierce') {
     await tween(.35, k => { vic.root.quaternion.copy(q0).premultiply(new THREE.Quaternion().setFromAxisAngle(axis, easeIO(k) * PI / 2)); setPose(vic, { lean: .4 * easeIO(k), tw: tw0 * .5 * k, sq: 1 - .2 * k }); });
@@ -4108,6 +4205,7 @@ function frame() {
   }
   const time = clock.getElapsedTime();
   const list = galleryOn ? (gRig ? [gRig] : []) : allRigs();
+  for (const r of list) if (r.mixer && r.robot && r.robot.visible) r.mixer.update(frozen ? 0 : dt * SPEED);
   for (const r of list) {
     if (r.t > 0 || r._lastT !== r.t || r.fade < 1) {
       r.apply();
