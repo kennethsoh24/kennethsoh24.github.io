@@ -135,6 +135,9 @@
   .origin .arrow { position: absolute; left: -96px; top: 46%; color: var(--ink); font-size: 10px; letter-spacing: .14em; opacity: .75; }
   .origin .arrow::after { content: ""; display: block; height: 1px; margin-top: 5px; background: currentColor; }
   .origin.none { width: 200px; cursor: default; }
+  .origin .full { position: absolute; right: -10px; bottom: -10px; width: 30px; height: 30px; border: 0; border-radius: 50%; background: #111; color: #fff; font-size: 15px; line-height: 30px; padding: 0; cursor: zoom-in; }
+  .origin.none .full { display: none; }
+  .origin:not(.none)::after { content: attr(data-hint); position: absolute; left: 8px; bottom: -18px; font: 9px var(--mono); letter-spacing: .16em; color: var(--ink); opacity: .7; }
   .origin.none img { display: none; }
   @keyframes pinIn { from { opacity: 0; transform: translateY(-14px) rotate(-4deg); } to { opacity: 1; transform: rotate(2.2deg); } }
   #originBox { z-index: 27; }
@@ -1073,8 +1076,8 @@
     else if (t !== 'moon' && t !== 'bw') document.body.classList.add('strand');
     if (t === 'bw') { document.title = 'Chess Fantasia — Black & White'; document.body.classList.add('bwed'); }
     // Monolith graphics in the Black & White edition: the whole interface goes dark to match the canyon
-    var g = q.get('gfx'); try { g = g || localStorage.getItem(q.get('edition') ? 'cf-gfx' : 'cf-gfx-home3'); } catch (x) {}
-    if (!g && !q.get('edition')) g = 'monolith';   // the home link opens in Monolith
+    var g = q.get('gfx'); try { g = g || localStorage.getItem(q.get('edition') ? 'cf-gfx' : 'cf-gfx-home4'); } catch (x) {}
+    if (!g && !q.get('edition')) g = 'monolithchrome';   // the home link opens in Monolith · Chrome
     if (t === 'bw' && (g === 'monolithglow' || g === 'monolithchrome')) document.body.classList.add('glow');
     if (t === 'bw' && g && g.indexOf('monolith') === 0) { document.body.classList.add('monolith'); document.querySelector('meta[name=theme-color]').setAttribute('content', '#08090b'); }
   })();
@@ -1087,7 +1090,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 66</div>
+  <div class="build mono">Build 67</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1213,6 +1216,7 @@
 <p id="gName">Pawn 2</p>
 <figure id="gOrigin" class="origin" hidden>
   <span class="pin mono">Origin</span>
+  <button class="full" id="gOriginFull" aria-label="Full sketch">⤢</button>
   <img alt="Original concept sketch">
   <figcaption class="mono"></figcaption>
   <span class="arrow mono">sketch → 3D</span>
@@ -1307,7 +1311,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=66';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=67';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1405,8 +1409,8 @@ const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 120);
 // Graphics: 'high' = lacquered PBR pieces, studio reflections, soft contact shadows, AO + bloom; 'classic' = flat toon + ink outlines
 // /chess/ with no edition is the home edition: Black & White, Anime 2.5D (its own saved graphics choice)
 const HOMEPAGE = !new URLSearchParams(location.search).get('edition');
-const GFX_KEY = HOMEPAGE ? 'cf-gfx-home3' : 'cf-gfx';   // new key so the new home default (Monolith) applies
-let GFX = HOMEPAGE ? 'monolith' : 'cinema';
+const GFX_KEY = HOMEPAGE ? 'cf-gfx-home4' : 'cf-gfx';   // new key so the new home default (Monolith · Chrome) applies
+let GFX = HOMEPAGE ? 'monolithchrome' : 'cinema';
 try { GFX = localStorage.getItem(GFX_KEY) || GFX; } catch (e) { /* storage blocked */ }
 if (GFX === 'ink') GFX = 'cinema';
 // the classic black & white edition keeps its paper look: no Cinema world there
@@ -5211,7 +5215,7 @@ CHARS.forEach((c, i) => {
 });
 function buildGalleryRig(keepT = false) {
   const t0 = keepT && gRig ? gRig.t : 0;
-  gRig?.dispose();
+  gRig?.dispose(); dropPaper();
   const c = CHARS[gIdx];
   gRig = makeRig(c.type, gTeam);
   gRig.yaw.rotation.y = 0;
@@ -5222,6 +5226,7 @@ function buildGalleryRig(keepT = false) {
   $('gNote').textContent = tl({ en: c.note, zh: c.noteZh, ja: c.noteJa });
   const og = $('gOrigin');
   og.classList.toggle('none', !c.sketch);
+  og.dataset.hint = tl({ en: 'tap → watch it come to life', zh: '撳 → 睇佢由畫入面走出嚟', ja: 'タップ → 絵から飛び出す' });
   if (c.sketch) { og.querySelector('img').src = c.sketch; og.querySelector('figcaption').textContent = tl({ en: c.sk, zh: c.skZh, ja: c.skJa }); }
   else og.querySelector('figcaption').textContent = tl({ en: 'No sketch — designed later in the same language as the hand-drawn cast', zh: '冇原稿 — 之後跟手繪角色同一風格設計', ja: '原画なし — 手描きキャストと同じ様式で後から設計' });
   og.hidden = !galleryOn; og.style.animation = 'none'; void og.offsetWidth; og.style.animation = '';
@@ -5271,7 +5276,7 @@ function closeGallery() {
   document.body.classList.remove('gallery');
   boardGroup.visible = true; fxGroup.visible = true;
   galleryStage.visible = false;
-  $('gallery').hidden = true; $('gOrigin').hidden = true; $('originBox').hidden = true;
+  $('gallery').hidden = true; $('gOrigin').hidden = true; $('originBox').hidden = true; dropPaper();
   controls.autoRotate = false; controls.minDistance = 5;
   camera.position.copy(gSaved.pos); controls.target.copy(gSaved.target);
   resize();
@@ -5314,7 +5319,51 @@ async function galleryAttack() {
   }
 }
 $('gAtk').onclick = galleryAttack;
-$('gOrigin').onclick = () => { const c = CHARS[gIdx]; if (!c.sketch) return; $('originBox').querySelector('img').src = c.sketch; $('originBox').querySelector('.cap').textContent = tl({ en: c.sk + ' — the original drawing this piece was built from', zh: c.skZh + ' — 呢隻棋嘅原始設計稿', ja: c.skJa + ' — この駒の元になった原画' }); $('originBox').hidden = false; };
+// the piece is drawn into its sketch, then swells out of the paper into 3D (like the heart painting)
+let gPaper = null;
+const paperTex = {};
+function dropPaper() { if (gPaper) { gPaper.removeFromParent(); gPaper.geometry.dispose(); gPaper.material.dispose(); gPaper = null; } }
+async function originEmerge() {
+  const c = CHARS[gIdx];
+  if (!c.sketch || !gRig || gAnimating) return;
+  gAnimating = true;
+  const spin = controls.autoRotate; controls.autoRotate = false;
+  try {
+    dropPaper();
+    const tex = paperTex[c.sketch] ??= await new THREE.TextureLoader().loadAsync(c.sketch);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const H = G_HEIGHT[c.type] * 1.3 * 1.2;
+    gPaper = new THREE.Mesh(new THREE.PlaneGeometry(H, H), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, toneMapped: false, fog: false, side: THREE.DoubleSide }));
+    gPaper.position.set(0, H * .5 - .05, -.25); gPaper.renderOrder = -1; galleryStage.add(gPaper);
+    // face the drawing square on
+    const dist = H / (2 * Math.tan(camera.fov * PI / 360)) * (isMobile ? 1.5 : 1.12);
+    const p0 = camera.position.clone(), t0 = controls.target.clone(), pF = new V3(0, H * .5, dist), tF = new V3(0, H * .5, 0);
+    gRig.t = 1; gRig.fade = 0; gRig.apply();
+    const S = gRig.root.scale.x;
+    gRig.root.scale.z = S * .03;   // pressed flat into the paper
+    await tween(.8, k => { const e = easeIO(k); camera.position.lerpVectors(p0, pF, e); controls.target.lerpVectors(t0, tF, e); gPaper.material.opacity = e; });
+    await wait(.35);
+    servo(true, .6);
+    // the drawing comes alive: ink becomes metal and the body swells out of the sheet
+    await tween(2.4, k => {
+      const e = easeIO(k);
+      gRig.fade = Math.min(1, k * 1.6);
+      gRig.root.scale.z = S * (.03 + .97 * easeBack(Math.min(1, k * 1.15)));
+      gPaper.material.opacity = 1 - .8 * e; gPaper.position.z = -.25 - 1.2 * e;
+    });
+    gRig.fade = 1; gRig.root.scale.z = S;
+    clank();
+    // swing round so the new volume reads
+    const a0 = 0, a1 = .65, r = pF.z;
+    await tween(1.5, k => { const a = a0 + (a1 - a0) * easeIO(k); camera.position.set(Math.sin(a) * r, H * .55, Math.cos(a) * r); if (gPaper) gPaper.material.opacity = .2 * (1 - k); });
+    dropPaper();
+  } finally {
+    if (gRig) { gRig.fade = 1; gRig.root.scale.setScalar(1.3); }
+    controls.autoRotate = spin; gAnimating = false;
+  }
+}
+$('gOrigin').onclick = e => { if (e.target.id === 'gOriginFull') return; originEmerge(); };
+$('gOriginFull').onclick = e => { e.stopPropagation(); const c = CHARS[gIdx]; if (!c.sketch) return; $('originBox').querySelector('img').src = c.sketch; $('originBox').querySelector('.cap').textContent = tl({ en: c.sk + ' — the original drawing this piece was built from', zh: c.skZh + ' — 呢隻棋嘅原始設計稿', ja: c.skJa + ' — この駒の元になった原画' }); $('originBox').hidden = false; };
 $('originClose').onclick = $('originBox').onclick = e => { if (e.target.id === 'originBox' || e.target.id === 'originClose') $('originBox').hidden = true; };
 $('gSpin').onclick = () => { controls.autoRotate = !controls.autoRotate; };
 $('gT').oninput = e => { if (gRig && !gAnimating) gRig.t = +e.target.value; };
