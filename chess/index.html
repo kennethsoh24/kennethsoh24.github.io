@@ -1043,7 +1043,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 63</div>
+  <div class="build mono">Build 64</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1256,7 +1256,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=63';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=64';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -4842,7 +4842,7 @@ function applyGfx(rebuild = true) {
     hemi.color.setHex(0x9aa6b4); hemi.groundColor.setHex(0x050607); hemi.intensity = .1;
     sun.color.setHex(0xe8eef6); sun.intensity = .8; sun.position.set(-2.5, 15, -3.5); sun.shadow.radius = 4;
     rim.color.setHex(0xdfe9ff); rim.intensity = 1.7; rim.position.set(1, 3.5, -12);
-    boardMatHi.color.setHex(0x404347); boardMatHi.roughness = .6; boardMatHi.clearcoat = .3; boardMatHi.clearcoatRoughness = .18; boardMatHi.envMapIntensity = .6;
+    boardMatHi.color.setHex(0x9a9ea4); boardMatHi.roughness = .62; boardMatHi.clearcoat = .25; boardMatHi.clearcoatRoughness = .2; boardMatHi.envMapIntensity = .25;   // light squares read as pale stone, dark stay near-black
     boardSideHi.color.setHex(0x121315); boardSideHi.roughness = .6; boardSideHi.clearcoat = .4;
     boardMatHi.needsUpdate = boardSideHi.needsUpdate = true;
   } else { dust.material.color.setHex(0xe8c99a); dust.material.opacity = .55; dust.material.size = .05; dust.material.sizeAttenuation = true; dust.material.needsUpdate = true; rim.position.set(6, 5, -8); }
