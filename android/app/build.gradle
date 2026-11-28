@@ -1,0 +1,18 @@
+plugins { id "com.android.application" }
+android {
+    namespace "com.kennethso.chessfantasia"
+    compileSdk 34
+    defaultConfig {
+        applicationId "com.kennethso.chessfantasia"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        // signed with the standard debug key so it installs straight from the download
+        debug { minifyEnabled false }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    androidResources { noCompress += ["glb", "mp3", "mp4", "webp", "woff2"] }
+}
