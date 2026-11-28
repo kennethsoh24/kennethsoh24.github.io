@@ -150,6 +150,10 @@
   .origin .arrow { position: absolute; left: -96px; top: 46%; color: var(--ink); font-size: 10px; letter-spacing: .14em; opacity: .75; }
   .origin .arrow::after { content: ""; display: block; height: 1px; margin-top: 5px; background: currentColor; }
   .origin.none { width: 200px; cursor: default; }
+  .origin .credit, .obox .credit { text-transform: none; }
+  .origin .credit { display: block; margin-top: 4px; font-size: 9px; letter-spacing: .14em; color: #111; font-weight: 600; }
+  .origin.none .credit { display: none; }
+  .obox .credit { margin: -2px 2px 8px; font-size: 12px; letter-spacing: .14em; font-weight: 600; }
   .origin .full { position: absolute; right: -10px; bottom: -10px; width: 30px; height: 30px; border: 0; border-radius: 50%; background: #111; color: #fff; font-size: 15px; line-height: 30px; padding: 0; cursor: zoom-in; }
   .origin.none .full { display: none; }
   .origin:not(.none)::after { content: attr(data-hint); position: absolute; left: 8px; bottom: -18px; font: 9px var(--mono); letter-spacing: .16em; color: var(--ink); opacity: .7; }
@@ -165,6 +169,7 @@
   @media (max-width: 760px) {
     .origin { right: 10px; top: 128px; width: 118px; padding: 5px 5px 6px; }
     .origin figcaption { display: none; }
+    .origin .credit { font-size: 7.5px; letter-spacing: .08em; margin-top: 3px; }
     .origin .arrow { display: none; }
     .origin .pin { font-size: 8px; top: -9px; padding: 2px 6px; }
     .origin.none { width: 130px; }
@@ -1105,7 +1110,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 71</div>
+  <div class="build mono">Build 72</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1233,6 +1238,7 @@
   <span class="pin mono">Origin</span>
   <img alt="Original concept sketch">
   <figcaption class="mono"></figcaption>
+  <span class="credit mono" id="gCredit"></span>
   <span class="arrow mono">sketch → 3D</span>
 </figure>
 <div id="originBox" class="modal" hidden>
@@ -1240,6 +1246,7 @@
     <div class="ozoom" id="ozoom"><img alt="Original concept sketch, full size" id="ozImg"></div>
     <div class="ozbar"><button id="ozOut" aria-label="Zoom out">−</button><span id="ozPct">100%</span><button id="ozIn" aria-label="Zoom in">＋</button><button id="ozFit">1:1</button></div>
     <div class="cap mono"></div>
+    <div class="credit mono" id="oCredit"></div>
     <div class="flow mono"><span>Hand-drawn sketch</span><b>→</b><span>Higgsfield render</span><b>→</b><span>3D model</span><b>→</b><span>Rigged mech in game</span></div>
     <button class="btn" id="originClose" style="width:100%">Close</button>
   </div>
@@ -1326,7 +1333,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=71';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=72';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -5244,6 +5251,7 @@ function buildGalleryRig(keepT = false) {
   const og = $('gOrigin');
   og.classList.toggle('none', !c.sketch);
   og.dataset.hint = tl({ en: 'tap → view & zoom', zh: '撳 → 放大睇原稿', ja: 'タップ → 原画を拡大' });
+  $('gCredit').textContent = ILLUS();
   if (c.sketch) { og.querySelector('img').src = c.sketch; og.querySelector('figcaption').textContent = tl({ en: c.sk, zh: c.skZh, ja: c.skJa }); }
   else og.querySelector('figcaption').textContent = tl({ en: 'No sketch — designed later in the same language as the hand-drawn cast', zh: '冇原稿 — 之後跟手繪角色同一風格設計', ja: '原画なし — 手描きキャストと同じ様式で後から設計' });
   og.hidden = !galleryOn; og.style.animation = 'none'; void og.offsetWidth; og.style.animation = '';
@@ -5381,7 +5389,8 @@ async function originEmerge() {
 }
 // each character opens by stepping out of its drawing (pieces without one transform instead)
 function galleryIntro() { if (!galleryOn || !gRig) return; if (CHARS[gIdx].sketch) originEmerge(); else galleryGo(); }
-$('gOrigin').onclick = () => { const c = CHARS[gIdx]; if (!c.sketch) return; ozSet(1); $('originBox').querySelector('img').src = c.sketch; $('originBox').querySelector('.cap').textContent = tl({ en: c.sk + ' — the original drawing this piece was built from', zh: c.skZh + ' — 呢隻棋嘅原始設計稿', ja: c.skJa + ' — この駒の元になった原画' }); $('originBox').hidden = false; };
+const ILLUS = () => tl({ en: 'Illustrator: Kenneth So', zh: '插畫：Kenneth So', ja: 'イラスト：Kenneth So' });
+$('gOrigin').onclick = () => { const c = CHARS[gIdx]; if (!c.sketch) return; ozSet(1); $('oCredit').textContent = ILLUS(); $('originBox').querySelector('img').src = c.sketch; $('originBox').querySelector('.cap').textContent = tl({ en: c.sk + ' — the original drawing this piece was built from', zh: c.skZh + ' — 呢隻棋嘅原始設計稿', ja: c.skJa + ' — この駒の元になった原画' }); $('originBox').hidden = false; };
 // zoom: buttons, wheel, double-tap and two-finger pinch
 let ozZ = 1;
 function ozSet(z, cx = .5, cy = .5) {
