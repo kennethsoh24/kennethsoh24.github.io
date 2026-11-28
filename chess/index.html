@@ -1117,7 +1117,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 77</div>
+  <div class="build mono">Build 78</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1347,7 +1347,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=77';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=78';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -2282,6 +2282,9 @@ function transformMat(pt, U) {
         // anime rim light: a crisp white band where the surface turns away from the camera
         float animeRim = 1.0 - max( dot( normalize( vViewPosition ), normal ), 0.0 );
         totalEmissiveRadiance += vec3( 0.55 ) * step( 0.68, animeRim ) * diffuseColor.rgb;` : ''));
+    // a mirror-sharp highlight can exceed half-float range on some GPUs (Apple): keep it a bright pixel
+    sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>', `#include <dithering_fragment>
+      gl_FragColor = clamp( mix( gl_FragColor, vec4( 0.0 ), vec4( notEqual( gl_FragColor, gl_FragColor ) ) ), 0.0, 64.0 );`);
   };
   m.customProgramCacheKey = () => (HIGH() ? 'tf-phys' : ANIME() ? 'tf-anime' : 'tf-toon') + (GLOW() ? '-glow' : '') + (CHROME() ? '-chrome' : METAL() ? '-metal' : GFX.startsWith('monolith') ? '-mono' : '');
   return m;
@@ -4036,7 +4039,7 @@ async function animateMoveInner(m) {
 // AI search in a Web Worker (falls back to the main thread if workers are unavailable)
 let aiWorker = null, aiSeq = 0; const aiWait = new Map();
 try {
-  aiWorker = new Worker(new URL('./ai-worker.js?v=77', import.meta.url), { type: 'module' });
+  aiWorker = new Worker(new URL('./ai-worker.js?v=78', import.meta.url), { type: 'module' });
   aiWorker.onmessage = e => { const r = aiWait.get(e.data.id); if (r) { aiWait.delete(e.data.id); r(e.data.m); } };
   aiWorker.onerror = () => { aiWorker = null; aiWait.forEach((r, id) => r(undefined)); aiWait.clear(); };
 } catch (e) { aiWorker = null; }
@@ -5086,6 +5089,7 @@ const GRADED_OUTPUT_FS = `
   varying vec2 vUv;
   vec4 outC( vec2 uv ) {
     vec4 c = texture2D( tDiffuse, uv );
+    c = clamp( mix( c, vec4( 0.0 ), vec4( notEqual( c, c ) ) ), 0.0, 64.0 );   // overflowed pixels stay pixels, never black holes
     #ifdef LINEAR_TONE_MAPPING
       c.rgb = LinearToneMapping( c.rgb );
     #elif defined( REINHARD_TONE_MAPPING )
@@ -5130,6 +5134,12 @@ function buildComposer() {
     composer.addPass(gtao);
   }
   bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .32, .5, .82);
+  // a single overflowed highlight (Inf/NaN in the half-float buffer — Apple GPUs keep them) must not be blurred
+  // across the screen by the bloom mips into black blocks: clean the bloom's input
+  { const hp = bloomPass.materialHighPassFilter;
+    hp.fragmentShader = hp.fragmentShader.replace('vec4 texel = texture2D( tDiffuse, vUv );',
+      'vec4 texel = texture2D( tDiffuse, vUv ); texel = clamp( mix( texel, vec4( 0.0 ), vec4( notEqual( texel, texel ) ) ), 0.0, 64.0 );');
+    hp.needsUpdate = true; }
   composer.addPass(bloomPass);
   // the film grade runs inside the output pass (tone map -> sRGB -> grade in one full-screen pass instead of two);
   // gradePass stays as a handle with the same uniforms and an enabled switch
@@ -5562,7 +5572,7 @@ function adaptResolution(ms) {
   ftAvg += (Math.min(ms, 100) - ftAvg) * .05;
   if (!Q.auto || performance.now() < ftCheck) return;
   let next = dprNow;
-  if (ftAvg > target * 1.15 && dprNow > DPR_MIN) next = Math.max(DPR_MIN, dprNow - .15);
+  if (ftAvg > target * (Q.fps ? 1.06 : 1.15) && dprNow > DPR_MIN) next = Math.max(DPR_MIN, dprNow - .15);   // locked: react once ~1 frame in 4 misses its slot
   else if (dprNow < DPR_MAX && (Q.fps ? ftAvg < target * 1.03 : ftAvg < 13)) next = Math.min(DPR_MAX, dprNow + .1);
   if (next !== dprNow) {
     const down = next < dprNow;
