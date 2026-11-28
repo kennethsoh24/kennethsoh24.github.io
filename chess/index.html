@@ -1110,7 +1110,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 72</div>
+  <div class="build mono">Build 73</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1333,7 +1333,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=72';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=73';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -2219,8 +2219,8 @@ function transformMat(pt, U) {
     sh.fragmentShader = TF_COMMON.replace(/vec3 tfTwist[\s\S]*$/, '\n') + `
       uniform float uSeam; uniform vec3 uAccent; uniform float uInvert; uniform float uLift;` + TF_NOISE + sh.fragmentShader
       .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
-        float tfN = tfField(), tfC = tfCut();
-        if ( tfN > tfC ) discard;
+        float tfN = 0.0, tfC = 1.0;
+        if ( uVis < 0.999 ) { tfN = tfField(); tfC = tfCut(); if ( tfN > tfC ) discard; }   // solid pieces skip the noise
         float tfEdge = uVis < 0.999 ? smoothstep( 0.08, 0.0, tfC - tfN ) : 0.0;
         float tfB = fract( vLoc.y * 6.0 );
         float tfSeam = ( 1.0 - smoothstep( 0.0, 0.035, min( tfB, 1.0 - tfB ) ) ) * uSeam;`)
@@ -2279,7 +2279,7 @@ function transformOutlineMat(U, th) {
       transformed += tfN * ${th.toFixed(4)};`);
     sh.fragmentShader = TF_COMMON.replace(/vec3 tfTwist[\s\S]*$/, '\n') + TF_NOISE + sh.fragmentShader
       .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
-        if ( tfField() > tfCut() - 0.02 ) discard;`);
+        if ( uVis < 0.999 && tfField() > tfCut() - 0.02 ) discard;`);
   };
   m.customProgramCacheKey = () => 'tf-outline' + th;
   return m;
@@ -2334,6 +2334,18 @@ async function loadModels() {
       if (gRig && gRig.type === type) gRig.attachModels(MODELS[type]);
     } catch (e) { console.warn('model failed', type, e); }
   }));
+  prewarmShaders();
+}
+// compile every piece material up front (chess form, mech form, outlines) so the first transformation
+// or battle never stalls on a shader compile; done in the background where the driver allows it
+async function prewarmShaders() {
+  try {
+    const rigsNow = allRigs(), shown = [];
+    for (const r of rigsNow) for (const g of [r.chess, r.robot]) if (g && !g.visible) { g.visible = true; shown.push(g); }
+    if (renderer.compileAsync) await renderer.compileAsync(scene, camera); else renderer.compile(scene, camera);
+    shown.forEach(g => { g.visible = false; });
+    rigsNow.forEach(r => r.apply());
+  } catch (e) { /* not critical */ }
 }
 
 /* ================================================================
@@ -3999,6 +4011,21 @@ async function animateMoveInner(m) {
 }
 
 /* ---------- AI ---------- */
+// AI search in a Web Worker (falls back to the main thread if workers are unavailable)
+let aiWorker = null, aiSeq = 0; const aiWait = new Map();
+try {
+  aiWorker = new Worker(new URL('./ai-worker.js?v=73', import.meta.url), { type: 'module' });
+  aiWorker.onmessage = e => { const r = aiWait.get(e.data.id); if (r) { aiWait.delete(e.data.id); r(e.data.m); } };
+  aiWorker.onerror = () => { aiWorker = null; aiWait.forEach((r, id) => r(undefined)); aiWait.clear(); };
+} catch (e) { aiWorker = null; }
+function searchMove(st, depth, slack) {
+  if (!aiWorker) return Promise.resolve(E.bestMove(st, depth, slack));
+  const id = ++aiSeq;
+  return new Promise(res => {
+    aiWait.set(id, m => res(m === undefined ? E.bestMove(st, depth, slack) : m));
+    aiWorker.postMessage({ id, state: st, depth, slack });
+  });
+}
 async function aiTurn() {
   if (gameOver || isHuman(state.turn) || busy) return;
   if (DC && dcHolding) { setTimeout(aiTurn, 400); return; }
@@ -4007,7 +4034,9 @@ async function aiTurn() {
   await new Promise(r => setTimeout(r, 30));
   const depth = settings.level;
   const demo = settings.mode === 'demo';
-  const m = E.bestMove(state, depth, depth === 1 ? 90 : demo ? 14 : 6);   // a little looser in demo so games differ
+  const asked = state;
+  const m = await searchMove(state, depth, depth === 1 ? 90 : demo ? 14 : 6);   // a little looser in demo so games differ
+  if (state !== asked) { busy = false; return; }   // the game changed while thinking (undo / new game)
   if (demo) await new Promise(r => setTimeout(r, 450 / SPEED));
   busy = false;
   if (m && !gameOver && !isHuman(state.turn)) play(m);
@@ -4401,11 +4430,12 @@ function whyMove(s, m) {
   return R("The engine's top pick here: it improves your position.", '引擎認為呢步最好，可以改善你嘅局面。', 'エンジンの最善手：局面を改善します。');
 }
 function clearHint() { hintBox.hidden = true; if (hintArrow) { hintArrow.removeFromParent(); hintArrow.geometry.dispose(); hintArrow = null; } }
-hintBtn.onclick = () => {
+hintBtn.onclick = async () => {
   if (busy || gameOver || !isHuman(state.turn)) return;
   clearHint();
-  const m = E.bestMove(state, Math.max(2, settings.level), 0);
-  if (!m) return;
+  const asked = state;
+  const m = await searchMove(state, Math.max(2, settings.level), 0);
+  if (!m || state !== asked) return;
   select(m.from);
   // a glowing ribbon from the piece to its best square
   const a = sqPos(m.from).setY(.06), b = sqPos(m.to).setY(.06), d = b.clone().sub(a), len = d.length();
@@ -5466,7 +5496,7 @@ function adaptResolution(ms) {
   let next = dprNow;
   if (ftAvg > 19 && dprNow > DPR_MIN) next = Math.max(DPR_MIN, dprNow - .15);
   else if (ftAvg < 13 && dprNow < DPR_MAX) next = Math.min(DPR_MAX, dprNow + .1);
-  if (next !== dprNow) { const down = next < dprNow; dprNow = next; renderer.setPixelRatio(dprNow); resize(); ftCheck = performance.now() + (down ? 700 : 2500); }
+  if (next !== dprNow) { const down = next < dprNow; dprNow = next; renderer.setPixelRatio(dprNow); resize(); ftCheck = performance.now() + (down ? 2500 : 6000); }
 }
 function frame() {
   const dt = Math.min(.05, (performance.now() - lastFrame) / 1000);
