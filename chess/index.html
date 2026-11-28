@@ -125,6 +125,20 @@
   .gskin .mono { padding-right: 12px; color: var(--grey); }
   .gskin .btn { margin-left: -1px; padding: 6px 4px; }
   #cfgModal { z-index: 26; }
+  /* language switch: always in the top-right corner */
+  #langSw { position: fixed; z-index: 66; top: 8px; right: 8px; display: flex; border: 1px solid var(--edge, rgba(13,13,13,.3)); background: rgba(10,12,15,.55);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  #langSw button { all: unset; cursor: pointer; padding: 4px 8px; font: 500 10.5px var(--mono); letter-spacing: .08em; color: #c9ced5; }
+  #langSw button + button { border-left: 1px solid rgba(217,222,228,.18); }
+  #langSw button[aria-pressed="true"] { background: #e9edf2; color: #07080a; }
+  #hudtop { top: 42px !important; }
+  #gOrigin { top: 104px; }
+  /* zoomable full sketch */
+  .ozoom { position: relative; overflow: auto; max-height: 70vh; touch-action: pan-x pan-y; background: #e9e6de; }
+  .ozoom img { display: block; width: 100%; max-width: none; transform-origin: 0 0; cursor: zoom-in; }
+  .ozbar { display: flex; gap: 0; margin: 8px 0 0; }
+  .ozbar button { flex: 1; margin-left: -1px; padding: 8px 4px; background: #fff; color: #111; border: 1px solid #111; font: 600 14px var(--mono); cursor: pointer; }
+  .ozbar span { flex: 2; display: grid; place-items: center; border: 1px solid #111; margin-left: -1px; font: 11px var(--mono); letter-spacing: .1em; color: #444; }
   /* gallery: the original concept sketch, pinned like a photo beside the model */
   .origin { position: fixed; z-index: 4; right: 22px; top: 92px; width: 250px; margin: 0; padding: 8px 8px 10px; background: #f4f2ec; color: #111;
     box-shadow: 0 18px 50px rgba(0,0,0,.55); transform: rotate(2.2deg); cursor: zoom-in; animation: pinIn .5s cubic-bezier(.2,1,.2,1) both; }
@@ -294,7 +308,7 @@
     .player .name { font-size: 18px; }
     #moves { max-height: 40px; }
     .sec { margin-bottom: 5px; }
-    #fab { width: 84px; height: 84px; right: 10px; top: 10px; bottom: auto; padding: 8px; }
+    #fab { width: 84px; height: 84px; right: 10px; top: 40px; bottom: auto; padding: 8px; }
     #fab .t { font-size: 27px; } #fab .mono { display: none; }
     #gName { top: 56px; font-size: 52px; }
     #gallery .chips { grid-template-columns: repeat(3, 1fr); }
@@ -1090,7 +1104,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 67</div>
+  <div class="build mono">Build 68</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1119,7 +1133,6 @@
     <div class="foot">
       <div class="opts mono"><span>AI —</span><span id="tLevel" style="display:flex"><button class="btn" data-l="1">Easy</button><button class="btn" data-l="2" aria-pressed="true" style="margin-left:-1px">Normal</button><button class="btn" data-l="3" style="margin-left:-1px">Hard</button></span></div>
       <div class="opts mono finish-row"><span>Finish —</span><span style="display:flex" class="finish"><button class="btn" data-gfx="monolith">Mono</button><button class="btn" data-gfx="monolithglow" style="margin-left:-1px">Glow</button><button class="btn" data-gfx="monolithchrome" style="margin-left:-1px">Chrome</button><button class="btn" data-gfx="monolithmetal" style="margin-left:-1px">Metal</button></span></div>
-      <div class="opts mono"><span>Language —</span><span style="display:flex"><button class="btn" data-lang="en">EN</button><button class="btn" data-lang="zh" style="margin-left:-1px">繁中</button><button class="btn" data-lang="ja" style="margin-left:-1px">日本語</button></span></div>
       <div class="opts mono"><span>Music —</span><span style="display:flex"><button class="btn" data-music="1">On</button><button class="btn" data-music="0" style="margin-left:-1px">Off</button></span></div>
       <div class="opts mono"><span>Theme —</span><span style="display:flex"><button class="btn" data-theme="mono">Mono</button><button class="btn" data-theme="moon" style="margin-left:-1px">Moonlit</button></span></div>
       <div class="loadbar mono"><span id="loadText">Loading models</span><div class="track"><div class="fill" id="loadFill"></div></div></div>
@@ -1208,6 +1221,7 @@
   </section>
 </aside>
 
+<div id="langSw" class="mono" role="group" aria-label="Language"><button data-lang="ja">日本語</button><button data-lang="zh">繁中</button><button data-lang="en">EN</button></div>
 <button id="hintBtn" class="mono" hidden title="Suggest a move"><span class="hi">?</span><span>Hint</span></button>
 <div id="hintBox" hidden></div>
 <section id="tutCard" hidden aria-live="polite"></section>
@@ -1216,14 +1230,14 @@
 <p id="gName">Pawn 2</p>
 <figure id="gOrigin" class="origin" hidden>
   <span class="pin mono">Origin</span>
-  <button class="full" id="gOriginFull" aria-label="Full sketch">⤢</button>
   <img alt="Original concept sketch">
   <figcaption class="mono"></figcaption>
   <span class="arrow mono">sketch → 3D</span>
 </figure>
 <div id="originBox" class="modal" hidden>
   <div class="obox">
-    <img alt="Original concept sketch, full size">
+    <div class="ozoom" id="ozoom"><img alt="Original concept sketch, full size" id="ozImg"></div>
+    <div class="ozbar"><button id="ozOut" aria-label="Zoom out">−</button><span id="ozPct">100%</span><button id="ozIn" aria-label="Zoom in">＋</button><button id="ozFit">1:1</button></div>
     <div class="cap mono"></div>
     <div class="flow mono"><span>Hand-drawn sketch</span><b>→</b><span>Higgsfield render</span><b>→</b><span>3D model</span><b>→</b><span>Rigged mech in game</span></div>
     <button class="btn" id="originClose" style="width:100%">Close</button>
@@ -1311,7 +1325,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=67';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=68';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1364,7 +1378,8 @@ const I18N = { zh: {"Loading models": "載入模型中", "Every piece transforms
   ja: {"Loading models": "モデル読み込み中", "Every piece transforms": "すべての駒が変形する", "Every piece transforms.": "すべての駒が変形する。", "Pawn 2": "ポーン 2", "Bishop 2.0": "ビショップ 2.0", "King": "キング", "Queen": "クイーン", "Knight": "ナイト", "Rook": "ルーク", "Bishop": "ビショップ", "Pawn": "ポーン", "On air — Channel 01": "オンエア — チャンネル 01", "Gear up": "全軍変形", "On air": "オンエア", "Channel 01": "チャンネル 01", "Tutorial": "チュートリアル", "Play White": "白で対戦", "Play Black": "黒で対戦", "Versus": "二人対戦", "COM vs COM": "COM 対 COM", "Gallery": "ギャラリー", "Config": "設定", "AI —": "AI —", "Easy": "やさしい", "Normal": "ふつう", "Hard": "むずかしい", "Finish —": "仕上げ —", "Mono": "モノ", "Glow": "グロウ", "Chrome": "クローム", "Metal": "メタル", "Music —": "音楽 —", "On": "オン", "Off": "オフ", "Theme —": "テーマ —", "Moonlit": "月夜", "Language —": "言語 —", "Cast — 4": "キャスト — 4", "Pawn 2 / Bishop 2.0 / King / Queen": "ポーン 2 / ビショップ 2.0 / キング / クイーン", "3D via Higgsfield": "3D 制作：Higgsfield", "♪ Tap anywhere for sound": "♪ タップでサウンド", "← Menu": "← メニュー", "Live": "ライブ", "01 — Players": "01 — プレイヤー", "vs AI": "対 AI", "Black": "黒", "White": "白", "YOU": "あなた", "Your move": "あなたの番", "Undo": "待った", "Flip": "反転", "Cast": "キャスト", "Retry": "やり直し", "02 — Config": "02 — 設定", "AI": "AI", "Morph": "変形", "Every move": "毎手", "On capture": "駒取り時", "Always mech": "常にメカ", "Never": "しない", "Battle": "バトル", "Full": "フル", "Quick": "クイック", "Graphics": "グラフィック", "Cinema": "シネマ", "Anime 2.5D": "アニメ 2.5D", "Anime 2.5D · Fine line": "アニメ 2.5D · 細線", "Monolith": "モノリス", "Monolith · Glow": "モノリス · グロウ", "Monolith · Chrome": "モノリス · クローム", "Monolith · Metal": "モノリス · メタル", "High": "高", "Classic": "クラシック", "Camera": "カメラ", "Cinematic": "シネマティック", "Fixed": "固定", "Music": "音楽", "Theme": "テーマ", "Speed": "速度", "Sound": "効果音", "Language": "言語", "Graphics quality": "画質", "Preset": "プリセット", "Ultra": "最高", "Medium": "中", "Low": "低", "Custom": "カスタム", "Resolution": "解像度", "Auto res": "自動解像度", "Shadows": "影", "AO": "AO", "Bloom": "ブルーム", "Fog": "霧", "Particles": "パーティクル", "Reflect": "反射", "Outlines": "輪郭線", "03 — Log": "03 — 棋譜", "Hint": "ヒント", "Gear": "全軍", "Up": "変形", "All units": "全ユニット", "Origin": "原画", "sketch → 3D": "原画 → 3D", "Hand-drawn sketch": "手描きスケッチ", "Higgsfield render": "Higgsfield レンダー", "3D model": "3D モデル", "Rigged mech in game": "ゲーム内のリグ付きメカ", "Close": "閉じる", "Skin": "スキン", "Chess": "駒", "Mech": "メカ", "Transform": "変形", "Attack": "攻撃", "Team": "チーム", "Spin": "回転", "Back": "戻る", "Pawn reached the last rank": "ポーンが最終段に到達", "Promotion": "プロモーション", "CH.02 — Battle feed": "CH.02 — バトル映像", "Skip ›": "スキップ ›", "Press start": "スタート", "Click, tap or press any key — sound on": "クリック・タップ・任意のキーで開始（音声あり）", "Done": "完了", "Checkmate": "チェックメイト", "Check": "チェック", "DRAW": "引き分け", "Game Start": "ゲームスタート", "Next Match": "次の対局", "Demo": "デモ", "Gear Up": "全軍変形", "Stalemate": "ステイルメイト", "50-move rule": "50手ルール", "Insufficient material": "駒不足", "Demo move limit": "デモ手数上限", "Draw — move limit": "引き分け — 手数上限", "Demo — auto play": "デモ — 自動対局", "Player 1": "プレイヤー 1", "Player 2": "プレイヤー 2", "EASY": "やさしい", "NORMAL": "ふつう", "HARD": "むずかしい", "Skip ✕": "スキップ ✕", "Close ✕": "閉じる ✕", "Lessons": "レッスン", "Next": "次へ", "Lesson complete ✓": "レッスン完了 ✓", "Play vs AI": "AI と対戦", "Next lesson": "次のレッスン", "New here? — 新手？": "はじめて？", "Start tutorial": "チュートリアル開始", "Skip": "スキップ", "Tutorial — 教學": "チュートリアル", "Take the one-minute tutorial: how to play, plus openings like the Queen's Gambit.": "1分チュートリアル：遊び方と、クイーンズ・ギャンビットなどの定跡。", "Moves": "手数", "Sector": "マス", "{who} to move": "{who}の番", "{who} is in check": "{who}がチェック", "{who} is plotting…": "{who}が思考中…", "{who} is thinking…": "{who}が思考中…", "Checkmate — {who} wins": "チェックメイト — {who}の勝ち", "{who} wins": "{who}の勝ち", "Draw — {why}": "引き分け — {why}", "{who} king": "{who}のキング", "Move {n}": "{n} 手目", "Cast {n} / 06 — {team}": "キャスト {n} / 06 — {team}", "{side} plays {san}.": "{side}：{san}。", "Nice. Next up: {name}.": "お見事！次は：{name}。", "Hint · {san}": "ヒント · {san}", "{name} · {k}/{n}": "{name} · {k}/{n}"} };
 // one language at a time: English, Traditional Chinese or Japanese
 let LANG = 'en';
-try { LANG = localStorage.getItem('cf-lang') || (/^zh/i.test(navigator.language) ? 'zh' : /^ja/i.test(navigator.language) ? 'ja' : 'en'); } catch (e) { /* storage blocked */ }
+let LANG_SAVED = null; try { LANG_SAVED = localStorage.getItem('cf-lang2'); } catch (e) { /* storage blocked */ }
+LANG = LANG_SAVED || 'ja';   // Japanese is the main language
 const t = (s, v) => { let r = LANG === 'en' ? s : (I18N[LANG][s] ?? s); if (v) for (const k in v) r = r.split('{' + k + '}').join(v[k]); return r; };
 const tl = o => (o && (LANG === 'zh' ? o.zh : LANG === 'ja' ? o.ja : o.en)) || (o && o.en) || '';   // pick one of {en, zh, ja}
 const ORIG = new WeakMap();
@@ -1386,7 +1401,7 @@ function applyLang() {
   if ($('lang')) $('lang').value = LANG;
 }
 function setLang(l) {
-  LANG = l; try { localStorage.setItem('cf-lang', l); } catch (e) { /* storage blocked */ }
+  LANG = l; try { localStorage.setItem('cf-lang2', l); } catch (e) { /* storage blocked */ }
   applyLang();
   if (typeof refreshStatus === 'function' && state) { refreshStatus(); }
   if (typeof galleryOn !== 'undefined' && galleryOn && gRig) buildGalleryRig(true);
@@ -5210,7 +5225,7 @@ const gChips = $('gChips');
 CHARS.forEach((c, i) => {
   const b = document.createElement('button');
   b.className = 'btn'; b.textContent = c.name;
-  b.onclick = () => { if (gAnimating) return; gIdx = i; buildGalleryRig(); setTimeout(galleryGo, 350); };
+  b.onclick = () => { if (gAnimating) return; gIdx = i; buildGalleryRig(); setTimeout(galleryIntro, 350); };
   gChips.append(b);
 });
 function buildGalleryRig(keepT = false) {
@@ -5226,7 +5241,7 @@ function buildGalleryRig(keepT = false) {
   $('gNote').textContent = tl({ en: c.note, zh: c.noteZh, ja: c.noteJa });
   const og = $('gOrigin');
   og.classList.toggle('none', !c.sketch);
-  og.dataset.hint = tl({ en: 'tap → watch it come to life', zh: '撳 → 睇佢由畫入面走出嚟', ja: 'タップ → 絵から飛び出す' });
+  og.dataset.hint = tl({ en: 'tap → view & zoom', zh: '撳 → 放大睇原稿', ja: 'タップ → 原画を拡大' });
   if (c.sketch) { og.querySelector('img').src = c.sketch; og.querySelector('figcaption').textContent = tl({ en: c.sk, zh: c.skZh, ja: c.skJa }); }
   else og.querySelector('figcaption').textContent = tl({ en: 'No sketch — designed later in the same language as the hand-drawn cast', zh: '冇原稿 — 之後跟手繪角色同一風格設計', ja: '原画なし — 手描きキャストと同じ様式で後から設計' });
   og.hidden = !galleryOn; og.style.animation = 'none'; void og.offsetWidth; og.style.animation = '';
@@ -5269,7 +5284,7 @@ function openGallery(fromTitle = false) {
   controls.autoRotate = true; controls.autoRotateSpeed = 1.4;
   buildGalleryRig();
   resize();
-  setTimeout(galleryGo, 500);
+  setTimeout(galleryIntro, 500);
 }
 function closeGallery() {
   galleryOn = false;
@@ -5362,8 +5377,33 @@ async function originEmerge() {
     controls.autoRotate = spin; gAnimating = false;
   }
 }
-$('gOrigin').onclick = e => { if (e.target.id === 'gOriginFull') return; originEmerge(); };
-$('gOriginFull').onclick = e => { e.stopPropagation(); const c = CHARS[gIdx]; if (!c.sketch) return; $('originBox').querySelector('img').src = c.sketch; $('originBox').querySelector('.cap').textContent = tl({ en: c.sk + ' — the original drawing this piece was built from', zh: c.skZh + ' — 呢隻棋嘅原始設計稿', ja: c.skJa + ' — この駒の元になった原画' }); $('originBox').hidden = false; };
+// each character opens by stepping out of its drawing (pieces without one transform instead)
+function galleryIntro() { if (!galleryOn || !gRig) return; if (CHARS[gIdx].sketch) originEmerge(); else galleryGo(); }
+$('gOrigin').onclick = () => { const c = CHARS[gIdx]; if (!c.sketch) return; ozSet(1); $('originBox').querySelector('img').src = c.sketch; $('originBox').querySelector('.cap').textContent = tl({ en: c.sk + ' — the original drawing this piece was built from', zh: c.skZh + ' — 呢隻棋嘅原始設計稿', ja: c.skJa + ' — この駒の元になった原画' }); $('originBox').hidden = false; };
+// zoom: buttons, wheel, double-tap and two-finger pinch
+let ozZ = 1;
+function ozSet(z, cx = .5, cy = .5) {
+  const box = $('ozoom'), img = $('ozImg'), old = ozZ;
+  ozZ = Math.max(1, Math.min(5, z));
+  const sx = (box.scrollLeft + box.clientWidth * cx) / old, sy = (box.scrollTop + box.clientHeight * cy) / old;
+  img.style.width = (ozZ * 100) + '%';
+  box.scrollLeft = sx * ozZ - box.clientWidth * cx; box.scrollTop = sy * ozZ - box.clientHeight * cy;
+  $('ozPct').textContent = Math.round(ozZ * 100) + '%'; img.style.cursor = ozZ > 1 ? 'zoom-out' : 'zoom-in';
+}
+$('ozIn').onclick = () => ozSet(ozZ * 1.5); $('ozOut').onclick = () => ozSet(ozZ / 1.5); $('ozFit').onclick = () => ozSet(1);
+$('ozoom').addEventListener('wheel', e => { e.preventDefault(); const r = e.currentTarget.getBoundingClientRect(); ozSet(ozZ * (e.deltaY < 0 ? 1.2 : 1 / 1.2), (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); }, { passive: false });
+$('ozImg').ondblclick = e => { const r = $('ozoom').getBoundingClientRect(); ozSet(ozZ > 1 ? 1 : 2.5, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); };
+{
+  const pts = new Map(); let d0 = 0, z0 = 1, lastTap = 0;
+  const el = $('ozoom');
+  el.addEventListener('pointerdown', e => { pts.set(e.pointerId, e); if (pts.size === 2) { const [a, b] = [...pts.values()]; d0 = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); z0 = ozZ; }
+    if (e.pointerType === 'touch' && pts.size === 1) { const n = performance.now(); if (n - lastTap < 300) { const r = el.getBoundingClientRect(); ozSet(ozZ > 1 ? 1 : 2.5, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); } lastTap = n; } });
+  el.addEventListener('pointermove', e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, e);
+    if (pts.size === 2) { const [a, b] = [...pts.values()], r = el.getBoundingClientRect(); const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      ozSet(z0 * d / d0, ((a.clientX + b.clientX) / 2 - r.left) / r.width, ((a.clientY + b.clientY) / 2 - r.top) / r.height); } });
+  const up = e => pts.delete(e.pointerId); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  el.style.touchAction = 'pan-x pan-y';
+}
 $('originClose').onclick = $('originBox').onclick = e => { if (e.target.id === 'originBox' || e.target.id === 'originClose') $('originBox').hidden = true; };
 $('gSpin').onclick = () => { controls.autoRotate = !controls.autoRotate; };
 $('gT').oninput = e => { if (gRig && !gAnimating) gRig.t = +e.target.value; };
