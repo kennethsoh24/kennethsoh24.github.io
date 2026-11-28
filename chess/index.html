@@ -118,11 +118,18 @@
   .tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
   .tools .btn { margin-left: -1px; padding: 8px 4px; }
   /* Monolith finish switch: Mono / Glow / Chrome, switchable at any time */
-  .styles { display: none; grid-template-columns: repeat(3, 1fr); margin-top: 6px; }
+  .styles { display: none; grid-template-columns: repeat(4, 1fr); margin-top: 6px; }
+  #cfgModal { z-index: 26; }
+  .cfgcard { width: min(420px, 94vw); max-height: 86vh; overflow-y: auto; }
+  .cfgcard #settings summary { display: none; }
+  .cfgcard .styles { margin: 0 0 6px; }
+  .finish-row { display: none !important; }
+  body.monolith .finish-row { display: flex !important; }
   body.monolith .styles { display: grid; }
   .styles .btn { margin-left: -1px; padding: 7px 4px; }
   body.glow .styles [data-gfx="monolithglow"][aria-pressed="true"] { color: #07080a; }
-  #panel { overflow-y: auto; overscroll-behavior: contain; }
+  #panel { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  #panel > section { flex-shrink: 0; }
   details summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; }
   details summary::-webkit-details-marker { display: none; }
   details summary::after { content: "+"; font-family: var(--mono); }
@@ -237,7 +244,8 @@
     header .wm { font-size: 24px; }
     #hudtop { display: none; }
     #panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 42vh; border-left: 0; border-right: 0; border-bottom: 0; -webkit-overflow-scrolling: touch; }
-    #panel:has(#settings[open]) { max-height: 62vh; }
+    #panel:has(#settings[open]), #panel.cfgopen { max-height: 72vh; }
+    .styles { grid-template-columns: repeat(4, 1fr); }
     #settings[open] { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; }
     #settings summary { grid-column: 1 / -1; }
     #settings .field { grid-template-columns: 50px minmax(0, 1fr); gap: 5px; margin-top: 5px; font-size: 10px; }
@@ -968,6 +976,8 @@
     body.monolith .screen::after { background: linear-gradient(0deg, rgba(7,8,10,1) 0%, rgba(7,8,10,.55) 45%, rgba(7,8,10,0) 75%); }
     body.monolith #panel { border-top: 1px solid var(--edge); }
     body.monolith .screen .tc { display: none; }
+    #title .left { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    body.monolith .mi { padding: 6px 4px 5px; } body.monolith .mi .t { font-size: 25px; } body.monolith #title .foot { gap: 7px; } body.monolith .opts .btn { padding: 5px 9px; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; } }
 </style>
@@ -999,7 +1009,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 56</div>
+  <div class="build mono">Build 57</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1022,9 +1032,11 @@
       <button class="mi" data-mode="pvp"><span class="n">03</span><span class="t">Versus</span><span class="a">→</span></button>
       <button class="mi" data-mode="demo"><span class="n">04</span><span class="t">COM vs COM</span><span class="a">→</span></button>
       <button class="mi" id="tGallery"><span class="n">05</span><span class="t">Gallery</span><span class="a">→</span></button>
+      <button class="mi" id="tConfig"><span class="n">06</span><span class="t">Config</span><span class="a">→</span></button>
     </nav>
     <div class="foot">
       <div class="opts mono"><span>AI —</span><span id="tLevel" style="display:flex"><button class="btn" data-l="1">Easy</button><button class="btn" data-l="2" aria-pressed="true" style="margin-left:-1px">Normal</button><button class="btn" data-l="3" style="margin-left:-1px">Hard</button></span></div>
+      <div class="opts mono finish-row"><span>Finish —</span><span style="display:flex" class="finish"><button class="btn" data-gfx="monolith">Mono</button><button class="btn" data-gfx="monolithglow" style="margin-left:-1px">Glow</button><button class="btn" data-gfx="monolithchrome" style="margin-left:-1px">Chrome</button><button class="btn" data-gfx="monolithmetal" style="margin-left:-1px">Metal</button></span></div>
       <div class="opts mono"><span>Music —</span><span style="display:flex"><button class="btn" data-music="1">On</button><button class="btn" data-music="0" style="margin-left:-1px">Off</button></span></div>
       <div class="opts mono"><span>Theme —</span><span style="display:flex"><button class="btn" data-theme="mono">Mono</button><button class="btn" data-theme="moon" style="margin-left:-1px">Moonlit</button></span></div>
       <div class="loadbar mono"><span id="loadText">Loading models</span><div class="track"><div class="fill" id="loadFill"></div></div></div>
@@ -1058,7 +1070,7 @@
       <button class="btn" id="bNew" title="Restart">Retry</button>
     </div>
     <div class="styles" id="styles" role="group" aria-label="Piece finish">
-      <button class="btn" data-gfx="monolith">Mono</button><button class="btn" data-gfx="monolithglow">Glow</button><button class="btn" data-gfx="monolithchrome">Chrome</button>
+      <button class="btn" data-gfx="monolith">Mono</button><button class="btn" data-gfx="monolithglow">Glow</button><button class="btn" data-gfx="monolithchrome">Chrome</button><button class="btn" data-gfx="monolithmetal">Metal</button>
     </div>
   </section>
   <section>
@@ -1071,7 +1083,7 @@
       <label class="field mono">Battle
         <select id="battle"><option value="full" selected>Full</option><option value="quick">Quick</option></select></label>
       <label class="field mono">Graphics
-        <select id="gfx"><option value="cinema" class="no-bw">Cinema</option><option value="anime" class="bw-only">Anime 2.5D</option><option value="animefine" class="bw-only">Anime 2.5D · Fine line</option><option value="monolith">Monolith</option><option value="monolithglow">Monolith · Glow</option><option value="monolithchrome">Monolith · Chrome</option><option value="high">High</option><option value="classic">Classic</option></select></label>
+        <select id="gfx"><option value="cinema" class="no-bw">Cinema</option><option value="anime" class="bw-only">Anime 2.5D</option><option value="animefine" class="bw-only">Anime 2.5D · Fine line</option><option value="monolith">Monolith</option><option value="monolithglow">Monolith · Glow</option><option value="monolithchrome">Monolith · Chrome</option><option value="monolithmetal">Monolith · Metal</option><option value="high">High</option><option value="classic">Classic</option></select></label>
       <label class="field mono">Camera
         <select id="cam"><option value="cine" selected>Cinematic</option><option value="fixed">Fixed</option></select></label>
       <label class="field mono">Music
@@ -1174,7 +1186,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=56';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=57';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1252,7 +1264,9 @@ const ANIME = () => GFX === 'anime' || GFX === 'animefine';
 const FINE = () => GFX === 'animefine';   // same cel render, fine black linework
 const HIGH = () => GFX === 'high' || GFX === 'cinema' || GFX.startsWith('monolith');
 const GLOW = () => GFX === 'monolithglow';
-const CHROME = () => GFX === 'monolithchrome';   // Monolith with mirror-chrome pieces: gold for Black, blue for White   // Monolith with the gold / blue trim glowing
+const CHROME = () => GFX === 'monolithchrome';
+const METAL = () => GFX === 'monolithmetal';   // Monolith with plain polished metal pieces: silver White, black-steel Black, no pattern
+const MIRROR = () => CHROME() || METAL();   // Monolith with mirror-chrome pieces: gold for Black, blue for White   // Monolith with the gold / blue trim glowing
 const INK = () => false;
 const CINE = () => GFX === 'cinema' && !BWED && (THEME === 'mono' || THEME === 'ops');
 const OPS = () => THEME === 'ops';
@@ -1552,7 +1566,7 @@ class Rig {
           if (!mech.root.parent) mesh.add(mech.root);
           mesh.updateMatrixWorld(true); mesh.bind(mech.skeleton);
         }
-        if ((!isMobile || which === 'chess' || ANIME()) && !(CHROME() && this.team === 'w')) {   // Chrome: White pieces have no ink outline
+        if ((!isMobile || which === 'chess' || ANIME()) && !(MIRROR() && this.team === 'w')) {   // Chrome / Metal: White pieces have no ink outline
           const th = FINE() ? (which === 'chess' ? .0065 : .004) : ANIME() ? (which === 'chess' ? .016 : .011) : HIGH() ? (which === 'chess' ? .007 : .0045) : (which === 'chess' ? .012 : .007);
           const ol = mech ? new THREE.SkinnedMesh(pt.geo, transformOutlineMat(U, th)) : new THREE.Mesh(pt.geo, transformOutlineMat(U, th));
           if (mech) { ol.bind(mech.skeleton, mesh.bindMatrix); ol.frustumCulled = false; }
@@ -2002,7 +2016,8 @@ function transformMat(pt, U) {
       })
     : new THREE.MeshToonMaterial({ map, gradientMap: ANIME() ? animeGrad : grad });
   if (HIGH() && pt.normalMap) m.normalScale.set(.8, .8);
-  if (CHROME()) { m.clearcoat = .8; m.clearcoatRoughness = .06; m.envMapIntensity = 6; }   // the trim reflects strongly (see the shader below)
+  if (CHROME()) { m.clearcoat = .8; m.clearcoatRoughness = .06; m.envMapIntensity = 6; }
+  if (METAL()) { m.clearcoat = 1; m.clearcoatRoughness = .06; m.envMapIntensity = 2.2; if (pt.normalMap) m.normalScale.set(.6, .6); }   // the trim reflects strongly (see the shader below)
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U, { uLift: PIECE_LIFT });
     sh.vertexShader = TF_COMMON + sh.vertexShader
@@ -2032,11 +2047,13 @@ function transformMat(pt, U) {
           vec3 o = s;
           if ( blue || gold ) { o = uAccent * clamp( 0.3 + mx * 1.05, 0.0, 1.25 ); tfAcc = smoothstep( 0.28, 0.5, sat ); }
           else if ( !red && uInvert > 0.5 ) o = ` + (GFX.startsWith('monolith') ? `vec3( 0.93 - 0.32 * smoothstep( 0.0, 0.5, L ) ) /* clean white: source highlights stay light grey */` : `vec3( mix( 1.0 - L * 0.8, ( 1.0 - L ) * 0.38, smoothstep( 0.35, 0.6, L ) ) )`) + `;
-          else if ( !red ) o = vec3( L * 0.9 );` + (CHROME() ? `
+          else if ( !red ) o = vec3( L * 0.9 );` + (METAL() ? `
+          if ( !red ) { o = uAccent.b > uAccent.r ? vec3( 1.0 ) : vec3( 0.025 ); tfAcc = 0.0; }` : '') + (CHROME() ? `
           if ( blue || gold ) o = ( uAccent.b > uAccent.r ? vec3( 0.55, 0.74, 1.0 ) : vec3( 1.0, 0.8, 0.36 ) ) * mix( 0.8, 1.1, mx );   // chrome trim tint` : '') + `
           diffuseColor.rgb *= pow( o, vec3( 2.2 ) );
         #endif`)
-      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>' + (CHROME() ? `
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>' + (METAL() ? `
+        metalnessFactor = uAccent.b > uAccent.r ? 0.25 : 0.55; roughnessFactor = uAccent.b > uAccent.r ? 0.28 : 0.18;   // white stays white, black stays black, both polished` : '') + (CHROME() ? `
         metalnessFactor = mix( metalnessFactor * 0.15, 1.0, tfAcc );
         roughnessFactor = mix( max( roughnessFactor, 0.72 ), 0.07, tfAcc );` : ''))
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
@@ -2053,7 +2070,7 @@ function transformMat(pt, U) {
         float animeRim = 1.0 - max( dot( normalize( vViewPosition ), normal ), 0.0 );
         totalEmissiveRadiance += vec3( 0.55 ) * step( 0.68, animeRim ) * diffuseColor.rgb;` : ''));
   };
-  m.customProgramCacheKey = () => (HIGH() ? 'tf-phys' : ANIME() ? 'tf-anime' : 'tf-toon') + (GLOW() ? '-glow' : '') + (CHROME() ? '-chrome' : GFX.startsWith('monolith') ? '-mono' : '');
+  m.customProgramCacheKey = () => (HIGH() ? 'tf-phys' : ANIME() ? 'tf-anime' : 'tf-toon') + (GLOW() ? '-glow' : '') + (CHROME() ? '-chrome' : METAL() ? '-metal' : GFX.startsWith('monolith') ? '-mono' : '');
   return m;
 }
 function transformOutlineMat(U, th) {
@@ -3997,6 +4014,21 @@ addEventListener('keydown', e => {
   items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1) + (i < 0 ? 1 : 0)) % items.length].focus();
   e.preventDefault();
 });
+// title Config: the in-game settings (and the finish switch) move into a sheet over the menu, and back on close
+const cfgModal = document.createElement('div');
+cfgModal.className = 'modal'; cfgModal.id = 'cfgModal'; cfgModal.hidden = true;
+cfgModal.innerHTML = '<div class="card cfgcard"><h2>Config</h2><div id="cfgBody"></div><button class="btn" id="cfgClose" style="width:100%;margin-top:12px">Done</button></div>';
+document.body.append(cfgModal);
+$('tConfig').onclick = () => {
+  const body = $('cfgBody'); body.append($('styles'), $('settings')); $('settings').open = true; $('styles').style.display = 'grid';
+  cfgModal.hidden = false;
+};
+$('cfgClose').onclick = cfgModal.onclick = e => {
+  if (e.target !== cfgModal && e.target.id !== 'cfgClose') return;
+  const tools = document.querySelector('#panel .tools').parentNode; tools.append($('styles')); $('styles').style.display = '';
+  document.querySelector('#panel section:nth-of-type(3)').append($('settings')); $('settings').open = false;
+  cfgModal.hidden = true;
+};
 $('tGallery').onclick = () => { document.body.classList.remove('intro'); $('title').classList.add('hide'); openGallery(true); };
 $('bMenu').onclick = () => {
   if (busy && settings.mode !== 'demo') return;
@@ -4018,7 +4050,7 @@ function setGfx(v) {
   try { localStorage.setItem(GFX_KEY, GFX); } catch (er) { /* storage blocked */ }
   applyGfx(true);
 }
-document.querySelectorAll('#styles [data-gfx]').forEach(b => b.onclick = () => { tvStatic(160); setGfx(b.dataset.gfx); });
+document.querySelectorAll('#styles [data-gfx], .finish [data-gfx]').forEach(b => b.onclick = () => { tvStatic(160); setGfx(b.dataset.gfx); });
 $('gfx').onchange = e => {
   if (busy) { e.target.value = GFX; return; }
   GFX = e.target.value;
@@ -4448,43 +4480,39 @@ const motes = new THREE.Points(moteGeo, new THREE.ShaderMaterial({
     void main() { float d = length( gl_PointCoord - 0.5 ); float a = smoothstep( 0.5, 0.0, d ) * vA; gl_FragColor = vec4( vec3( 0.85, 0.9, 1.0 ) * a * 0.9, 1.0 ); }`,
 }));
 motes.frustumCulled = false; motes.raycast = () => {}; abyss.add(motes);
-// drifting mist: soft noise sheets that slide across the board at knee height, lit where the light column falls
-const mistSheets = [];
-{
-  const MS_FS = `
-    uniform float uTime; uniform float uSeed; uniform float uOp; varying vec2 vUv; varying vec3 vW;
-    float mh( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
-    float mn( vec2 p ) { vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
-      return mix( mix( mh( i ), mh( i + vec2( 1, 0 ) ), f.x ), mix( mh( i + vec2( 0, 1 ) ), mh( i + vec2( 1, 1 ) ), f.x ), f.y ); }
-    float fbm( vec2 p ) { float v = 0.0, a = 0.5; for ( int i = 0; i < 3; i++ ) { v += a * mn( p ); p = p * 2.02 + 7.3; a *= 0.5; } return v; }
-    void main() {
-      vec2 p = vUv * vec2( 3.2, 1.0 ) + vec2( uTime * 0.025 + uSeed * 9.0, uSeed * 4.0 );
-      float f = fbm( p + 0.8 * fbm( p * 1.7 - uTime * 0.03 ) );
-      f = smoothstep( 0.42, 0.82, f );
-      float edge = smoothstep( 0.0, 0.25, vUv.x ) * smoothstep( 1.0, 0.75, vUv.x ) * smoothstep( 0.0, 0.3, vUv.y ) * smoothstep( 1.0, 0.45, vUv.y );
-      float lit = 0.55 + 0.9 * exp( - dot( vW.xz - vec2( 0.0, -0.8 ), vW.xz - vec2( 0.0, -0.8 ) ) / 16.0 );   // brighter in the light column
-      float near = smoothstep( 1.8, 6.0, distance( vW, cameraPosition ) );                                   // thins out at the lens
-      gl_FragColor = vec4( vec3( 0.62, 0.67, 0.74 ) * lit, f * edge * near * uOp );
-    }`;
-  const MS_VS = `varying vec2 vUv; varying vec3 vW; void main() { vUv = uv; vec4 w = modelMatrix * vec4( position, 1.0 ); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
-  const N = isMobile ? 7 : 12;
-  for (let i = 0; i < N; i++) {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(10 + Math.random() * 6, 2.2 + Math.random() * 1.6), new THREE.ShaderMaterial({
-      vertexShader: MS_VS, fragmentShader: MS_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      uniforms: { uTime: { value: 0 }, uSeed: { value: Math.random() }, uOp: { value: .16 + Math.random() * .12 } } }));
-    const a = Math.random() * PI * 2, r = 2 + Math.random() * 8;
-    m.position.set(Math.cos(a) * r, .55 + Math.random() * .9, Math.sin(a) * r);
-    m.userData.v = (.12 + Math.random() * .18) * (Math.random() < .5 ? -1 : 1);
-    m.renderOrder = 5; m.raycast = () => {};
-    abyss.add(m); mistSheets.push(m);
+// drifting fog: soft cloud puffs (sprites, so they always face the lens and never show an edge or a line)
+const fogPuffTex = canvasTex(256, (g, S) => {
+  for (let i = 0; i < 70; i++) {
+    const a = Math.random() * PI * 2, d = Math.pow(Math.random(), .7) * S * .3;
+    const x = S / 2 + Math.cos(a) * d, y = S / 2 + Math.sin(a) * d * .75, r = S * (.09 + Math.random() * .16);
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, 'rgba(255,255,255,.12)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, S, S);
   }
+  const m = g.createRadialGradient(S / 2, S / 2, S * .2, S / 2, S / 2, S / 2);   // fade every edge to nothing
+  m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(1, 'rgba(0,0,0,1)');
+  g.globalCompositeOperation = 'destination-out'; g.fillStyle = m; g.fillRect(0, 0, S, S);
+});
+const fogPuffs = [];
+for (let i = 0; i < (isMobile ? 16 : 26); i++) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: fogPuffTex, color: 0x9aa3ad, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+  const a = Math.random() * PI * 2, r = 1.5 + Math.random() * 11;
+  sp.position.set(Math.cos(a) * r, .25 + Math.random() * 1.6, Math.sin(a) * r);
+  const k = 4 + Math.random() * 5; sp.scale.set(k * 1.6, k, 1);
+  sp.material.rotation = Math.random() * PI;
+  sp.userData = { v: (.06 + Math.random() * .12) * (Math.random() < .5 ? -1 : 1), op: .1 + Math.random() * .1, ph: Math.random() * 6 };
+  sp.renderOrder = 5; sp.raycast = () => {};
+  abyss.add(sp); fogPuffs.push(sp);
 }
 function updateMistSheets(dt, time) {
-  for (const m of mistSheets) {
-    m.material.uniforms.uTime.value = time;
-    m.position.x += m.userData.v * dt;
-    if (m.position.x > 13) m.position.x = -13; else if (m.position.x < -13) m.position.x = 13;
-    m.rotation.y = Math.atan2(camera.position.x - m.position.x, camera.position.z - m.position.z);   // face the camera, stay upright
+  for (const sp of fogPuffs) {
+    const u = sp.userData;
+    sp.position.x += u.v * dt; if (sp.position.x > 14) sp.position.x = -14; else if (sp.position.x < -14) sp.position.x = 14;
+    sp.material.rotation += u.v * .02 * dt;
+    const d = sp.position.distanceTo(camera.position);
+    const lit = 1 + 1.2 * Math.exp(-(sp.position.x ** 2 + (sp.position.z + .8) ** 2) / 18);   // brighter inside the column of light
+    sp.material.opacity = u.op * Math.min(1, Math.max(0, (d - 2.5) / 4)) * (.75 + .25 * Math.sin(time * .3 + u.ph));
+    sp.material.color.setScalar(.6 * lit).multiply(new THREE.Color(.95, 1, 1.08));
   }
 }
 // the wet floor: a mirror under a dark, puddled skin; the mirror smears reflections into vertical streaks
@@ -4602,7 +4630,7 @@ function applyGfx(rebuild = true) {
   const hi = HIGH();
   renderer.toneMapping = hi ? THREE.NeutralToneMapping : THREE.NoToneMapping;
   renderer.toneMappingExposure = hi ? 1.0 : 1;
-  scene.environment = hi ? (CHROME() ? envSoft : envTex) : null;
+  scene.environment = hi ? (MIRROR() ? envSoft : envTex) : null;
   // lacquered studio light vs flat ink light
   hemi.intensity = INK() ? .42 : hi ? .75 : SC().hemi[2];
   sun.intensity = INK() ? 3.2 : hi ? 2.9 : 2.4;
@@ -4692,7 +4720,7 @@ function applyGfx(rebuild = true) {
   // Monolith: the board stands in a canyon of dark towers lit only from above and from the openings behind
   const ab = ABYSS();
   PIECE_LIFT.value = ab ? .5 : 0;
-  if (gtao) gtao.blendIntensity = CHROME() ? .55 : 1;
+  if (gtao) gtao.blendIntensity = MIRROR() ? .55 : 1;
   sparks.material.blending = ab ? THREE.AdditiveBlending : THREE.NormalBlending; sparks.material.size = ab ? .07 : .09; sparks.material.needsUpdate = true;
   abyss.visible = ab; abyssSpot.intensity = ab ? 120 : 0;
   scene.environmentIntensity = ab ? .14 : 1;
