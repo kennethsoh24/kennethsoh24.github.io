@@ -1010,7 +1010,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 59</div>
+  <div class="build mono">Build 60</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1208,7 +1208,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=59';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=60';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -2079,7 +2079,7 @@ function transformMat(pt, U) {
           if ( blue || gold ) { o = uAccent * clamp( 0.3 + mx * 1.05, 0.0, 1.25 ); tfAcc = smoothstep( 0.28, 0.5, sat ); }
           else if ( !red && uInvert > 0.5 ) o = ` + (GFX.startsWith('monolith') ? `( uAccent.b > uAccent.r ? vec3( 0.93 - 0.32 * smoothstep( 0.0, 0.5, L ) ) : vec3( mix( 1.0 - L * 0.8, ( 1.0 - L ) * 0.38, smoothstep( 0.35, 0.6, L ) ) ) ) /* White: clean white; Black (from a white-painted model): stays black */` : `vec3( mix( 1.0 - L * 0.8, ( 1.0 - L ) * 0.38, smoothstep( 0.35, 0.6, L ) ) )`) + `;
           else if ( !red ) o = vec3( L * 0.9 );` + (METAL() ? `
-          if ( !red ) { o = uAccent.b > uAccent.r ? vec3( 1.0 ) : vec3( 0.025 ); tfAcc = 0.0; }` : '') + (CHROME() ? `
+          if ( !red ) { o = uAccent.b > uAccent.r ? vec3( 0.8 ) : vec3( 0.045 ); tfAcc = 0.0; }` : '') + (CHROME() ? `
           if ( blue || gold ) o = ( uAccent.b > uAccent.r ? vec3( 0.55, 0.74, 1.0 ) : vec3( 1.0, 0.8, 0.36 ) ) * mix( 0.8, 1.1, mx );   // chrome trim tint` : '') + `
           diffuseColor.rgb *= pow( o, vec3( 2.2 ) );
         #endif`)
@@ -2091,8 +2091,11 @@ function transformMat(pt, U) {
         vec3 tfHot = pow( mix( uAccent, vec3( 1.0 ), 0.35 ), vec3( 2.2 ) );
         {
           float pr = 1.0 - max( dot( normalize( vViewPosition ), normal ), 0.0 );
-          totalEmissiveRadiance += diffuseColor.rgb * uLift * ( 0.55 + 0.45 * max( normal.y, 0.0 ) )   // soft fill from above
-            + vec3( 0.75, 0.82, 0.95 ) * uLift * 0.5 * smoothstep( 0.55, 0.95, pr );             // cold rim around the silhouette
+          float pDark = 1.0 - smoothstep( 0.02, 0.25, dot( diffuseColor.rgb, vec3( 0.3, 0.59, 0.11 ) ) );   // 1 on black armour
+          totalEmissiveRadiance += diffuseColor.rgb * uLift * ( 0.55 + 0.45 * max( normal.y, 0.0 ) ) * mix( 0.4, 1.0, pDark )   // soft fill from above (less on white: no blow-out in close-ups)
+            + vec3( 0.2, 0.215, 0.24 ) * uLift * pDark * ( 0.5 + 0.5 * max( normal.y, 0.0 ) )   // black reads as deep graphite, not void
+            + vec3( 0.7, 0.75, 0.85 ) * uLift * pDark * pow( max( normal.y, 0.0 ), 5.0 )            // a glossy sheen on top surfaces
+            + vec3( 0.75, 0.82, 0.95 ) * uLift * ( 0.5 + 2.2 * pDark ) * smoothstep( 0.35, 0.95, pr );   // cold rim, strongest on black
         }
         totalEmissiveRadiance += tfHot * ( tfEdge * 4.0 + tfSeam * 2.2 );` + (GLOW() ? `
         // Monolith Glow: the original gold / blue trim burns like neon (HDR, so the bloom picks it up)
@@ -4111,7 +4114,27 @@ canvas.addEventListener('pointerup', e => {
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
   if (galleryOn) { const h = ray.intersectObject(galleryStage, true)[0]; if (h) galleryGo(); return; }
+  // with a piece selected, the floor square under the finger wins if it is a legal target
+  // (tall pieces standing in front used to catch the tap and select themselves instead)
+  if (selected >= 0) {
+    const th = ray.intersectObject(tiles, true)[0];
+    let o = th && th.object; while (o && o.userData.square === undefined) o = o.parent;
+    if (o && legalCache.some(m => m.to === o.userData.square || (m.enPassant && m.to === o.userData.square))) return onSquare(o.userData.square);
+  }
   const hits = ray.intersectObjects([piecesGroup, tiles], true);
+  // several pieces under the finger (a tall back-rank piece in front of a pawn): take the one whose
+  // body is closest to the tap on screen, not simply the nearest to the camera
+  const cand = [...new Set(hits.map(h => { let o = h.object; while (o && !o.userData.rig) o = o.parent; return o && o.userData.rig; }).filter(Boolean))];
+  if (cand.length > 1) {
+    let best = null, bd = 1e9;
+    for (const r of cand) {
+      const v = r.root.position.clone().setY(.45).project(camera);
+      const d = Math.hypot(v.x - ndc.x, (v.y - ndc.y) * innerHeight / innerWidth);
+      if (d < bd) { bd = d; best = r; }
+    }
+    const s = rigs.indexOf(best);
+    if (s >= 0) return onSquare(s);
+  }
   for (const h of hits) {
     let o = h.object;
     while (o && !o.userData.rig && o.userData.square === undefined) o = o.parent;
@@ -4447,7 +4470,7 @@ skyAbyss.mapping = THREE.EquirectangularReflectionMapping;
     abyss.add(m); return m;
   };
   AVENUES.forEach((a, i) => {
-    const r = 42 + i * 3, w = i ? 2.5 + rnd() * 2 : 5, h = i ? 3 + rnd() * 3 : 7;
+    const r = 42 + i * 3, w = i ? 1.2 + rnd() * 1.2 : 1.8, h = i ? 4 + rnd() * 3 : 9;   // tall narrow slits, never a square
     const x = Math.cos(a) * r, z = Math.sin(a) * r;
     const g = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.6, h * 1.25), glowMat);
     g.position.set(x, -.37 + h / 2, z); g.lookAt(0, g.position.y, 0); g.raycast = () => {};
@@ -4918,7 +4941,7 @@ async function galleryAttack() {
     vic.t = 0; vic.apply(); galleryStage.add(vic.root); gVictim = vic;
     // frame both from the side
     const h = G_HEIGHT[CHARS[gIdx].type] * 1.3, mid = new V3(0, h * .45, 1.6);
-    const camTo = new V3(isMobile ? 8.6 : 7.2, h * .75 + .6, 1.6 + (isMobile ? 2.4 : 1.6));
+    const camTo = new V3(isMobile ? 13 : 7.6, h * .7 + .8, 1.6 + (isMobile ? 1.2 : 1.6));
     const p0 = camera.position.clone(), t0 = controls.target.clone();
     await Promise.all([morph(vic, 1, .9), tween(.8, k => { const e = easeIO(k); camera.position.lerpVectors(p0, camTo, e); controls.target.lerpVectors(t0, mid, e); })]);
     const dir = new V3(0, 0, 1), vp = vic.root.position.clone();
@@ -5348,7 +5371,7 @@ refreshStatus();
 frame();
 
 // small hook for automated checks
-window.__chess = { get state() { return state; }, play: m => play(m), E, openGallery, closeGallery, gearUp, settings,
+window.__chess = { get state() { return state; }, sq: (s, h = 0) => { const v = sqPos(s).setY(h).project(camera); return [(v.x * .5 + .5) * innerWidth, (-v.y * .5 + .5) * innerHeight]; }, play: m => play(m), E, openGallery, closeGallery, gearUp, settings,
   setT: t => { if (gRig) { gRig.t = t; } }, setGallery: (i, team) => { gIdx = i; gTeam = team; buildGalleryRig(); }, get busy() { return busy; }, pose: p => { if (gRig) setPose(gRig, p); }, dc: { transmit, episode, rollCredits, get txBusy() { return txBusy; } }, get music() { return musicEl && { paused: musicEl.paused, src: musicEl.dataset.src, vol: musicEl.volume }; } };
 </script>
 </body>
