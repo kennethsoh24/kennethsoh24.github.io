@@ -125,6 +125,33 @@
   .gskin .mono { padding-right: 12px; color: var(--grey); }
   .gskin .btn { margin-left: -1px; padding: 6px 4px; }
   #cfgModal { z-index: 26; }
+  /* gallery: the original concept sketch, pinned like a photo beside the model */
+  .origin { position: fixed; z-index: 4; right: 22px; top: 92px; width: 250px; margin: 0; padding: 8px 8px 10px; background: #f4f2ec; color: #111;
+    box-shadow: 0 18px 50px rgba(0,0,0,.55); transform: rotate(2.2deg); cursor: zoom-in; animation: pinIn .5s cubic-bezier(.2,1,.2,1) both; }
+  .origin[hidden] { display: none; }
+  .origin img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; filter: contrast(1.03); }
+  .origin figcaption { font-size: 9.5px; letter-spacing: .08em; margin-top: 7px; line-height: 1.4; color: #333; }
+  .origin .pin { position: absolute; left: 50%; top: -11px; transform: translateX(-50%) rotate(-2deg); background: #111; color: #fff; padding: 3px 9px; font-size: 10px; letter-spacing: .2em; }
+  .origin .arrow { position: absolute; left: -96px; top: 46%; color: var(--ink); font-size: 10px; letter-spacing: .14em; opacity: .75; }
+  .origin .arrow::after { content: ""; display: block; height: 1px; margin-top: 5px; background: currentColor; }
+  .origin.none { width: 200px; cursor: default; }
+  .origin.none img { display: none; }
+  @keyframes pinIn { from { opacity: 0; transform: translateY(-14px) rotate(-4deg); } to { opacity: 1; transform: rotate(2.2deg); } }
+  #originBox { z-index: 27; }
+  .obox { width: min(760px, 94vw); max-height: 92vh; overflow-y: auto; background: #f4f2ec; color: #111; padding: 12px; box-shadow: 0 30px 90px rgba(0,0,0,.6); }
+  .obox img { display: block; width: 100%; }
+  .obox .cap { margin: 10px 2px 8px; font-size: 11px; letter-spacing: .1em; }
+  .obox .flow { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 0 2px 12px; font-size: 10px; letter-spacing: .1em; color: #555; }
+  .obox .flow b { color: #111; }
+  .obox .btn { background: #111; color: #fff; border-color: #111; }
+  @media (max-width: 760px) {
+    .origin { right: 10px; top: 128px; width: 118px; padding: 5px 5px 6px; }
+    .origin figcaption { display: none; }
+    .origin .arrow { display: none; }
+    .origin .pin { font-size: 8px; top: -9px; padding: 2px 6px; }
+    .origin.none { width: 130px; }
+    .origin.none figcaption { display: block; font-size: 8.5px; }
+  }
   .qhead { margin: 12px 0 2px; padding-top: 8px; border-top: 1px solid var(--rule); color: var(--grey); grid-column: 1 / -1; }
   .cfgcard { width: min(420px, 94vw); max-height: 86vh; overflow-y: auto; }
   .cfgcard #settings summary { display: none; }
@@ -1016,7 +1043,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 62</div>
+  <div class="build mono">Build 63</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1133,6 +1160,20 @@
 <button id="fab" title="Transform the whole army"><span class="t">Gear<br>Up</span><span class="mono"><span>All units</span><span>→</span></span></button>
 
 <p id="gName">Pawn 2</p>
+<figure id="gOrigin" class="origin" hidden>
+  <span class="pin mono">Origin</span>
+  <img alt="Original concept sketch">
+  <figcaption class="mono"></figcaption>
+  <span class="arrow mono">sketch → 3D</span>
+</figure>
+<div id="originBox" class="modal" hidden>
+  <div class="obox">
+    <img alt="Original concept sketch, full size">
+    <div class="cap mono"></div>
+    <div class="flow mono"><span>Hand-drawn sketch</span><b>→</b><span>Higgsfield render</span><b>→</b><span>3D model</span><b>→</b><span>Rigged mech in game</span></div>
+    <button class="btn" id="originClose" style="width:100%">Close</button>
+  </div>
+</div>
 <div id="gallery" hidden>
   <div class="chips" id="gChips"></div>
   <div id="gNote"></div>
@@ -1215,7 +1256,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=62';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=63';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -4854,10 +4895,10 @@ scene.add(galleryStage);
   galleryStage.add(top);
 }
 const CHARS = [
-  { type: 'P', name: 'Pawn 2', zh: '01', note: '“flip down & turn 180°, open up” — concept sketch 5' },
-  { type: 'B', name: 'Bishop 2.0', zh: '02', note: '“Transform! — Gear up!” — concept sketch 6' },
-  { type: 'Q', name: 'Queen', zh: '03', note: '“King & Queen” — concept sketch 4' },
-  { type: 'K', name: 'King', zh: '04', note: 'the robed spire — concept sketch 4' },
+  { type: 'P', name: 'Pawn 2', zh: '01', note: '“flip down & turn 180°, open up” — concept sketch 5', sketch: 'assets/sketch_P.webp', sk: 'Concept sketch 5 · “Pawn 2” · 9 Jan 2023' },
+  { type: 'B', name: 'Bishop 2.0', zh: '02', note: '“Transform! — Gear up!” — concept sketch 6', sketch: 'assets/sketch_B.webp', sk: 'Concept sketch 6 · “Bishop 2.0” · 10 Jan 2023' },
+  { type: 'Q', name: 'Queen', zh: '03', note: '“King & Queen” — concept sketch 4', sketch: 'assets/sketch_KQ.webp', sk: 'Concept sketch 4 · “King & Queen” · 8 Jan 2023' },
+  { type: 'K', name: 'King', zh: '04', note: 'the robed spire — concept sketch 4', sketch: 'assets/sketch_KQ.webp', sk: 'Concept sketch 4 · “King & Queen” · 8 Jan 2023' },
   { type: 'N', name: 'Knight', zh: '05', note: 'extra · designed in the same language' },
   { type: 'R', name: 'Rook', zh: '06', note: 'extra · tower on spider legs, the sketch-sheet cannon' },
 ];
@@ -4880,6 +4921,11 @@ function buildGalleryRig(keepT = false) {
   galleryStage.add(gRig.root);
   $('gName').innerHTML = `<small>Cast ${c.zh} / 06 — ${gTeam === 'w' ? 'White' : 'Black'}</small>${c.name}`;
   $('gNote').textContent = c.note;
+  const og = $('gOrigin');
+  og.classList.toggle('none', !c.sketch);
+  if (c.sketch) { og.querySelector('img').src = c.sketch; og.querySelector('figcaption').textContent = c.sk; }
+  else og.querySelector('figcaption').textContent = 'No sketch — designed later in the same language as the hand-drawn cast';
+  og.hidden = !galleryOn; og.style.animation = 'none'; void og.offsetWidth; og.style.animation = '';
   $('gT').value = t;
   if (galleryOn) frameGallery();
   [...gChips.children].forEach((b, i) => b.setAttribute('aria-pressed', i === gIdx));
@@ -4911,7 +4957,7 @@ function openGallery(fromTitle = false) {
   document.body.classList.add('gallery');
   boardGroup.visible = false; fxGroup.visible = false; ground.position.y = -.37;
   galleryStage.visible = true;
-  $('gallery').hidden = false;
+  $('gallery').hidden = false; $('gOrigin').hidden = false;
   // a battle camera may still be holding the controls: release it so the gallery can orbit and zoom
   camFollow = null; camHome = null; camReturning = false; controls.enabled = true; controls.minDistance = 2; controls.maxDistance = 30;
   gSaved = { pos: camera.position.clone(), target: controls.target.clone() };
@@ -4926,7 +4972,7 @@ function closeGallery() {
   document.body.classList.remove('gallery');
   boardGroup.visible = true; fxGroup.visible = true;
   galleryStage.visible = false;
-  $('gallery').hidden = true;
+  $('gallery').hidden = true; $('gOrigin').hidden = true; $('originBox').hidden = true;
   controls.autoRotate = false; controls.minDistance = 5;
   camera.position.copy(gSaved.pos); controls.target.copy(gSaved.target);
   resize();
@@ -4969,6 +5015,8 @@ async function galleryAttack() {
   }
 }
 $('gAtk').onclick = galleryAttack;
+$('gOrigin').onclick = () => { const c = CHARS[gIdx]; if (!c.sketch) return; $('originBox').querySelector('img').src = c.sketch; $('originBox').querySelector('.cap').textContent = c.sk + ' — the original drawing this piece was built from'; $('originBox').hidden = false; };
+$('originClose').onclick = $('originBox').onclick = e => { if (e.target.id === 'originBox' || e.target.id === 'originClose') $('originBox').hidden = true; };
 $('gSpin').onclick = () => { controls.autoRotate = !controls.autoRotate; };
 $('gT').oninput = e => { if (gRig && !gAnimating) gRig.t = +e.target.value; };
 addEventListener('keydown', e => {
