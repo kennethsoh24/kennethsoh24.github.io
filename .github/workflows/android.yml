@@ -1,9 +1,6 @@
 name: Android APK
 on:
-  push:
-    branches: [master]
-    paths: ['chess/**', 'android/**', '.github/workflows/android.yml']
-  workflow_dispatch:
+  workflow_dispatch:   # built on request only (not on every web change)
 permissions:
   contents: write
 jobs:
