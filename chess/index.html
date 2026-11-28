@@ -120,6 +120,7 @@
   /* Monolith finish switch: Mono / Glow / Chrome, switchable at any time */
   .styles { display: none; grid-template-columns: repeat(4, 1fr); margin-top: 6px; }
   #cfgModal { z-index: 26; }
+  .qhead { margin: 12px 0 2px; padding-top: 8px; border-top: 1px solid var(--rule); color: var(--grey); grid-column: 1 / -1; }
   .cfgcard { width: min(420px, 94vw); max-height: 86vh; overflow-y: auto; }
   .cfgcard #settings summary { display: none; }
   .cfgcard .styles { margin: 0 0 6px; }
@@ -1009,7 +1010,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 57</div>
+  <div class="build mono">Build 58</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1094,6 +1095,27 @@
         <select id="speed"><option value="1">1×</option><option value="1.6" selected>1.6×</option><option value="2.6">2.6×</option></select></label>
       <label class="field mono">Sound
         <select id="sound"><option value="1">On</option><option value="0">Off</option></select></label>
+      <div class="qhead mono">Graphics quality</div>
+      <label class="field mono">Preset
+        <select id="qPreset"><option value="ultra">Ultra</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="custom">Custom</option></select></label>
+      <label class="field mono">Resolution
+        <select id="qRes"><option value="1">100%</option><option value="0.8">80%</option><option value="0.65">65%</option><option value="0.5">50%</option></select></label>
+      <label class="field mono">Auto res
+        <select id="qAuto" data-q="auto"><option value="1">On</option><option value="0">Off</option></select></label>
+      <label class="field mono">Shadows
+        <select data-q="shadows"><option value="1">On</option><option value="0">Off</option></select></label>
+      <label class="field mono">AO
+        <select data-q="ao"><option value="1">On</option><option value="0">Off</option></select></label>
+      <label class="field mono">Bloom
+        <select data-q="bloom"><option value="1">On</option><option value="0">Off</option></select></label>
+      <label class="field mono">Fog
+        <select data-q="fog"><option value="1">On</option><option value="0">Off</option></select></label>
+      <label class="field mono">Particles
+        <select data-q="particles"><option value="1">On</option><option value="0">Off</option></select></label>
+      <label class="field mono">Reflect
+        <select data-q="reflect"><option value="1">On</option><option value="0">Off</option></select></label>
+      <label class="field mono">Outlines
+        <select data-q="outlines"><option value="1">On</option><option value="0">Off</option></select></label>
     </details>
   </section>
   <section>
@@ -1186,7 +1208,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=57';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=58';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1266,7 +1288,16 @@ const HIGH = () => GFX === 'high' || GFX === 'cinema' || GFX.startsWith('monolit
 const GLOW = () => GFX === 'monolithglow';
 const CHROME = () => GFX === 'monolithchrome';
 const METAL = () => GFX === 'monolithmetal';   // Monolith with plain polished metal pieces: silver White, black-steel Black, no pattern
-const MIRROR = () => CHROME() || METAL();   // Monolith with mirror-chrome pieces: gold for Black, blue for White   // Monolith with the gold / blue trim glowing
+const MIRROR = () => CHROME() || METAL();
+const QPRESETS = {
+  ultra: { res: 1, auto: 0, shadows: 1, ao: 1, bloom: 1, fog: 1, particles: 1, reflect: 1, outlines: 1 },
+  high: { res: 1, auto: 1, shadows: 1, ao: 1, bloom: 1, fog: 1, particles: 1, reflect: 1, outlines: 1 },
+  medium: { res: .8, auto: 1, shadows: 1, ao: 0, bloom: 1, fog: 1, particles: 1, reflect: 0, outlines: 1 },
+  low: { res: .65, auto: 1, shadows: 0, ao: 0, bloom: 0, fog: 0, particles: 0, reflect: 0, outlines: 0 },
+};
+let Q = { preset: isMobile ? 'medium' : 'high', ...QPRESETS[isMobile ? 'medium' : 'high'] };
+try { const sv = JSON.parse(localStorage.getItem('cf-quality') || 'null'); if (sv) Q = { ...Q, ...sv }; } catch (e) { /* storage blocked */ }
+const OUTLINES = () => Q.outlines !== 0;
 const INK = () => false;
 const CINE = () => GFX === 'cinema' && !BWED && (THEME === 'mono' || THEME === 'ops');
 const OPS = () => THEME === 'ops';
@@ -1566,7 +1597,7 @@ class Rig {
           if (!mech.root.parent) mesh.add(mech.root);
           mesh.updateMatrixWorld(true); mesh.bind(mech.skeleton);
         }
-        if ((!isMobile || which === 'chess' || ANIME()) && !(MIRROR() && this.team === 'w')) {   // Chrome / Metal: White pieces have no ink outline
+        if ((!isMobile || which === 'chess' || ANIME()) && !(MIRROR() && this.team === 'w') && OUTLINES()) {   // Chrome / Metal: White pieces have no ink outline
           const th = FINE() ? (which === 'chess' ? .0065 : .004) : ANIME() ? (which === 'chess' ? .016 : .011) : HIGH() ? (which === 'chess' ? .007 : .0045) : (which === 'chess' ? .012 : .007);
           const ol = mech ? new THREE.SkinnedMesh(pt.geo, transformOutlineMat(U, th)) : new THREE.Mesh(pt.geo, transformOutlineMat(U, th));
           if (mech) { ol.bind(mech.skeleton, mesh.bindMatrix); ol.frustumCulled = false; }
@@ -2046,7 +2077,7 @@ function transformMat(pt, U) {
           bool gold = s.r > s.b * 1.35 && s.g > s.b * 1.1 && !red && sat > 0.28 && mx > 0.18;
           vec3 o = s;
           if ( blue || gold ) { o = uAccent * clamp( 0.3 + mx * 1.05, 0.0, 1.25 ); tfAcc = smoothstep( 0.28, 0.5, sat ); }
-          else if ( !red && uInvert > 0.5 ) o = ` + (GFX.startsWith('monolith') ? `vec3( 0.93 - 0.32 * smoothstep( 0.0, 0.5, L ) ) /* clean white: source highlights stay light grey */` : `vec3( mix( 1.0 - L * 0.8, ( 1.0 - L ) * 0.38, smoothstep( 0.35, 0.6, L ) ) )`) + `;
+          else if ( !red && uInvert > 0.5 ) o = ` + (GFX.startsWith('monolith') ? `( uAccent.b > uAccent.r ? vec3( 0.93 - 0.32 * smoothstep( 0.0, 0.5, L ) ) : vec3( mix( 1.0 - L * 0.8, ( 1.0 - L ) * 0.38, smoothstep( 0.35, 0.6, L ) ) ) ) /* White: clean white; Black (from a white-painted model): stays black */` : `vec3( mix( 1.0 - L * 0.8, ( 1.0 - L ) * 0.38, smoothstep( 0.35, 0.6, L ) ) )`) + `;
           else if ( !red ) o = vec3( L * 0.9 );` + (METAL() ? `
           if ( !red ) { o = uAccent.b > uAccent.r ? vec3( 1.0 ) : vec3( 0.025 ); tfAcc = 0.0; }` : '') + (CHROME() ? `
           if ( blue || gold ) o = ( uAccent.b > uAccent.r ? vec3( 0.55, 0.74, 1.0 ) : vec3( 1.0, 0.8, 0.36 ) ) * mix( 0.8, 1.1, mx );   // chrome trim tint` : '') + `
@@ -2728,6 +2759,7 @@ function camRestore(dur = .6) {
   return tween(dur, k => { const e = easeIO(k); controls.target.lerpVectors(t0, target, e); camera.position.lerpVectors(p0, pos, e); });
 }
 function burst(pos, n) {
+  if (!Q.particles) n = Math.ceil(n / 4);
   for (let i = 0; i < n; i++) {
     const v = new V3(Math.random() - .5, Math.random() * .9 + .1, Math.random() - .5).normalize().multiplyScalar(2 + Math.random() * 4);
     emitSpark(pos, v, sparkColor(), .3 + Math.random() * .45);
@@ -4742,6 +4774,7 @@ function applyGfx(rebuild = true) {
   } else { dust.material.color.setHex(0xe8c99a); dust.material.opacity = .55; dust.material.size = .05; dust.material.sizeAttenuation = true; dust.material.needsUpdate = true; rim.position.set(6, 5, -8); }
   document.body.classList.toggle('monolith', ab && BWED);
   document.body.classList.toggle('glow', (GLOW() || CHROME()) && BWED);
+  applyQuality();
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', ab && BWED ? '#08090b' : '#f2f1ed');
   document.querySelectorAll('[data-gfx]').forEach(b => b.setAttribute('aria-pressed', b.dataset.gfx === GFX));
   if ($('gfx')) $('gfx').value = GFX;
@@ -4915,11 +4948,39 @@ addEventListener('keydown', e => {
    ================================================================ */
 const clock = new THREE.Clock();
 let lastFrame = performance.now();
-const DPR_MAX = Math.min(devicePixelRatio, isMobile ? 1.5 : 2), DPR_MIN = isMobile ? .75 : 1;
-let dprNow = DPR_MAX, ftAvg = 16, ftCheck = 0;
+const DPR_BASE = Math.min(devicePixelRatio, isMobile ? 1.5 : 2);
+let DPR_MAX = DPR_BASE * Q.res, DPR_MIN = Math.min(DPR_MAX, isMobile ? .75 : 1) * (Q.res < 1 ? Q.res : 1);
+function applyQuality(rebuild = false) {
+  if (!window.__qReady) return;
+  DPR_MAX = DPR_BASE * Q.res; DPR_MIN = Math.min(DPR_MAX, (isMobile ? .75 : 1) * Math.min(1, Q.res + .1));
+  dprNow = DPR_MAX; renderer.setPixelRatio(dprNow); resize();
+  if (renderer.shadowMap.enabled !== !!Q.shadows) {
+    renderer.shadowMap.enabled = !!Q.shadows;
+    scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
+  }
+  if (gtao) gtao.enabled = !!Q.ao;
+  if (bloomPass && ABYSS()) bloomPass.enabled = !!Q.bloom;
+  const ab = abyss.visible;
+  groundFog.forEach(m => { m.visible = m.visible && !!Q.fog; if (ab || CINE()) m.visible = !!Q.fog; });
+  fogPuffs.forEach(sp => { sp.visible = !!Q.fog; });
+  motes.visible = !!Q.particles; if (ab) dust.visible = !!Q.particles;
+  if (abyssMirror) abyssMirror.visible = !!Q.reflect;
+  if (rebuild && typeof syncAll === 'function' && !busy) syncAll();
+  // reflect in the UI
+  if ($('qPreset')) {
+    $('qPreset').value = Q.preset; $('qRes').value = String(Q.res >= .99 ? 1 : Q.res); if (!$('qRes').value) $('qRes').value = '0.8';
+    document.querySelectorAll('[data-q]').forEach(el => { el.value = Q[el.dataset.q] ? '1' : '0'; });
+  }
+  try { localStorage.setItem('cf-quality', JSON.stringify(Q)); } catch (e) { /* storage blocked */ }
+}
+let dprNow = 1, ftAvg = 16, ftCheck = 0;
+$('qPreset').onchange = e => { const p = e.target.value; if (QPRESETS[p]) Q = { preset: p, ...QPRESETS[p] }; else Q.preset = 'custom'; applyQuality(true); };
+$('qRes').onchange = e => { Q.res = +e.target.value; Q.preset = 'custom'; applyQuality(); };
+document.querySelectorAll('[data-q]').forEach(el => el.onchange = () => { const k = el.dataset.q; Q[k] = el.value === '1' ? 1 : 0; Q.preset = 'custom'; applyQuality(k === 'outlines'); });
+window.__qReady = true; applyQuality();
 function adaptResolution(ms) {
   ftAvg += (Math.min(ms, 100) - ftAvg) * .05;
-  if (performance.now() < ftCheck) return;
+  if (!Q.auto || performance.now() < ftCheck) return;
   let next = dprNow;
   if (ftAvg > 22 && dprNow > DPR_MIN) next = Math.max(DPR_MIN, dprNow - .15);
   else if (ftAvg < 13 && dprNow < DPR_MAX) next = Math.min(DPR_MAX, dprNow + .1);
