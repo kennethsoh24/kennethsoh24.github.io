@@ -1117,7 +1117,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 76</div>
+  <div class="build mono">Build 77</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1347,7 +1347,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=76';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=77';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -4036,7 +4036,7 @@ async function animateMoveInner(m) {
 // AI search in a Web Worker (falls back to the main thread if workers are unavailable)
 let aiWorker = null, aiSeq = 0; const aiWait = new Map();
 try {
-  aiWorker = new Worker(new URL('./ai-worker.js?v=76', import.meta.url), { type: 'module' });
+  aiWorker = new Worker(new URL('./ai-worker.js?v=77', import.meta.url), { type: 'module' });
   aiWorker.onmessage = e => { const r = aiWait.get(e.data.id); if (r) { aiWait.delete(e.data.id); r(e.data.m); } };
   aiWorker.onerror = () => { aiWorker = null; aiWait.forEach((r, id) => r(undefined)); aiWait.clear(); };
 } catch (e) { aiWorker = null; }
@@ -5077,6 +5077,37 @@ const GradeShader = {
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
+const GRADED_OUTPUT_FS = `
+  precision highp float;
+  uniform sampler2D tDiffuse; uniform float uGradeOn;
+  uniform float uTime; uniform float uImpact; uniform vec2 uRes; uniform float uOps; uniform float uAbyss; uniform float uKeep;
+  #include <tonemapping_pars_fragment>
+  #include <colorspace_pars_fragment>
+  varying vec2 vUv;
+  vec4 outC( vec2 uv ) {
+    vec4 c = texture2D( tDiffuse, uv );
+    #ifdef LINEAR_TONE_MAPPING
+      c.rgb = LinearToneMapping( c.rgb );
+    #elif defined( REINHARD_TONE_MAPPING )
+      c.rgb = ReinhardToneMapping( c.rgb );
+    #elif defined( CINEON_TONE_MAPPING )
+      c.rgb = CineonToneMapping( c.rgb );
+    #elif defined( ACES_FILMIC_TONE_MAPPING )
+      c.rgb = ACESFilmicToneMapping( c.rgb );
+    #elif defined( AGX_TONE_MAPPING )
+      c.rgb = AgXToneMapping( c.rgb );
+    #elif defined( NEUTRAL_TONE_MAPPING )
+      c.rgb = NeutralToneMapping( c.rgb );
+    #endif
+    #ifdef SRGB_TRANSFER
+      c = sRGBTransferOETF( c );
+    #endif
+    return c;
+  }
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+  void main() {
+    if ( uGradeOn < .5 ) { gl_FragColor = outC( vUv ); return; }
+` + GradeShader.fragmentShader.split('void main() {')[1].replace(/texture2D\(tDiffuse, /g, 'outC(');
 function buildComposer() {
   // multisampled targets: without them every edge in the post-processed image is aliased
   composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: Q.msaa ?? 4 }));
@@ -5100,10 +5131,17 @@ function buildComposer() {
   }
   bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .32, .5, .82);
   composer.addPass(bloomPass);
-  composer.addPass(new OutputPass());
-  gradePass = new ShaderPass(GradeShader);
+  // the film grade runs inside the output pass (tone map -> sRGB -> grade in one full-screen pass instead of two);
+  // gradePass stays as a handle with the same uniforms and an enabled switch
+  const outPass = new OutputPass();
+  Object.assign(outPass.uniforms, THREE.UniformsUtils.clone(GradeShader.uniforms), { uGradeOn: { value: 1 } });
+  delete outPass.uniforms.tDiffuse.value; outPass.uniforms.tDiffuse = { value: null };
+  outPass.material.uniforms = outPass.uniforms;
+  outPass.material.fragmentShader = GRADED_OUTPUT_FS;
+  outPass.material.needsUpdate = true;
+  composer.addPass(outPass);
+  gradePass = { uniforms: outPass.uniforms, get enabled() { return outPass.uniforms.uGradeOn.value > .5; }, set enabled(v) { outPass.uniforms.uGradeOn.value = v ? 1 : 0; } };
   gradePass.uniforms.uRes.value.set(innerWidth, innerHeight);
-  composer.addPass(gradePass);
   inkPass = new ShaderPass(InkShader);
   inkPass.uniforms.uRes.value.set(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
   inkPass.uniforms.uDot.value = 4.5 * renderer.getPixelRatio();
@@ -5536,9 +5574,11 @@ function adaptResolution(ms) {
 // GPU bench: times the real frame on this device, then again with each part switched off, so the cost of
 // every layer shows directly (each render is followed by a 1-pixel read, which waits for the GPU to finish)
 let benchRunning = false;
+const BENCH_R = +(new URLSearchParams(location.search).get('benchR') || 4);
 async function gpuBench() {
   if (benchRunning) return;
   benchRunning = true;
+  document.getElementById('benchOut')?.remove();
   const out = document.createElement('div'); out.id = 'benchOut'; out.textContent = 'GPU bench…'; document.body.appendChild(out);
   await new Promise(r => setTimeout(r, 60));
   const gl = renderer.getContext(), px = new Uint8Array(4);
@@ -5561,18 +5601,25 @@ async function gpuBench() {
     ['pieces', [piecesGroup]],
     ['board', boardGroup.children.filter(o => o !== piecesGroup)],
   ];
-  const rows = [];
+  const rows = [], bases = [];
+  const med = a => { const b = [...a].sort((x, y) => x - y); return b[b.length >> 1]; };
+  // alternate base / variant in rounds and keep the median difference: the phone's GPU clock and
+  // temperature drift during a test, so back-to-back pairs are compared rather than absolute times
+  const ab = (off, on) => { const d = []; for (let r = 0; r < BENCH_R; r++) { const b = time(4); bases.push(b); off(); const v = time(4); on(); d.push(b - v); } return med(d); };
   try {
-    const base = time();
-    rows.push(['FULL FRAME', base]);
-    for (const [name, list] of groups) { if (!list.length) continue; const undo = hide(list); rows.push([name, base - time()]); undo(); }
+    const t0 = performance.now(); while (performance.now() - t0 < 1500) time(3);   // warm the GPU up to its working clock
+    const variants = [];
+    for (const [name, list] of groups) { if (!list.length) continue; let undo; variants.push([name, () => { undo = hide(list); }, () => undo()]); }
     for (const [name, pass] of [['bloom', bloomPass], ['grade', gradePass], ['ink', inkPass], ['AO', gtao]]) {
       if (!pass || !pass.enabled || !usePost()) continue;
-      pass.enabled = false; rows.push([name + ' (post)', base - time()]); pass.enabled = true;
+      variants.push([name + ' (post)', () => { pass.enabled = false; }, () => { pass.enabled = true; }]);
     }
-    if (usePost() && composer) { const c = composer; composer = null; rows.push(['all post', base - time()]); composer = c; }
-    if (renderer.shadowMap.enabled) { forceSh = true; rows.push(['shadow redraw*', base - time()]); forceSh = false; }
-    const pr = renderer.getPixelRatio(); renderer.setPixelRatio(pr * .5); resize(); rows.push(['half resolution', base - time()]); renderer.setPixelRatio(pr); resize();
+    if (usePost() && composer) { let c; variants.push(['all post', () => { c = composer; composer = null; }, () => { composer = c; }]); }
+    if (renderer.shadowMap.enabled) variants.push(['shadow redraw*', () => { forceSh = true; }, () => { forceSh = false; }]);
+    const pr = renderer.getPixelRatio();
+    variants.push(['half resolution', () => { renderer.setPixelRatio(pr * .5); resize(); }, () => { renderer.setPixelRatio(pr); resize(); }]);
+    for (const [name, off, on] of variants) { out.textContent = 'GPU bench… ' + name; await new Promise(r => setTimeout(r, 0)); rows.push([name, ab(off, on)]); }
+    rows.unshift(['FULL FRAME', med(bases)]);
     const W = renderer.domElement.width, H = renderer.domElement.height;
     out.textContent = `GPU bench — ${W}×${H} (dpr ${pr.toFixed(2)})\npreset ${Q.preset} · msaa ${Q.msaa} · ${GFX}\n\n` +
       rows.map(([n, v], i) => (i ? '  ' + n : n).padEnd(20) + (i ? (v >= 0 ? '-' : '+') + Math.abs(v).toFixed(1) : v.toFixed(1)).padStart(8) + ' ms').join('\n') +
@@ -5646,7 +5693,8 @@ function frame(ts = performance.now()) {
     if (tweens.size || busy || galleryOn || sig !== frame.sig || list.some(r => r.t > 0 || r.fade < 1 || r._lastT !== r.t)) frame.shHold = 4;
     frame.sig = sig;
     renderer.shadowMap.autoUpdate = false;
-    renderer.shadowMap.needsUpdate = (frame.shHold = (frame.shHold || 0) - 1) >= 0;
+    frame.shOdd = !frame.shOdd;   // phones: while pieces move, the shadow refreshes every other frame (15 Hz) — half the cost, no visible lag
+    renderer.shadowMap.needsUpdate = (frame.shHold = (frame.shHold || 0) - 1) >= 0 && (!isMobile || frame.shOdd || frame.shHold < 1);
   }
   // the title menu is opaque and covers the whole canvas: don't draw a 3D frame nobody can see
   const covered = !titleEl.classList.contains('hide');
