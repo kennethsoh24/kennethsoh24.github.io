@@ -1105,7 +1105,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 69</div>
+  <div class="build mono">Build 70</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1326,7 +1326,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=69';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=70';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1445,11 +1445,11 @@ const MIRROR = () => CHROME() || METAL();
 const QPRESETS = {
   ultra: { res: 1, auto: 0, shadows: 1, ao: 1, bloom: 1, fog: 1, particles: 1, reflect: 1, outlines: 1 },
   high: { res: 1, auto: 1, shadows: 1, ao: 1, bloom: 1, fog: 1, particles: 1, reflect: 1, outlines: 1 },
-  medium: { res: .8, auto: 1, shadows: 1, ao: 0, bloom: 1, fog: 1, particles: 1, reflect: 0, outlines: 1 },
+  medium: { res: 1, auto: 1, shadows: 1, ao: 0, bloom: 1, fog: 1, particles: 1, reflect: 0, outlines: 1 },
   low: { res: .65, auto: 1, shadows: 0, ao: 0, bloom: 0, fog: 0, particles: 0, reflect: 0, outlines: 0 },
 };
 let Q = { preset: isMobile ? 'medium' : 'high', ...QPRESETS[isMobile ? 'medium' : 'high'] };
-try { const sv = JSON.parse(localStorage.getItem('cf-quality') || 'null'); if (sv) Q = { ...Q, ...sv }; } catch (e) { /* storage blocked */ }
+try { const sv = JSON.parse(localStorage.getItem('cf-quality2') || 'null'); if (sv) Q = { ...Q, ...sv }; } catch (e) { /* storage blocked */ }
 const OUTLINES = () => Q.outlines !== 0;
 const INK = () => false;
 const CINE = () => GFX === 'cinema' && !BWED && (THEME === 'mono' || THEME === 'ops');
@@ -5019,7 +5019,8 @@ const GradeShader = {
     }`,
 };
 function buildComposer() {
-  composer = new EffectComposer(renderer);
+  // multisampled targets: without them every edge in the post-processed image is aliased
+  composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: isMobile ? 4 : 4 }));
   composer.setPixelRatio(renderer.getPixelRatio());
   composer.setSize(innerWidth, innerHeight);
   composer.addPass(new RenderPass(scene, camera));
@@ -5418,11 +5419,11 @@ addEventListener('keydown', e => {
    ================================================================ */
 const clock = new THREE.Clock();
 let lastFrame = performance.now();
-const DPR_BASE = Math.min(devicePixelRatio, isMobile ? 1.5 : 2);
-let DPR_MAX = DPR_BASE * Q.res, DPR_MIN = Math.min(DPR_MAX, isMobile ? .75 : 1) * (Q.res < 1 ? Q.res : 1);
+const DPR_BASE = Math.min(devicePixelRatio, 2);
+let DPR_MAX = DPR_BASE * Q.res, DPR_MIN = Math.min(DPR_MAX, 1.25);
 function applyQuality(rebuild = false) {
   if (!window.__qReady) return;
-  DPR_MAX = DPR_BASE * Q.res; DPR_MIN = Math.min(DPR_MAX, (isMobile ? .75 : 1) * Math.min(1, Q.res + .1));
+  DPR_MAX = DPR_BASE * Q.res; DPR_MIN = Math.min(DPR_MAX, Q.res >= .99 ? 1.25 : 1);
   dprNow = DPR_MAX; renderer.setPixelRatio(dprNow); resize();
   if (renderer.shadowMap.enabled !== !!Q.shadows) {
     renderer.shadowMap.enabled = !!Q.shadows;
@@ -5441,7 +5442,7 @@ function applyQuality(rebuild = false) {
     $('qPreset').value = Q.preset; $('qRes').value = String(Q.res >= .99 ? 1 : Q.res); if (!$('qRes').value) $('qRes').value = '0.8';
     document.querySelectorAll('[data-q]').forEach(el => { el.value = Q[el.dataset.q] ? '1' : '0'; });
   }
-  try { localStorage.setItem('cf-quality', JSON.stringify(Q)); } catch (e) { /* storage blocked */ }
+  try { localStorage.setItem('cf-quality2', JSON.stringify(Q)); } catch (e) { /* storage blocked */ }
 }
 let dprNow = 1, ftAvg = 16, ftCheck = 0;
 $('qPreset').onchange = e => { const p = e.target.value; if (QPRESETS[p]) Q = { preset: p, ...QPRESETS[p] }; else Q.preset = 'custom'; applyQuality(true); };
