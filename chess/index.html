@@ -119,6 +119,11 @@
   .tools .btn { margin-left: -1px; padding: 8px 4px; }
   /* Monolith finish switch: Mono / Glow / Chrome, switchable at any time */
   .styles { display: none; grid-template-columns: repeat(4, 1fr); margin-top: 6px; }
+  /* gallery skin picker (Monolith looks) */
+  .gskin { display: none; grid-template-columns: auto repeat(4, 1fr); align-items: center; gap: 0; padding: 8px 14px 0; }
+  body.monolith .gskin { display: grid; }
+  .gskin .mono { padding-right: 12px; color: var(--grey); }
+  .gskin .btn { margin-left: -1px; padding: 6px 4px; }
   #cfgModal { z-index: 26; }
   .qhead { margin: 12px 0 2px; padding-top: 8px; border-top: 1px solid var(--rule); color: var(--grey); grid-column: 1 / -1; }
   .cfgcard { width: min(420px, 94vw); max-height: 86vh; overflow-y: auto; }
@@ -252,6 +257,7 @@
     #settings .field { grid-template-columns: 50px minmax(0, 1fr); gap: 5px; margin-top: 5px; font-size: 10px; }
     #settings select { padding: 4px 3px; font-size: 10.5px; min-width: 0; }
     .styles .btn { padding: 6px 2px; }
+    #gallery .row .btn { font-size: 9.5px; letter-spacing: .04em; padding-left: 2px; padding-right: 2px; }
     #panel section { padding: 7px 10px; }
     .players { display: grid; grid-template-columns: 1fr 1fr; }
     .player { margin-top: 0; margin-left: -1px; padding: 5px 7px; }
@@ -1010,7 +1016,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 61</div>
+  <div class="build mono">Build 62</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1130,6 +1136,7 @@
 <div id="gallery" hidden>
   <div class="chips" id="gChips"></div>
   <div id="gNote"></div>
+  <div class="gskin" id="gSkin" role="group" aria-label="Skin"><span class="mono">Skin</span><button class="btn" data-gfx="monolith">Mono</button><button class="btn" data-gfx="monolithglow">Glow</button><button class="btn" data-gfx="monolithchrome">Chrome</button><button class="btn" data-gfx="monolithmetal">Metal</button></div>
   <div class="slider mono"><span>Chess</span><input id="gT" type="range" min="0" max="1" step="0.001" value="0" aria-label="transform amount"><span>Mech</span></div>
   <div class="row">
     <button class="btn" id="gGo">Transform</button>
@@ -1208,7 +1215,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=61';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=62';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -4087,7 +4094,7 @@ function setGfx(v) {
   try { localStorage.setItem(GFX_KEY, GFX); } catch (er) { /* storage blocked */ }
   applyGfx(true);
 }
-document.querySelectorAll('#styles [data-gfx], .finish [data-gfx]').forEach(b => b.onclick = () => { tvStatic(160); setGfx(b.dataset.gfx); });
+document.querySelectorAll('#styles [data-gfx], .finish [data-gfx], #gSkin [data-gfx]').forEach(b => b.onclick = () => { if (gAnimating) return; tvStatic(160); setGfx(b.dataset.gfx); });
 $('gfx').onchange = e => {
   if (busy) { e.target.value = GFX; return; }
   GFX = e.target.value;
