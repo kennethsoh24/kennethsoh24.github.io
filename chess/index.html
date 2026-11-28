@@ -1087,7 +1087,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 65</div>
+  <div class="build mono">Build 66</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1116,6 +1116,7 @@
     <div class="foot">
       <div class="opts mono"><span>AI —</span><span id="tLevel" style="display:flex"><button class="btn" data-l="1">Easy</button><button class="btn" data-l="2" aria-pressed="true" style="margin-left:-1px">Normal</button><button class="btn" data-l="3" style="margin-left:-1px">Hard</button></span></div>
       <div class="opts mono finish-row"><span>Finish —</span><span style="display:flex" class="finish"><button class="btn" data-gfx="monolith">Mono</button><button class="btn" data-gfx="monolithglow" style="margin-left:-1px">Glow</button><button class="btn" data-gfx="monolithchrome" style="margin-left:-1px">Chrome</button><button class="btn" data-gfx="monolithmetal" style="margin-left:-1px">Metal</button></span></div>
+      <div class="opts mono"><span>Language —</span><span style="display:flex"><button class="btn" data-lang="en">EN</button><button class="btn" data-lang="zh" style="margin-left:-1px">繁中</button><button class="btn" data-lang="ja" style="margin-left:-1px">日本語</button></span></div>
       <div class="opts mono"><span>Music —</span><span style="display:flex"><button class="btn" data-music="1">On</button><button class="btn" data-music="0" style="margin-left:-1px">Off</button></span></div>
       <div class="opts mono"><span>Theme —</span><span style="display:flex"><button class="btn" data-theme="mono">Mono</button><button class="btn" data-theme="moon" style="margin-left:-1px">Moonlit</button></span></div>
       <div class="loadbar mono"><span id="loadText">Loading models</span><div class="track"><div class="fill" id="loadFill"></div></div></div>
@@ -1155,6 +1156,8 @@
   <section>
     <details id="settings">
       <summary class="mono"><span>02 — Config</span></summary>
+      <label class="field mono">Language
+        <select id="lang"><option value="en">English</option><option value="zh">繁體中文</option><option value="ja">日本語</option></select></label>
       <label class="field mono">AI
         <select id="level"><option value="1">Easy</option><option value="2" selected>Normal</option><option value="3">Hard</option></select></label>
       <label class="field mono">Morph
@@ -1304,7 +1307,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=65';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=66';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1353,6 +1356,40 @@ THREE.ShaderChunk.fog_fragment = `#ifdef USE_FOG
 const V3 = THREE.Vector3, PI = Math.PI;
 const $ = id => document.getElementById(id);
 const isMobile = matchMedia('(max-width: 760px)').matches;
+const I18N = { zh: {"Loading models": "載入模型中", "Every piece transforms": "每一隻棋都會變身", "Every piece transforms.": "每一隻棋都會變身。", "Pawn 2": "兵 2", "Bishop 2.0": "象 2.0", "King": "王", "Queen": "后", "Knight": "馬", "Rook": "車", "Bishop": "象", "Pawn": "兵", "On air — Channel 01": "直播中 — 頻道 01", "Gear up": "全軍變身", "On air": "直播中", "Channel 01": "頻道 01", "Tutorial": "教學", "Play White": "執白對戰", "Play Black": "執黑對戰", "Versus": "雙人對戰", "COM vs COM": "電腦對電腦", "Gallery": "角色畫廊", "Config": "設定", "AI —": "AI —", "Easy": "易", "Normal": "普通", "Hard": "難", "Finish —": "外觀 —", "Mono": "黑白", "Glow": "發光", "Chrome": "鏡面", "Metal": "金屬", "Music —": "音樂 —", "On": "開", "Off": "關", "Theme —": "主題 —", "Moonlit": "月夜", "Language —": "語言 —", "Cast — 4": "登場角色 — 4", "Pawn 2 / Bishop 2.0 / King / Queen": "兵 2 / 象 2.0 / 王 / 后", "3D via Higgsfield": "3D 由 Higgsfield 製作", "♪ Tap anywhere for sound": "♪ 撳任何地方開聲", "← Menu": "← 主選單", "Live": "直播", "01 — Players": "01 — 玩家", "vs AI": "對 AI", "Black": "黑方", "White": "白方", "YOU": "你", "Your move": "輪到你", "Undo": "悔棋", "Flip": "翻轉", "Cast": "角色", "Retry": "重來", "02 — Config": "02 — 設定", "AI": "AI", "Morph": "變身", "Every move": "每一步", "On capture": "食子時", "Always mech": "永遠機械人", "Never": "唔變身", "Battle": "戰鬥", "Full": "完整", "Quick": "快速", "Graphics": "畫面", "Cinema": "電影", "Anime 2.5D": "動畫 2.5D", "Anime 2.5D · Fine line": "動畫 2.5D · 幼線", "Monolith": "巨石", "Monolith · Glow": "巨石 · 發光", "Monolith · Chrome": "巨石 · 鏡面", "Monolith · Metal": "巨石 · 金屬", "High": "高", "Classic": "經典", "Camera": "鏡頭", "Cinematic": "電影鏡頭", "Fixed": "固定", "Music": "音樂", "Theme": "主題", "Speed": "速度", "Sound": "音效", "Language": "語言", "Graphics quality": "畫質", "Preset": "預設", "Ultra": "極高", "Medium": "中", "Low": "低", "Custom": "自訂", "Resolution": "解像度", "Auto res": "自動解像度", "Shadows": "陰影", "AO": "環境遮蔽", "Bloom": "光暈", "Fog": "霧", "Particles": "粒子", "Reflect": "倒影", "Outlines": "描邊", "03 — Log": "03 — 棋譜", "Hint": "提示", "Gear": "全軍", "Up": "變身", "All units": "所有單位", "Origin": "原稿", "sketch → 3D": "原稿 → 3D", "Hand-drawn sketch": "手繪設計稿", "Higgsfield render": "Higgsfield 渲染", "3D model": "3D 模型", "Rigged mech in game": "遊戲內骨架機械人", "Close": "關閉", "Skin": "外觀", "Chess": "棋子", "Mech": "機械人", "Transform": "變身", "Attack": "攻擊", "Team": "換隊", "Spin": "轉動", "Back": "返回", "Pawn reached the last rank": "兵到咗底線", "Promotion": "升變", "CH.02 — Battle feed": "CH.02 — 戰鬥畫面", "Skip ›": "跳過 ›", "Press start": "撳一下開始", "Click, tap or press any key — sound on": "撳畫面或任何掣 — 有聲", "Done": "完成", "Checkmate": "將死", "Check": "將軍", "DRAW": "和局", "Game Start": "開始", "Next Match": "下一局", "Demo": "示範", "Gear Up": "全軍變身", "Stalemate": "無子可動", "50-move rule": "五十步規則", "Insufficient material": "子力不足", "Demo move limit": "示範步數上限", "Draw — move limit": "和局 — 步數上限", "Demo — auto play": "示範 — 自動對戰", "Player 1": "玩家 1", "Player 2": "玩家 2", "EASY": "易", "NORMAL": "普通", "HARD": "難", "Skip ✕": "跳過 ✕", "Close ✕": "關閉 ✕", "Lessons": "課程", "Next": "下一步", "Lesson complete ✓": "完成課程 ✓", "Play vs AI": "對 AI", "Next lesson": "下一課", "New here? — 新手？": "新手？", "Start tutorial": "開始教學", "Skip": "跳過", "Tutorial — 教學": "教學", "Take the one-minute tutorial: how to play, plus openings like the Queen's Gambit.": "一分鐘教學：基本玩法，同埋后翼棄兵等開局技巧。", "Moves": "步數", "Sector": "格", "{who} to move": "輪到{who}", "{who} is in check": "{who}被將軍", "{who} is plotting…": "{who}思考緊…", "{who} is thinking…": "{who}思考緊…", "Checkmate — {who} wins": "將死 — {who}勝", "{who} wins": "{who}勝出", "Draw — {why}": "和局 — {why}", "{who} king": "{who}王", "Move {n}": "第 {n} 步", "Cast {n} / 06 — {team}": "角色 {n} / 06 — {team}", "{side} plays {san}.": "{side}行 {san}。", "Nice. Next up: {name}.": "做得好！下一課：{name}。", "Hint · {san}": "提示 · {san}", "{name} · {k}/{n}": "{name} · {k}/{n}"},
+  ja: {"Loading models": "モデル読み込み中", "Every piece transforms": "すべての駒が変形する", "Every piece transforms.": "すべての駒が変形する。", "Pawn 2": "ポーン 2", "Bishop 2.0": "ビショップ 2.0", "King": "キング", "Queen": "クイーン", "Knight": "ナイト", "Rook": "ルーク", "Bishop": "ビショップ", "Pawn": "ポーン", "On air — Channel 01": "オンエア — チャンネル 01", "Gear up": "全軍変形", "On air": "オンエア", "Channel 01": "チャンネル 01", "Tutorial": "チュートリアル", "Play White": "白で対戦", "Play Black": "黒で対戦", "Versus": "二人対戦", "COM vs COM": "COM 対 COM", "Gallery": "ギャラリー", "Config": "設定", "AI —": "AI —", "Easy": "やさしい", "Normal": "ふつう", "Hard": "むずかしい", "Finish —": "仕上げ —", "Mono": "モノ", "Glow": "グロウ", "Chrome": "クローム", "Metal": "メタル", "Music —": "音楽 —", "On": "オン", "Off": "オフ", "Theme —": "テーマ —", "Moonlit": "月夜", "Language —": "言語 —", "Cast — 4": "キャスト — 4", "Pawn 2 / Bishop 2.0 / King / Queen": "ポーン 2 / ビショップ 2.0 / キング / クイーン", "3D via Higgsfield": "3D 制作：Higgsfield", "♪ Tap anywhere for sound": "♪ タップでサウンド", "← Menu": "← メニュー", "Live": "ライブ", "01 — Players": "01 — プレイヤー", "vs AI": "対 AI", "Black": "黒", "White": "白", "YOU": "あなた", "Your move": "あなたの番", "Undo": "待った", "Flip": "反転", "Cast": "キャスト", "Retry": "やり直し", "02 — Config": "02 — 設定", "AI": "AI", "Morph": "変形", "Every move": "毎手", "On capture": "駒取り時", "Always mech": "常にメカ", "Never": "しない", "Battle": "バトル", "Full": "フル", "Quick": "クイック", "Graphics": "グラフィック", "Cinema": "シネマ", "Anime 2.5D": "アニメ 2.5D", "Anime 2.5D · Fine line": "アニメ 2.5D · 細線", "Monolith": "モノリス", "Monolith · Glow": "モノリス · グロウ", "Monolith · Chrome": "モノリス · クローム", "Monolith · Metal": "モノリス · メタル", "High": "高", "Classic": "クラシック", "Camera": "カメラ", "Cinematic": "シネマティック", "Fixed": "固定", "Music": "音楽", "Theme": "テーマ", "Speed": "速度", "Sound": "効果音", "Language": "言語", "Graphics quality": "画質", "Preset": "プリセット", "Ultra": "最高", "Medium": "中", "Low": "低", "Custom": "カスタム", "Resolution": "解像度", "Auto res": "自動解像度", "Shadows": "影", "AO": "AO", "Bloom": "ブルーム", "Fog": "霧", "Particles": "パーティクル", "Reflect": "反射", "Outlines": "輪郭線", "03 — Log": "03 — 棋譜", "Hint": "ヒント", "Gear": "全軍", "Up": "変形", "All units": "全ユニット", "Origin": "原画", "sketch → 3D": "原画 → 3D", "Hand-drawn sketch": "手描きスケッチ", "Higgsfield render": "Higgsfield レンダー", "3D model": "3D モデル", "Rigged mech in game": "ゲーム内のリグ付きメカ", "Close": "閉じる", "Skin": "スキン", "Chess": "駒", "Mech": "メカ", "Transform": "変形", "Attack": "攻撃", "Team": "チーム", "Spin": "回転", "Back": "戻る", "Pawn reached the last rank": "ポーンが最終段に到達", "Promotion": "プロモーション", "CH.02 — Battle feed": "CH.02 — バトル映像", "Skip ›": "スキップ ›", "Press start": "スタート", "Click, tap or press any key — sound on": "クリック・タップ・任意のキーで開始（音声あり）", "Done": "完了", "Checkmate": "チェックメイト", "Check": "チェック", "DRAW": "引き分け", "Game Start": "ゲームスタート", "Next Match": "次の対局", "Demo": "デモ", "Gear Up": "全軍変形", "Stalemate": "ステイルメイト", "50-move rule": "50手ルール", "Insufficient material": "駒不足", "Demo move limit": "デモ手数上限", "Draw — move limit": "引き分け — 手数上限", "Demo — auto play": "デモ — 自動対局", "Player 1": "プレイヤー 1", "Player 2": "プレイヤー 2", "EASY": "やさしい", "NORMAL": "ふつう", "HARD": "むずかしい", "Skip ✕": "スキップ ✕", "Close ✕": "閉じる ✕", "Lessons": "レッスン", "Next": "次へ", "Lesson complete ✓": "レッスン完了 ✓", "Play vs AI": "AI と対戦", "Next lesson": "次のレッスン", "New here? — 新手？": "はじめて？", "Start tutorial": "チュートリアル開始", "Skip": "スキップ", "Tutorial — 教學": "チュートリアル", "Take the one-minute tutorial: how to play, plus openings like the Queen's Gambit.": "1分チュートリアル：遊び方と、クイーンズ・ギャンビットなどの定跡。", "Moves": "手数", "Sector": "マス", "{who} to move": "{who}の番", "{who} is in check": "{who}がチェック", "{who} is plotting…": "{who}が思考中…", "{who} is thinking…": "{who}が思考中…", "Checkmate — {who} wins": "チェックメイト — {who}の勝ち", "{who} wins": "{who}の勝ち", "Draw — {why}": "引き分け — {why}", "{who} king": "{who}のキング", "Move {n}": "{n} 手目", "Cast {n} / 06 — {team}": "キャスト {n} / 06 — {team}", "{side} plays {san}.": "{side}：{san}。", "Nice. Next up: {name}.": "お見事！次は：{name}。", "Hint · {san}": "ヒント · {san}", "{name} · {k}/{n}": "{name} · {k}/{n}"} };
+// one language at a time: English, Traditional Chinese or Japanese
+let LANG = 'en';
+try { LANG = localStorage.getItem('cf-lang') || (/^zh/i.test(navigator.language) ? 'zh' : /^ja/i.test(navigator.language) ? 'ja' : 'en'); } catch (e) { /* storage blocked */ }
+const t = (s, v) => { let r = LANG === 'en' ? s : (I18N[LANG][s] ?? s); if (v) for (const k in v) r = r.split('{' + k + '}').join(v[k]); return r; };
+const tl = o => (o && (LANG === 'zh' ? o.zh : LANG === 'ja' ? o.ja : o.en)) || (o && o.en) || '';   // pick one of {en, zh, ja}
+const ORIG = new WeakMap();
+function applyLang() {
+  document.documentElement.lang = LANG === 'zh' ? 'zh-Hant' : LANG === 'ja' ? 'ja' : 'en';
+  document.body.classList.toggle('cjk', LANG !== 'en');
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = w.nextNode())) {
+    const pe = n.parentElement;
+    if (!pe || pe.closest('script,style,#tutCard,#hintBox,#moves,#tag,#gName,#gNote,.wordmark,.wm,.bw,.brand')) continue;   // the logo stays CHESS FANTASIA
+    if (!ORIG.has(n)) ORIG.set(n, n.nodeValue);
+    const o = ORIG.get(n), k = o.trim();
+    if (!k || !/[A-Za-z]/.test(k)) continue;
+    const tr = t(k);
+    n.nodeValue = tr === k ? o : o.replace(k, tr);
+  }
+  document.querySelectorAll('[data-lang]').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === LANG));
+  if ($('lang')) $('lang').value = LANG;
+}
+function setLang(l) {
+  LANG = l; try { localStorage.setItem('cf-lang', l); } catch (e) { /* storage blocked */ }
+  applyLang();
+  if (typeof refreshStatus === 'function' && state) { refreshStatus(); }
+  if (typeof galleryOn !== 'undefined' && galleryOn && gRig) buildGalleryRig(true);
+  if (tut && !tutCard.hidden && !tutCard.classList.contains('picker')) renderStep();
+  else if (!tutCard.hidden && tutCard.classList.contains('picker')) openLessonPicker();
+}
+
 
 /* ================================================================
    Renderer / scene
@@ -3668,7 +3705,7 @@ function allRigs() { return piecesGroup.children.map(c => c.userData.rig).filter
 const statusEl = $('status'), movesEl = $('moves');
 let toastTimer;
 function toast(msg, ms = 2200, sub = '') {
-  const t = $('toast'); t.querySelector('.txt').textContent = msg; t.querySelector('.sub').textContent = sub || ('Move ' + (history.length + 1));
+  const t = $('toast'); t.querySelector('.txt').textContent = msg; t.querySelector('.sub').textContent = sub || ('Move ' + (history.length + 1)).replace(/^Move (\d+)$/, (m, n) => (typeof LANG !== 'undefined' && LANG !== 'en') ? I18N[LANG]['Move {n}'].replace('{n}', n) : m);
   t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
@@ -3680,13 +3717,13 @@ function updateTurnUI() {
   document.documentElement.style.setProperty('--turn', state.turn === 'w' ? 'var(--cyan)' : 'var(--gold)');
   $('pW').classList.toggle('active', state.turn === 'w' && !gameOver);
   $('pB').classList.toggle('active', state.turn === 'b' && !gameOver);
-  const lvl = ['', 'EASY', 'NORMAL', 'HARD'][settings.level];
-  const who = c => settings.mode === 'pvp' ? '' : settings.mode === 'demo' ? `COM ${c === 'w' ? 1 : 2} · ${lvl}` : (isHuman(c) ? 'YOU' : `AI · ${lvl}`);
-  $('nW').innerHTML = `White<small>${who('w') || 'Player 1'}</small>`;
-  $('nB').innerHTML = `Black<small>${who('b') || 'Player 2'}</small>`;
-  $('modeLabel').textContent = { 'ai-w': 'vs AI', 'ai-b': 'vs AI', pvp: 'Versus', demo: 'COM vs COM', tutor: 'Tutorial', idle: '—' }[settings.mode];
-  $('liveLabel').textContent = settings.mode === 'demo' ? 'Demo — auto play' : 'Live';
-  $('mcount').textContent = 'Move ' + String(Math.floor(history.length / 2) + 1).padStart(3, '0');
+  const lvl = t(['', 'EASY', 'NORMAL', 'HARD'][settings.level]);
+  const who = c => settings.mode === 'pvp' ? '' : settings.mode === 'demo' ? `COM ${c === 'w' ? 1 : 2} · ${lvl}` : (isHuman(c) ? t('YOU') : `AI · ${lvl}`);
+  $('nW').innerHTML = `${t('White')}<small>${who('w') || t('Player 1')}</small>`;
+  $('nB').innerHTML = `${t('Black')}<small>${who('b') || t('Player 2')}</small>`;
+  $('modeLabel').textContent = t({ 'ai-w': 'vs AI', 'ai-b': 'vs AI', pvp: 'Versus', demo: 'COM vs COM', tutor: 'Tutorial', idle: '—' }[settings.mode] || '—');
+  $('liveLabel').textContent = t(settings.mode === 'demo' ? 'Demo — auto play' : 'Live');
+  $('mcount').textContent = t('Move {n}', { n: String(Math.floor(history.length / 2) + 1).padStart(3, '0') });
   // captured material, worked out from what is missing from the board
   const start = { P: 8, N: 2, B: 2, R: 2, Q: 1 };
   const left = { w: {}, b: {} };
@@ -3732,8 +3769,8 @@ function refreshStatus() {
   if (st === 'checkmate') {
     const win = state.turn === 'w' ? 'b' : 'w';
     gameOver = true;
-    setStatus(`Checkmate — ${NAME[win]} wins`, 'over');
-    toast('Checkmate', 4200, `${NAME[win]} wins`);
+    setStatus(t('Checkmate — {who} wins', { who: t(NAME[win]) }), 'over');
+    toast(t('Checkmate'), 4200, t('{who} wins', { who: t(NAME[win]) }));
     gameOver = true;
     victory(win);
     if (DC) dcEnd(win);
@@ -3741,16 +3778,17 @@ function refreshStatus() {
   } else if (st === 'stalemate' || st === 'fifty' || st === 'insufficient') {
     const why = { stalemate: 'Stalemate', fifty: '50-move rule', insufficient: 'Insufficient material' }[st];
     gameOver = true;
-    setStatus('Draw — ' + why, 'over'); toast('DRAW', 3200, why);
+    setStatus(t('Draw — {why}', { why: t(why) }), 'over'); toast(t('DRAW'), 3200, t(why));
     gameOver = true;
     demoNext();
   } else if (settings.mode === 'demo' && history.length >= 180) {
     gameOver = true;
-    setStatus('Draw — move limit', 'over'); toast('DRAW', 3200, 'Demo move limit');
+    setStatus(t('Draw — move limit'), 'over'); toast(t('DRAW'), 3200, t('Demo move limit'));
     demoNext();
   } else {
-    setStatus(st === 'check' ? `${who} is in check` : (isHuman(state.turn) ? (settings.mode === 'pvp' ? `${who} to move` : 'Your move') : `${settings.mode === 'demo' ? 'COM ' + (state.turn === 'w' ? 1 : 2) + ' — ' + who : who} is plotting…`), st === 'check' ? 'check' : '');
-    if (st === 'check') { toast('Check', 1400, `${who} king`); if (DC) dcCheck(state.turn); }
+    const W = t(who);
+    setStatus(st === 'check' ? t('{who} is in check', { who: W }) : (isHuman(state.turn) ? (settings.mode === 'pvp' ? t('{who} to move', { who: W }) : t('Your move')) : t('{who} is plotting…', { who: settings.mode === 'demo' ? 'COM ' + (state.turn === 'w' ? 1 : 2) + ' — ' + W : W })), st === 'check' ? 'check' : '');
+    if (st === 'check') { toast(t('Check'), 1400, t('{who} king', { who: W })); if (DC) dcCheck(state.turn); }
   }
   updateTurnUI();
 }
@@ -3789,7 +3827,7 @@ function select(s) {
     tween(.22, k => selMark.scale.setScalar(1.6 - .6 * easeIO(k)));
     const p = state.board[s];
     const nm = { P: 'Pawn 2', B: 'Bishop 2.0', N: 'Knight', R: 'Rook', Q: 'Queen', K: 'King' }[p.toUpperCase()];
-    $('tag').innerHTML = `<b>Sector ${E.sqName(s).toUpperCase()}</b><span>${E.colorOf(p) === 'w' ? 'White' : 'Black'} // ${nm}</span><span>Moves ${String(legalCache.length).padStart(2, '0')}</span>`;
+    $('tag').innerHTML = `<b>${t('Sector')} ${E.sqName(s).toUpperCase()}</b><span>${t(E.colorOf(p) === 'w' ? 'White' : 'Black')} // ${t(nm)}</span><span>${t('Moves')} ${String(legalCache.length).padStart(2, '0')}</span>`;
     tagSq = s; $('tag').hidden = false;
     $('tag').classList.remove('in'); void $('tag').offsetWidth; $('tag').classList.add('in');
   }
@@ -3851,12 +3889,12 @@ async function play(m) {
 
 /* capture cut-in: the attacker's portrait slashes across the screen */
 const CUT_NAME = { P: 'PAWN 2', B: 'BISHOP 2.0', Q: 'QUEEN', K: 'KING', N: 'KNIGHT', R: 'ROOK' };
-const CUT_WORD = ['TAKE!', 'STRIKE!', 'BREAK!', 'CRUSH!'];
+const CUT_WORDS = { en: ['TAKE!', 'STRIKE!', 'BREAK!', 'CRUSH!'], zh: ['斬！', '擊！', '破！', '碎！'], ja: ['斬！', '撃！', '破！', '砕！'] };
 for (const t of 'PBQKNR') for (const k of ['cut', 'cutc']) { const i = new Image(); i.src = `assets/${k}_${t}.webp`; }
 function cutIn(rig) {
   const c = $('cutin');
   c.querySelector('img').src = `assets/${THEME === 'mono' ? 'cut' : 'cutc'}_${rig.type}.webp`;
-  c.querySelector('.word').textContent = CUT_WORD[Math.random() * CUT_WORD.length | 0];
+  { const W = CUT_WORDS[LANG] || CUT_WORDS.en; c.querySelector('.word').textContent = W[Math.random() * W.length | 0]; }
   c.querySelector('.label').textContent = `${rig.team === 'w' ? 'White' : 'Black'} — ${CUT_NAME[rig.type]}`;
   c.classList.remove('go'); void c.offsetWidth; c.classList.add('go');
   zap();
@@ -3938,7 +3976,7 @@ async function aiTurn() {
   if (gameOver || isHuman(state.turn) || busy) return;
   if (DC && dcHolding) { setTimeout(aiTurn, 400); return; }
   busy = true;
-  setStatus(`${NAME[state.turn]} is thinking…`);
+  setStatus(t('{who} is thinking…', { who: t(NAME[state.turn]) }));
   await new Promise(r => setTimeout(r, 30));
   const depth = settings.level;
   const demo = settings.mode === 'demo';
@@ -3957,7 +3995,7 @@ function demoNext() {
     if (settings.mode !== 'demo') return;
     tvStatic();
     newGame();
-    setTimeout(() => toast('Next Match', 1500, 'COM vs COM'), 400);
+    setTimeout(() => toast(t('Next Match'), 1500, t('COM vs COM')), 400);
   }), 6000);
 }
 function whenIdle(fn) { if (!busy) fn(); else setTimeout(() => whenIdle(fn), 120); }
@@ -4010,7 +4048,7 @@ async function gearUp() {
   setFab();
   const list = allRigs().sort((a, b) => a.root.position.z - b.root.position.z);
   list.forEach((r, i) => setTimeout(() => morph(r, geared ? 1 : 0, .9), i * 45));
-  if (geared) toast('Gear Up', 1500, 'All units');
+  if (geared) toast(t('Gear Up'), 1500, t('All units'));
 }
 
 $('bNew').onclick = newGame;
@@ -4136,7 +4174,7 @@ function startGame(mode) {
     servo(true, .5);
     if (DC) dcStart();
     if (['ai-w', 'ai-b', 'pvp'].includes(mode) && !DC) setTimeout(offerTutorial, 1800);
-    if (DC) { /* handled above */ } else if (mode !== 'tutor') setTimeout(() => mode === 'demo' ? toast('Demo', 1600, 'COM vs COM') : toast('Game Start', 1500, 'Channel 01'), 500);
+    if (DC) { /* handled above */ } else if (mode !== 'tutor') setTimeout(() => mode === 'demo' ? toast(t('Demo'), 1600, t('COM vs COM')) : toast(t('Game Start'), 1500, t('Channel 01')), 500);
   });
 }
 document.querySelectorAll('#title [data-mode]').forEach(b => b.onclick = () => startGame(b.dataset.mode));
@@ -4153,83 +4191,83 @@ addEventListener('keydown', e => {
    played out on the real board one move at a time
    ================================================================ */
 const LESSONS = [
-  { id: 'basics', name: 'How to play', zh: '基本玩法', steps: [
-    { say: 'Tap one of your pieces. Glowing dots show every square it can reach; a glowing ring marks a capture.', zh: '撳你嘅棋，發光圓點係可以行嘅格，光環係可以食嘅棋。' },
-    { say: 'Tap a glowing square to move there. Each move transforms the piece into its mech and back.', zh: '撳發光嘅格就行過去，每行一步棋都會變身。' },
-    { say: 'Moving onto an enemy piece starts a battle — every piece has its own attack.', zh: '行去對方棋子嘅格就會開打，每隻棋有自己嘅攻擊。' },
-    { say: 'Not sure what to play? Tap HINT on the right for the best move and why.', zh: '唔知點行？撳右邊 HINT，會話你下一步同原因。', point: '#hintBtn' },
-    { say: 'GEAR UP turns your whole army into mechs at once.', zh: 'GEAR UP 一次過將全軍變做機械人。', point: '#fab' },
-    { say: 'Mono / Glow / Chrome / Metal change the finish any time. Config holds AI level and graphics quality.', zh: 'Mono / Glow / Chrome / Metal 隨時換顏色，Config 入面調 AI 同畫質。', point: '#styles' },
-    { say: 'CAST opens the gallery: every piece, its attack demo and the sketch it was born from.', zh: 'CAST 打開角色畫廊：睇每隻棋、攻擊示範同原稿。', point: '#bGallery' },
+  { id: 'basics', name: 'How to play', zh: '基本玩法', ja: "遊び方", steps: [
+    { say: 'Tap one of your pieces. Glowing dots show every square it can reach; a glowing ring marks a capture.', zh: '撳你嘅棋，發光圓點係可以行嘅格，光環係可以食嘅棋。' , ja: "自分の駒をタップ。光る点は移動できるマス、光る輪は取れる駒です。" },
+    { say: 'Tap a glowing square to move there. Each move transforms the piece into its mech and back.', zh: '撳發光嘅格就行過去，每行一步棋都會變身。' , ja: "光るマスをタップして移動。動くたびに駒がメカに変形して戻ります。" },
+    { say: 'Moving onto an enemy piece starts a battle — every piece has its own attack.', zh: '行去對方棋子嘅格就會開打，每隻棋有自己嘅攻擊。' , ja: "敵の駒に動くとバトル開始。駒ごとに専用の攻撃があります。" },
+    { say: 'Not sure what to play? Tap HINT on the right for the best move and why.', zh: '唔知點行？撳右邊 HINT，會話你下一步同原因。', point: '#hintBtn' , ja: "迷ったら右の HINT をタップ。最善手とその理由が表示されます。" },
+    { say: 'GEAR UP turns your whole army into mechs at once.', zh: 'GEAR UP 一次過將全軍變做機械人。', point: '#fab' , ja: "GEAR UP で全軍を一気にメカへ変形。" },
+    { say: 'Mono / Glow / Chrome / Metal change the finish any time. Config holds AI level and graphics quality.', zh: 'Mono / Glow / Chrome / Metal 隨時換顏色，Config 入面調 AI 同畫質。', point: '#styles' , ja: "Mono / Glow / Chrome / Metal でいつでも外観を変更。設定で AI の強さと画質を調整。" },
+    { say: 'CAST opens the gallery: every piece, its attack demo and the sketch it was born from.', zh: 'CAST 打開角色畫廊：睇每隻棋、攻擊示範同原稿。', point: '#bGallery' , ja: "CAST でギャラリーへ：全キャラ、攻撃デモ、そして元になった原画。" },
   ] },
-  { id: 'principles', name: 'Opening principles', zh: '開局三原則', steps: [
-    { say: 'Three rules win most openings: take the centre, develop your pieces, castle early.', zh: '開局三大原則：搶中心、出子、早啲易位。' },
-    { san: 'e4', say: 'Take the centre: the pawn on e4 controls d5 and f5 and frees the queen and bishop.', zh: '搶中心：e4 兵控制 d5、f5，亦打開后同象嘅路。' },
-    { san: 'e5', say: 'Black claims his share of the centre the same way.', zh: '黑方用同一招搶返中心。' },
-    { san: 'Nf3', say: 'Develop: knights before bishops. Nf3 also attacks the pawn on e5.', zh: '出子：馬先過象。Nf3 仲攻擊緊 e5 兵。' },
-    { san: 'Nc6', say: 'Black defends e5 by developing too — every move should do something.', zh: '黑方出馬保護 e5，每一步都要有作用。' },
-    { san: 'Bc4', say: 'The bishop eyes f7 — the weakest square, guarded only by the king.', zh: '象瞄住 f7：全場最弱嘅格，只有王保護。' },
-    { san: 'Bc5', say: 'Black mirrors it.', zh: '黑方照樣出象。' },
-    { san: 'O-O', say: 'Castle early: the king hides behind pawns and the rook joins the game.', zh: '早啲易位：王匿入兵後面，車亦可以出嚟。' },
-    { san: 'Nf6', say: 'Both sides are developed — now the middlegame can begin.', zh: '雙方出子完成，中局開始。' },
+  { id: 'principles', name: 'Opening principles', zh: '開局三原則', ja: "序盤の原則", steps: [
+    { say: 'Three rules win most openings: take the centre, develop your pieces, castle early.', zh: '開局三大原則：搶中心、出子、早啲易位。' , ja: "序盤の三原則：中央を取る、駒を展開する、早めにキャスリング。" },
+    { san: 'e4', say: 'Take the centre: the pawn on e4 controls d5 and f5 and frees the queen and bishop.', zh: '搶中心：e4 兵控制 d5、f5，亦打開后同象嘅路。' , ja: "中央を取る：e4 のポーンは d5・f5 を支配し、クイーンとビショップの道を開く。" },
+    { san: 'e5', say: 'Black claims his share of the centre the same way.', zh: '黑方用同一招搶返中心。' , ja: "黒も同じように中央を主張。" },
+    { san: 'Nf3', say: 'Develop: knights before bishops. Nf3 also attacks the pawn on e5.', zh: '出子：馬先過象。Nf3 仲攻擊緊 e5 兵。' , ja: "展開：ビショップより先にナイト。Nf3 は e5 のポーンも狙う。" },
+    { san: 'Nc6', say: 'Black defends e5 by developing too — every move should do something.', zh: '黑方出馬保護 e5，每一步都要有作用。' , ja: "黒も展開しながら e5 を守る。一手一手に意味を。" },
+    { san: 'Bc4', say: 'The bishop eyes f7 — the weakest square, guarded only by the king.', zh: '象瞄住 f7：全場最弱嘅格，只有王保護。' , ja: "ビショップが f7 を狙う：キングしか守っていない最弱のマス。" },
+    { san: 'Bc5', say: 'Black mirrors it.', zh: '黑方照樣出象。' , ja: "黒も同じく。" },
+    { san: 'O-O', say: 'Castle early: the king hides behind pawns and the rook joins the game.', zh: '早啲易位：王匿入兵後面，車亦可以出嚟。' , ja: "早めのキャスリング：キングはポーンの陰に、ルークも参戦。" },
+    { san: 'Nf6', say: 'Both sides are developed — now the middlegame can begin.', zh: '雙方出子完成，中局開始。' , ja: "両者の展開完了。ここから中盤戦。" },
   ] },
-  { id: 'qg', name: "Queen's Gambit", zh: '后翼棄兵', steps: [
-    { say: "The Queen's Gambit is one of the oldest and most respected openings. White offers a pawn for the centre.", zh: '后翼棄兵係最經典嘅開局之一：白方送一隻兵去換中心。' },
-    { san: 'd4', say: 'White opens with the queen’s pawn.', zh: '白方行后前兵。' },
-    { san: 'd5', say: 'Black answers symmetrically.', zh: '黑方對稱回應。' },
-    { san: 'c4', say: "The gambit! c4 offers a pawn to lure Black's d-pawn away from the centre.", zh: '棄兵！c4 引黑方 d 兵離開中心。' },
-    { san: 'e6', say: "Declined (QGD): Black keeps the d5 pawn solidly protected instead of taking.", zh: '拒絕棄兵：黑方唔食，用 e6 穩住 d5。' },
-    { san: 'Nc3', say: 'White adds pressure on d5.', zh: '白方再加壓 d5。' },
-    { san: 'Nf6', say: 'Black defends d5 again.', zh: '黑方再保護 d5。' },
-    { san: 'Bg5', say: 'The bishop pins the knight to the queen behind it — a classic QGD idea.', zh: '象牽制住馬（後面係后），后翼棄兵經典手法。' },
-    { san: 'Be7', say: 'Black breaks the pin. If Black had taken on c4 (Accepted), White wins the pawn back with e3 and Bxc4.', zh: '黑方解除牽制。如果黑方食咗 c4（接受棄兵），白方用 e3、Bxc4 食返。' },
+  { id: 'qg', name: "Queen's Gambit", zh: '后翼棄兵', ja: "クイーンズ・ギャンビット", steps: [
+    { say: "The Queen's Gambit is one of the oldest and most respected openings. White offers a pawn for the centre.", zh: '后翼棄兵係最經典嘅開局之一：白方送一隻兵去換中心。' , ja: "クイーンズ・ギャンビットは最も古く由緒ある定跡の一つ。白は中央のためにポーンを差し出す。" },
+    { san: 'd4', say: 'White opens with the queen’s pawn.', zh: '白方行后前兵。' , ja: "白はクイーン前のポーンから。" },
+    { san: 'd5', say: 'Black answers symmetrically.', zh: '黑方對稱回應。' , ja: "黒は対称に応じる。" },
+    { san: 'c4', say: "The gambit! c4 offers a pawn to lure Black's d-pawn away from the centre.", zh: '棄兵！c4 引黑方 d 兵離開中心。' , ja: "ギャンビット！c4 でポーンを差し出し、黒の d ポーンを中央から引き離す。" },
+    { san: 'e6', say: "Declined (QGD): Black keeps the d5 pawn solidly protected instead of taking.", zh: '拒絕棄兵：黑方唔食，用 e6 穩住 d5。' , ja: "辞退型（QGD）：黒は取らずに e6 で d5 を堅く守る。" },
+    { san: 'Nc3', say: 'White adds pressure on d5.', zh: '白方再加壓 d5。' , ja: "白は d5 にさらに圧力。" },
+    { san: 'Nf6', say: 'Black defends d5 again.', zh: '黑方再保護 d5。' , ja: "黒は再び d5 を守る。" },
+    { san: 'Bg5', say: 'The bishop pins the knight to the queen behind it — a classic QGD idea.', zh: '象牽制住馬（後面係后），后翼棄兵經典手法。' , ja: "ビショップが後ろのクイーンごとナイトをピン。QGD の定番。" },
+    { san: 'Be7', say: 'Black breaks the pin. If Black had taken on c4 (Accepted), White wins the pawn back with e3 and Bxc4.', zh: '黑方解除牽制。如果黑方食咗 c4（接受棄兵），白方用 e3、Bxc4 食返。' , ja: "黒はピンを解消。もし c4 で取っていたら（受諾型）、白は e3・Bxc4 で取り返す。" },
   ] },
-  { id: 'italian', name: 'Italian Game', zh: '意大利開局', steps: [
-    { say: 'The Italian Game: fast development and an early bishop aimed at f7.', zh: '意大利開局：快速出子，象一早瞄住 f7。' },
+  { id: 'italian', name: 'Italian Game', zh: '意大利開局', ja: "イタリアン・ゲーム", steps: [
+    { say: 'The Italian Game: fast development and an early bishop aimed at f7.', zh: '意大利開局：快速出子，象一早瞄住 f7。' , ja: "イタリアン・ゲーム：素早い展開と f7 を狙う早いビショップ。" },
     { san: 'e4' }, { san: 'e5' },
-    { san: 'Nf3', say: 'Knight out, attacking e5.', zh: '出馬攻擊 e5。' },
-    { san: 'Nc6', say: 'Defended.', zh: '保護。' },
-    { san: 'Bc4', say: 'The Italian bishop.', zh: '意大利象。' },
-    { san: 'Bc5', say: 'Giuoco Piano — "the quiet game".', zh: 'Giuoco Piano：「安靜嘅棋」。' },
-    { san: 'c3', say: 'c3 prepares d4 to build a big pawn centre.', zh: 'c3 準備 d4，建立大中心。' },
-    { san: 'Nf6', say: 'Black hits e4.', zh: '黑方攻擊 e4。' },
-    { san: 'd4', say: 'White strikes in the centre. The fight is on.', zh: '白方中心突破，正式開戰。' },
+    { san: 'Nf3', say: 'Knight out, attacking e5.', zh: '出馬攻擊 e5。' , ja: "ナイトを出して e5 を攻撃。" },
+    { san: 'Nc6', say: 'Defended.', zh: '保護。' , ja: "守る。" },
+    { san: 'Bc4', say: 'The Italian bishop.', zh: '意大利象。' , ja: "イタリアンのビショップ。" },
+    { san: 'Bc5', say: 'Giuoco Piano — "the quiet game".', zh: 'Giuoco Piano：「安靜嘅棋」。' , ja: "ジュオコ・ピアノ：「静かな対局」。" },
+    { san: 'c3', say: 'c3 prepares d4 to build a big pawn centre.', zh: 'c3 準備 d4，建立大中心。' , ja: "c3 は d4 を準備し、大きなポーン中央を築く。" },
+    { san: 'Nf6', say: 'Black hits e4.', zh: '黑方攻擊 e4。' , ja: "黒は e4 を攻撃。" },
+    { san: 'd4', say: 'White strikes in the centre. The fight is on.', zh: '白方中心突破，正式開戰。' , ja: "白が中央で仕掛ける。戦いの始まり。" },
   ] },
-  { id: 'sicilian', name: 'Sicilian Defence', zh: '西西里防禦', steps: [
-    { say: "The Sicilian is Black's most popular and combative answer to 1.e4.", zh: '西西里防禦：黑方對付 1.e4 最受歡迎、最好戰嘅回應。' },
+  { id: 'sicilian', name: 'Sicilian Defence', zh: '西西里防禦', ja: "シシリアン・ディフェンス", steps: [
+    { say: "The Sicilian is Black's most popular and combative answer to 1.e4.", zh: '西西里防禦：黑方對付 1.e4 最受歡迎、最好戰嘅回應。' , ja: "シシリアンは 1.e4 に対する黒の最も人気で好戦的な応手。" },
     { san: 'e4' },
-    { san: 'c5', say: 'Black fights for d4 from the side instead of mirroring.', zh: '黑方唔對稱，由側面爭 d4。' },
+    { san: 'c5', say: 'Black fights for d4 from the side instead of mirroring.', zh: '黑方唔對稱，由側面爭 d4。' , ja: "黒は対称にせず、横から d4 を争う。" },
     { san: 'Nf3' }, { san: 'd6' },
-    { san: 'd4', say: 'White opens the centre.', zh: '白方打開中心。' },
-    { san: 'cxd4', say: 'Black trades a wing pawn for a centre pawn — a long-term plus.', zh: '黑方用翼兵換中心兵，長遠有利。' },
+    { san: 'd4', say: 'White opens the centre.', zh: '白方打開中心。' , ja: "白が中央を開く。" },
+    { san: 'cxd4', say: 'Black trades a wing pawn for a centre pawn — a long-term plus.', zh: '黑方用翼兵換中心兵，長遠有利。' , ja: "黒は翼のポーンと中央のポーンを交換。長期的に有利。" },
     { san: 'Nxd4' }, { san: 'Nf6' }, { san: 'Nc3' },
-    { san: 'a6', say: 'The Najdorf — the favourite of world champions. Sharp play for both sides.', zh: 'Najdorf 變例：世界冠軍最愛，雙方都好尖銳。' },
+    { san: 'a6', say: 'The Najdorf — the favourite of world champions. Sharp play for both sides.', zh: 'Najdorf 變例：世界冠軍最愛，雙方都好尖銳。' , ja: "ナイドルフ：世界王者たちのお気に入り。双方にとって鋭い戦い。" },
   ] },
-  { id: 'ruy', name: 'Ruy Lopez', zh: '西班牙開局', steps: [
-    { say: 'The Ruy Lopez (Spanish): pressure on the knight that defends e5.', zh: '西班牙開局：壓住保護 e5 嘅馬。' },
+  { id: 'ruy', name: 'Ruy Lopez', zh: '西班牙開局', ja: "ルイ・ロペス", steps: [
+    { say: 'The Ruy Lopez (Spanish): pressure on the knight that defends e5.', zh: '西班牙開局：壓住保護 e5 嘅馬。' , ja: "ルイ・ロペス（スパニッシュ）：e5 を守るナイトに圧力。" },
     { san: 'e4' }, { san: 'e5' }, { san: 'Nf3' }, { san: 'Nc6' },
-    { san: 'Bb5', say: 'The bishop attacks the knight that guards e5.', zh: '象攻擊保護 e5 嘅馬。' },
-    { san: 'a6', say: 'The Morphy Defence: ask the bishop what it wants.', zh: 'Morphy 防禦：逼象表態。' },
-    { san: 'Ba4', say: 'The bishop keeps the pin-like pressure.', zh: '象退後繼續施壓。' },
+    { san: 'Bb5', say: 'The bishop attacks the knight that guards e5.', zh: '象攻擊保護 e5 嘅馬。' , ja: "ビショップが e5 を守るナイトを攻撃。" },
+    { san: 'a6', say: 'The Morphy Defence: ask the bishop what it wants.', zh: 'Morphy 防禦：逼象表態。' , ja: "モーフィー・ディフェンス：ビショップに態度を迫る。" },
+    { san: 'Ba4', say: 'The bishop keeps the pin-like pressure.', zh: '象退後繼續施壓。' , ja: "ビショップは下がって圧力を維持。" },
     { san: 'Nf6' },
-    { san: 'O-O', say: 'White castles. One of the deepest openings in chess.', zh: '白方易位。呢個係國際象棋最深奧嘅開局之一。' },
+    { san: 'O-O', say: 'White castles. One of the deepest openings in chess.', zh: '白方易位。呢個係國際象棋最深奧嘅開局之一。' , ja: "白はキャスリング。チェスで最も奥深い定跡の一つ。" },
   ] },
-  { id: 'scholar', name: "Scholar's Mate (trap)", zh: '學者殺（陷阱）', steps: [
-    { say: "The four-move checkmate every beginner should know — so you never fall for it.", zh: '四步殺：新手必學，學識咗就唔會中伏。' },
+  { id: 'scholar', name: "Scholar's Mate (trap)", zh: '學者殺（陷阱）', ja: "スカラーズ・メイト（罠）", steps: [
+    { say: "The four-move checkmate every beginner should know — so you never fall for it.", zh: '四步殺：新手必學，學識咗就唔會中伏。' , ja: "初心者が必ず知るべき4手詰め。知っていれば引っかからない。" },
     { san: 'e4' }, { san: 'e5' },
-    { san: 'Bc4', say: 'Bishop aims at f7…', zh: '象瞄住 f7……' },
+    { san: 'Bc4', say: 'Bishop aims at f7…', zh: '象瞄住 f7……' , ja: "ビショップが f7 を狙う…" },
     { san: 'Nc6' },
-    { san: 'Qh5', say: 'The queen joins the attack on f7. Threat: Qxf7 mate!', zh: '后都瞄住 f7，威脅 Qxf7 殺！' },
-    { san: 'Nf6', say: 'A natural move… and a blunder. The right defence was ...g6 or ...Qe7.', zh: '睇落自然……其實係漏著。正確防守係 ...g6 或 ...Qe7。' },
-    { san: 'Qxf7', say: 'Checkmate! Guard f7 early and this never happens to you.', zh: '將死！早啲保護 f7 就唔會中呢招。' },
+    { san: 'Qh5', say: 'The queen joins the attack on f7. Threat: Qxf7 mate!', zh: '后都瞄住 f7，威脅 Qxf7 殺！' , ja: "クイーンも f7 を攻撃。狙いは Qxf7 メイト！" },
+    { san: 'Nf6', say: 'A natural move… and a blunder. The right defence was ...g6 or ...Qe7.', zh: '睇落自然……其實係漏著。正確防守係 ...g6 或 ...Qe7。' , ja: "自然な手…だが大悪手。正しい守りは ...g6 か ...Qe7。" },
+    { san: 'Qxf7', say: 'Checkmate! Guard f7 early and this never happens to you.', zh: '將死！早啲保護 f7 就唔會中呢招。' , ja: "チェックメイト！早めに f7 を守ればこうはならない。" },
   ] },
 ];
 let tut = null;   // { L, k, saved }
 const tutCard = $('tutCard');
 function openLessonPicker() {
   tutCard.hidden = false; tutCard.classList.add('picker');
-  tutCard.innerHTML = `<div class="th mono"><span>Tutorial — 教學</span><button class="tx" id="tutX" aria-label="Close">Skip ✕</button></div>
-    <div class="tlist">${LESSONS.map((l, i) => `<button class="btn" data-l="${i}"><b>${l.name}</b><span>${l.zh}</span></button>`).join('')}</div>`;
+  tutCard.innerHTML = `<div class="th mono"><span>${t('Tutorial')}</span><button class="tx" id="tutX" aria-label="Close">${t('Skip ✕')}</button></div>
+    <div class="tlist">${LESSONS.map((l, i) => `<button class="btn" data-l="${i}"><b>${tl({ en: l.name, zh: l.zh, ja: l.ja })}</b></button>`).join('')}</div>`;
   $('tutX').onclick = closeTutorial;
   tutCard.querySelectorAll('[data-l]').forEach(b => b.onclick = () => startLesson(+b.dataset.l));
 }
@@ -4255,13 +4293,13 @@ function jumpTo(k) {
 function renderStep() {
   const L = tut.L, st = L.steps[tut.k], last = tut.k === L.steps.length - 1;
   tutCard.hidden = false; tutCard.classList.remove('picker');
-  let say = st.say, zh = st.zh;
-  if (!say && st.san) { say = `${history.length % 2 ? 'White' : 'Black'} plays ${history[history.length - 1].san}.`; zh = ''; }
-  tutCard.innerHTML = `<div class="th mono"><span>${L.name} · ${tut.k + 1}/${L.steps.length}</span><button class="tx" id="tutX">Skip ✕</button></div>
+  let say = st.say ? tl({ en: st.say, zh: st.zh, ja: st.ja }) : '';
+  if (!say && st.san) say = t('{side} plays {san}.', { side: t(history.length % 2 ? 'White' : 'Black'), san: history[history.length - 1].san });
+  tutCard.innerHTML = `<div class="th mono"><span>${tl({ en: L.name, zh: L.zh, ja: L.ja })} · ${tut.k + 1}/${L.steps.length}</span><button class="tx" id="tutX">${t('Skip ✕')}</button></div>
     ${st.san ? `<div class="tmove">${history[history.length - 1].san}</div>` : ''}
-    <p class="ts">${say}</p>${zh ? `<p class="tz">${zh}</p>` : ''}
-    <div class="tb"><button class="btn" id="tutPrev" ${tut.k ? '' : 'disabled'}>Back</button><button class="btn" id="tutList">Lessons</button>
-    <button class="btn primary" id="tutNext">${last ? 'Done' : 'Next'}</button></div>`;
+    <p class="ts">${say}</p>
+    <div class="tb"><button class="btn" id="tutPrev" ${tut.k ? '' : 'disabled'}>${t('Back')}</button><button class="btn" id="tutList">${t('Lessons')}</button>
+    <button class="btn primary" id="tutNext">${t(last ? 'Done' : 'Next')}</button></div>`;
   $('tutX').onclick = closeTutorial; $('tutList').onclick = openLessonPicker;
   $('tutPrev').onclick = () => { if (busy || !tut.k) return; jumpTo(tut.k - 1); renderStep(); };
   $('tutNext').onclick = nextStep;
@@ -4273,9 +4311,9 @@ async function nextStep() {
   const L = tut.L;
   if (tut.k >= L.steps.length - 1) {   // lesson finished: offer the next one
     const n = (tut.i + 1) % LESSONS.length;
-    tutCard.innerHTML = `<div class="th mono"><span>Lesson complete ✓</span><button class="tx" id="tutX">Close ✕</button></div>
-      <p class="ts">Nice. Next up: <b>${LESSONS[n].name}</b> (${LESSONS[n].zh}).</p>
-      <div class="tb"><button class="btn" id="tutList">Lessons</button><button class="btn" id="tutPlay">Play vs AI</button><button class="btn primary" id="tutNextL">Next lesson</button></div>`;
+    tutCard.innerHTML = `<div class="th mono"><span>${t('Lesson complete ✓')}</span><button class="tx" id="tutX">${t('Close ✕')}</button></div>
+      <p class="ts">${t('Nice. Next up: {name}.', { name: '<b>' + tl({ en: LESSONS[n].name, zh: LESSONS[n].zh, ja: LESSONS[n].ja }) + '</b>' })}</p>
+      <div class="tb"><button class="btn" id="tutList">${t('Lessons')}</button><button class="btn" id="tutPlay">${t('Play vs AI')}</button><button class="btn primary" id="tutNextL">${t('Next lesson')}</button></div>`;
     $('tutX').onclick = closeTutorial; $('tutList').onclick = openLessonPicker;
     $('tutNextL').onclick = () => startLesson(n);
     $('tutPlay').onclick = () => { closeTutorial(true); startGame('ai-w'); };
@@ -4305,9 +4343,9 @@ function closeTutorial(silent) {
 function offerTutorial() {
   try { if (localStorage.getItem('cf-tut-seen')) return; localStorage.setItem('cf-tut-seen', '1'); } catch (e) { return; }
   tutCard.hidden = false; tutCard.classList.remove('picker');
-  tutCard.innerHTML = `<div class="th mono"><span>New here? — 新手？</span><button class="tx" id="tutX">Skip ✕</button></div>
-    <p class="ts">Take the one-minute tutorial: how to play, plus openings like the Queen's Gambit.</p><p class="tz">一分鐘教學：基本玩法，同埋后翼棄兵等開局技巧。</p>
-    <div class="tb" style="grid-template-columns:1fr 1fr"><button class="btn" id="tutNo">Skip</button><button class="btn primary" id="tutYes">Start tutorial</button></div>`;
+  tutCard.innerHTML = `<div class="th mono"><span>${LANG === 'en' ? 'New here?' : t('New here? — 新手？')}</span><button class="tx" id="tutX">${t('Skip ✕')}</button></div>
+    <p class="ts">${t("Take the one-minute tutorial: how to play, plus openings like the Queen's Gambit.")}</p>
+    <div class="tb" style="grid-template-columns:1fr 1fr"><button class="btn" id="tutNo">${t('Skip')}</button><button class="btn primary" id="tutYes">${t('Start tutorial')}</button></div>`;
   $('tutX').onclick = $('tutNo').onclick = () => { tutCard.hidden = true; };
   $('tutYes').onclick = () => { whenIdle(() => { openLessonPicker(); startGame('tutor'); }); };
 }
@@ -4318,19 +4356,22 @@ const hintBtn = $('hintBtn'), hintBox = $('hintBox');
 let hintArrow = null;
 const PNAME = { P: 'pawn', N: 'knight', B: 'bishop', R: 'rook', Q: 'queen', K: 'king' };
 function whyMove(s, m) {
-  const after = E.makeMove(s, m), san = E.toSAN(s, m), pc = m.piece.toUpperCase();
-  if (E.status(after) === 'checkmate') return ['Checkmate!', '將死！'];
-  if (m.castle) return ['Castle — tuck the king away and bring the rook into play.', '易位：保護王，車出嚟參戰。'];
-  if (m.promo) return ['Promote the pawn to a queen.', '兵升變做后。'];
+  const after = E.makeMove(s, m), pc = m.piece.toUpperCase();
+  const R = (en, zh, ja) => tl({ en, zh, ja });
+  if (E.status(after) === 'checkmate') return R('Checkmate!', '將死！', 'チェックメイト！');
+  if (m.castle) return R('Castle — tuck the king away and bring the rook into play.', '易位：保護王，車出嚟參戰。', 'キャスリング：キングを守り、ルークを活用。');
+  if (m.promo) return R('Promote the pawn to a queen.', '兵升變做后。', 'ポーンをクイーンに昇格。');
   if (m.captured) {
-    const val = { p: 1, n: 3, b: 3, r: 5, q: 9 }[m.captured.toLowerCase()] || 0;
-    return [`Capture the ${PNAME[m.captured.toUpperCase()]}${val >= 3 ? ' — a clear material gain' : ''}.`, `食咗對方嘅${{ P: '兵', N: '馬', B: '象', R: '車', Q: '后' }[m.captured.toUpperCase()] || '棋'}。`];
+    const c = m.captured.toUpperCase(), val = { P: 1, N: 3, B: 3, R: 5, Q: 9 }[c] || 0;
+    return R(`Capture the ${PNAME[c]}${val >= 3 ? ' — a clear material gain' : ''}.`, `食咗對方嘅${{ P: '兵', N: '馬', B: '象', R: '車', Q: '后' }[c]}${val >= 3 ? '，明顯賺子' : ''}。`,
+      `${{ P: 'ポーン', N: 'ナイト', B: 'ビショップ', R: 'ルーク', Q: 'クイーン' }[c]}を取る${val >= 3 ? '：はっきりした駒得' : ''}。`);
   }
-  if (E.inCheck(after)) return ['Check — the enemy king has to respond.', '將軍！對方一定要應付。'];
+  if (E.inCheck(after)) return R('Check — the enemy king has to respond.', '將軍！對方一定要應付。', 'チェック！相手のキングは対応が必要。');
   const to = E.sqName(m.to), fromRank = E.sqName(m.from)[1], moveNo = Math.floor(history.length / 2) + 1;
-  if (pc === 'P' && ['d4', 'e4', 'd5', 'e5', 'c4', 'c5'].includes(to)) return ['Claim the centre with a pawn.', '用兵搶中心。'];
-  if ((pc === 'N' || pc === 'B') && (fromRank === '1' || fromRank === '8') && moveNo <= 12) return [`Develop the ${PNAME[pc]} toward the centre.`, `出${pc === 'N' ? '馬' : '象'}，向中心發展。`];
-  return ["The engine's top pick here: it improves your position.", '引擎認為呢步最好，可以改善你嘅局面。'];
+  if (pc === 'P' && ['d4', 'e4', 'd5', 'e5', 'c4', 'c5'].includes(to)) return R('Claim the centre with a pawn.', '用兵搶中心。', 'ポーンで中央を取る。');
+  if ((pc === 'N' || pc === 'B') && (fromRank === '1' || fromRank === '8') && moveNo <= 12)
+    return R(`Develop the ${PNAME[pc]} toward the centre.`, `出${pc === 'N' ? '馬' : '象'}，向中心發展。`, `${pc === 'N' ? 'ナイト' : 'ビショップ'}を中央へ展開。`);
+  return R("The engine's top pick here: it improves your position.", '引擎認為呢步最好，可以改善你嘅局面。', 'エンジンの最善手：局面を改善します。');
 }
 function clearHint() { hintBox.hidden = true; if (hintArrow) { hintArrow.removeFromParent(); hintArrow.geometry.dispose(); hintArrow = null; } }
 hintBtn.onclick = () => {
@@ -4345,8 +4386,7 @@ hintBtn.onclick = () => {
     color: ABYSS() ? hintColor(state.turn, 1.4) : new THREE.Color(SC().mark), transparent: true, opacity: .85, depthWrite: false, toneMapped: !ABYSS(), blending: ABYSS() ? THREE.AdditiveBlending : THREE.NormalBlending }));
   hintArrow.position.copy(a); hintArrow.rotation.y = Math.atan2(d.x, d.z); hintArrow.renderOrder = 3; hintArrow.raycast = () => {};
   markGroup.add(hintArrow);
-  const [en, zh] = whyMove(state, m);
-  hintBox.innerHTML = `<b class="mono">Hint · ${E.toSAN(state, m)}</b><span>${en}</span><span class="z">${zh}</span>`;
+  hintBox.innerHTML = `<b class="mono">${t('Hint · {san}', { san: E.toSAN(state, m) })}</b><span>${whyMove(state, m)}</span>`;
   hintBox.hidden = false;
 };
 setInterval(() => {
@@ -4383,6 +4423,8 @@ $('bMenu').onclick = () => {
   $('title').classList.remove('hide');
 };
 $('speed').onchange = e => { SPEED = +e.target.value; };
+$('lang').onchange = e => setLang(e.target.value);
+document.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => setLang(b.dataset.lang));
 $('battle').onchange = e => { settings.battle = e.target.value; };
 $('cam').onchange = e => { settings.cam = e.target.value; };
 let pendingGfx = null;
@@ -5152,12 +5194,12 @@ scene.add(galleryStage);
   galleryStage.add(top);
 }
 const CHARS = [
-  { type: 'P', name: 'Pawn 2', zh: '01', note: '“flip down & turn 180°, open up” — concept sketch 5', sketch: 'assets/sketch_P.webp', sk: 'Concept sketch 5 · “Pawn 2” · 9 Jan 2023' },
-  { type: 'B', name: 'Bishop 2.0', zh: '02', note: '“Transform! — Gear up!” — concept sketch 6', sketch: 'assets/sketch_B.webp', sk: 'Concept sketch 6 · “Bishop 2.0” · 10 Jan 2023' },
-  { type: 'Q', name: 'Queen', zh: '03', note: '“King & Queen” — concept sketch 4', sketch: 'assets/sketch_KQ.webp', sk: 'Concept sketch 4 · “King & Queen” · 8 Jan 2023' },
-  { type: 'K', name: 'King', zh: '04', note: 'the robed spire — concept sketch 4', sketch: 'assets/sketch_KQ.webp', sk: 'Concept sketch 4 · “King & Queen” · 8 Jan 2023' },
-  { type: 'N', name: 'Knight', zh: '05', note: 'extra · designed in the same language' },
-  { type: 'R', name: 'Rook', zh: '06', note: 'extra · tower on spider legs, the sketch-sheet cannon' },
+  { type: 'P', name: 'Pawn 2', zh: '01', note: '“flip down & turn 180°, open up” — concept sketch 5', noteZh: '「翻轉 180°、打開」— 設計稿 5', noteJa: '「反転して180°、展開」— コンセプト画 5', sketch: 'assets/sketch_P.webp', sk: 'Concept sketch 5 · “Pawn 2” · 9 Jan 2023', skZh: '設計稿 5 · 「兵 2」· 2023年1月9日', skJa: 'コンセプト画 5 · 「ポーン 2」· 2023年1月9日' },
+  { type: 'B', name: 'Bishop 2.0', zh: '02', note: '“Transform! — Gear up!” — concept sketch 6', noteZh: '「變身！— Gear up！」— 設計稿 6', noteJa: '「変形！— Gear up！」— コンセプト画 6', sketch: 'assets/sketch_B.webp', sk: 'Concept sketch 6 · “Bishop 2.0” · 10 Jan 2023', skZh: '設計稿 6 · 「象 2.0」· 2023年1月10日', skJa: 'コンセプト画 6 · 「ビショップ 2.0」· 2023年1月10日' },
+  { type: 'Q', name: 'Queen', zh: '03', note: '“King & Queen” — concept sketch 4', noteZh: '「王與后」— 設計稿 4', noteJa: '「キング＆クイーン」— コンセプト画 4', sketch: 'assets/sketch_KQ.webp', sk: 'Concept sketch 4 · “King & Queen” · 8 Jan 2023', skZh: '設計稿 4 · 「王與后」· 2023年1月8日', skJa: 'コンセプト画 4 · 「キング＆クイーン」· 2023年1月8日' },
+  { type: 'K', name: 'King', zh: '04', note: 'the robed spire — concept sketch 4', noteZh: '披袍尖塔 — 設計稿 4', noteJa: 'ローブの尖塔 — コンセプト画 4', sketch: 'assets/sketch_KQ.webp', sk: 'Concept sketch 4 · “King & Queen” · 8 Jan 2023', skZh: '設計稿 4 · 「王與后」· 2023年1月8日', skJa: 'コンセプト画 4 · 「キング＆クイーン」· 2023年1月8日' },
+  { type: 'N', name: 'Knight', zh: '05', note: 'extra · designed in the same language', noteZh: '追加角色 · 同一風格設計', noteJa: '追加キャラ · 同じ様式で設計' },
+  { type: 'R', name: 'Rook', zh: '06', note: 'extra · tower on spider legs, the sketch-sheet cannon', noteZh: '追加角色 · 蜘蛛腳塔，原稿上嘅大炮', noteJa: '追加キャラ · 蜘蛛脚の塔、原画の大砲' },
 ];
 let galleryOn = false, gIdx = 0, gTeam = 'b', gRig = null, gSaved = null, gAnimating = false, gVictim = null;
 const gChips = $('gChips');
@@ -5168,22 +5210,22 @@ CHARS.forEach((c, i) => {
   gChips.append(b);
 });
 function buildGalleryRig(keepT = false) {
-  const t = keepT && gRig ? gRig.t : 0;
+  const t0 = keepT && gRig ? gRig.t : 0;
   gRig?.dispose();
   const c = CHARS[gIdx];
   gRig = makeRig(c.type, gTeam);
   gRig.yaw.rotation.y = 0;
   gRig.root.scale.setScalar(1.3);
-  gRig.t = t; gRig.apply();
+  gRig.t = t0; gRig.apply();
   galleryStage.add(gRig.root);
-  $('gName').innerHTML = `<small>Cast ${c.zh} / 06 — ${gTeam === 'w' ? 'White' : 'Black'}</small>${c.name}`;
-  $('gNote').textContent = c.note;
+  $('gName').innerHTML = `<small>${t('Cast {n} / 06 — {team}', { n: c.zh, team: t(gTeam === 'w' ? 'White' : 'Black') })}</small>${t(c.name)}`;
+  $('gNote').textContent = tl({ en: c.note, zh: c.noteZh, ja: c.noteJa });
   const og = $('gOrigin');
   og.classList.toggle('none', !c.sketch);
-  if (c.sketch) { og.querySelector('img').src = c.sketch; og.querySelector('figcaption').textContent = c.sk; }
-  else og.querySelector('figcaption').textContent = 'No sketch — designed later in the same language as the hand-drawn cast';
+  if (c.sketch) { og.querySelector('img').src = c.sketch; og.querySelector('figcaption').textContent = tl({ en: c.sk, zh: c.skZh, ja: c.skJa }); }
+  else og.querySelector('figcaption').textContent = tl({ en: 'No sketch — designed later in the same language as the hand-drawn cast', zh: '冇原稿 — 之後跟手繪角色同一風格設計', ja: '原画なし — 手描きキャストと同じ様式で後から設計' });
   og.hidden = !galleryOn; og.style.animation = 'none'; void og.offsetWidth; og.style.animation = '';
-  $('gT').value = t;
+  $('gT').value = t0;
   if (galleryOn) frameGallery();
   [...gChips.children].forEach((b, i) => b.setAttribute('aria-pressed', i === gIdx));
   document.documentElement.style.setProperty('--turn', gTeam === 'w' ? 'var(--cyan)' : 'var(--gold)');
@@ -5272,7 +5314,7 @@ async function galleryAttack() {
   }
 }
 $('gAtk').onclick = galleryAttack;
-$('gOrigin').onclick = () => { const c = CHARS[gIdx]; if (!c.sketch) return; $('originBox').querySelector('img').src = c.sketch; $('originBox').querySelector('.cap').textContent = c.sk + ' — the original drawing this piece was built from'; $('originBox').hidden = false; };
+$('gOrigin').onclick = () => { const c = CHARS[gIdx]; if (!c.sketch) return; $('originBox').querySelector('img').src = c.sketch; $('originBox').querySelector('.cap').textContent = tl({ en: c.sk + ' — the original drawing this piece was built from', zh: c.skZh + ' — 呢隻棋嘅原始設計稿', ja: c.skJa + ' — この駒の元になった原画' }); $('originBox').hidden = false; };
 $('originClose').onclick = $('originBox').onclick = e => { if (e.target.id === 'originBox' || e.target.id === 'originClose') $('originBox').hidden = true; };
 $('gSpin').onclick = () => { controls.autoRotate = !controls.autoRotate; };
 $('gT').oninput = e => { if (gRig && !gAnimating) gRig.t = +e.target.value; };
@@ -5316,6 +5358,7 @@ $('qPreset').onchange = e => { const p = e.target.value; if (QPRESETS[p]) Q = { 
 $('qRes').onchange = e => { Q.res = +e.target.value; Q.preset = 'custom'; applyQuality(); };
 document.querySelectorAll('[data-q]').forEach(el => el.onchange = () => { const k = el.dataset.q; Q[k] = el.value === '1' ? 1 : 0; Q.preset = 'custom'; applyQuality(k === 'outlines'); });
 window.__qReady = true; applyQuality();
+applyLang();
 function adaptResolution(ms) {
   ftAvg += (Math.min(ms, 100) - ftAvg) * .05;
   if (!Q.auto || performance.now() < ftCheck) return;
