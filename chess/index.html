@@ -1105,7 +1105,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 70</div>
+  <div class="build mono">Build 71</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1197,7 +1197,7 @@
       <label class="field mono">Preset
         <select id="qPreset"><option value="ultra">Ultra</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option><option value="custom">Custom</option></select></label>
       <label class="field mono">Resolution
-        <select id="qRes"><option value="1">100%</option><option value="0.8">80%</option><option value="0.65">65%</option><option value="0.5">50%</option></select></label>
+        <select id="qRes"><option value="1">100%</option><option value="0.85">85%</option><option value="0.8">80%</option><option value="0.65">65%</option><option value="0.5">50%</option></select></label>
       <label class="field mono">Auto res
         <select id="qAuto" data-q="auto"><option value="1">On</option><option value="0">Off</option></select></label>
       <label class="field mono">Shadows
@@ -1326,7 +1326,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=70';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=71';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1443,13 +1443,13 @@ const CHROME = () => GFX === 'monolithchrome';
 const METAL = () => GFX === 'monolithmetal';   // Monolith with plain polished metal pieces: silver White, black-steel Black, no pattern
 const MIRROR = () => CHROME() || METAL();
 const QPRESETS = {
-  ultra: { res: 1, auto: 0, shadows: 1, ao: 1, bloom: 1, fog: 1, particles: 1, reflect: 1, outlines: 1 },
-  high: { res: 1, auto: 1, shadows: 1, ao: 1, bloom: 1, fog: 1, particles: 1, reflect: 1, outlines: 1 },
-  medium: { res: 1, auto: 1, shadows: 1, ao: 0, bloom: 1, fog: 1, particles: 1, reflect: 0, outlines: 1 },
-  low: { res: .65, auto: 1, shadows: 0, ao: 0, bloom: 0, fog: 0, particles: 0, reflect: 0, outlines: 0 },
+  ultra: { res: 1, msaa: 4, auto: 0, shadows: 1, ao: 1, bloom: 1, fog: 1, particles: 1, reflect: 1, outlines: 1 },
+  high: { res: 1, msaa: 4, auto: 1, shadows: 1, ao: 1, bloom: 1, fog: 1, particles: 1, reflect: 1, outlines: 1 },
+  medium: { res: .85, msaa: 2, auto: 1, shadows: 1, ao: 0, bloom: 1, fog: 1, particles: 1, reflect: 0, outlines: 1 },
+  low: { res: .65, msaa: 0, auto: 1, shadows: 0, ao: 0, bloom: 0, fog: 0, particles: 0, reflect: 0, outlines: 0 },
 };
 let Q = { preset: isMobile ? 'medium' : 'high', ...QPRESETS[isMobile ? 'medium' : 'high'] };
-try { const sv = JSON.parse(localStorage.getItem('cf-quality2') || 'null'); if (sv) Q = { ...Q, ...sv }; } catch (e) { /* storage blocked */ }
+try { const sv = JSON.parse(localStorage.getItem('cf-quality3') || 'null'); if (sv) Q = { ...Q, ...sv }; } catch (e) { /* storage blocked */ }
 const OUTLINES = () => Q.outlines !== 0;
 const INK = () => false;
 const CINE = () => GFX === 'cinema' && !BWED && (THEME === 'mono' || THEME === 'ops');
@@ -5020,7 +5020,7 @@ const GradeShader = {
 };
 function buildComposer() {
   // multisampled targets: without them every edge in the post-processed image is aliased
-  composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: isMobile ? 4 : 4 }));
+  composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: Q.msaa ?? 4 }));
   composer.setPixelRatio(renderer.getPixelRatio());
   composer.setSize(innerWidth, innerHeight);
   composer.addPass(new RenderPass(scene, camera));
@@ -5091,7 +5091,7 @@ function applyGfx(rebuild = true) {
     top = boardMatAnime; side = boardSideAnime;
   }
   // hard-edged shadow shapes for the anime render, soft for the rest
-  const st = ANIME() ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  const st = ANIME() || (isMobile && Q.preset !== 'ultra') ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;   // phones: cheaper shadow filtering
   if (renderer.shadowMap.type !== st) {
     renderer.shadowMap.type = st; renderer.shadowMap.needsUpdate = true;
     scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
@@ -5423,13 +5423,14 @@ const DPR_BASE = Math.min(devicePixelRatio, 2);
 let DPR_MAX = DPR_BASE * Q.res, DPR_MIN = Math.min(DPR_MAX, 1.25);
 function applyQuality(rebuild = false) {
   if (!window.__qReady) return;
-  DPR_MAX = DPR_BASE * Q.res; DPR_MIN = Math.min(DPR_MAX, Q.res >= .99 ? 1.25 : 1);
+  DPR_MAX = DPR_BASE * Q.res; DPR_MIN = Math.min(DPR_MAX, Q.res >= .99 ? 1.25 : Q.res >= .8 ? 1.15 : .9);
   dprNow = DPR_MAX; renderer.setPixelRatio(dprNow); resize();
   if (renderer.shadowMap.enabled !== !!Q.shadows) {
     renderer.shadowMap.enabled = !!Q.shadows;
     scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); });
   }
   if (gtao) gtao.enabled = !!Q.ao;
+  if (composer) for (const rt of [composer.renderTarget1, composer.renderTarget2]) if (rt.samples !== (Q.msaa ?? 4)) { rt.samples = Q.msaa ?? 4; rt.dispose(); }
   if (bloomPass && ABYSS()) bloomPass.enabled = !!Q.bloom;
   const ab = abyss.visible;
   groundFog.forEach(m => { m.visible = m.visible && !!Q.fog; if (ab || CINE()) m.visible = !!Q.fog; });
@@ -5442,7 +5443,7 @@ function applyQuality(rebuild = false) {
     $('qPreset').value = Q.preset; $('qRes').value = String(Q.res >= .99 ? 1 : Q.res); if (!$('qRes').value) $('qRes').value = '0.8';
     document.querySelectorAll('[data-q]').forEach(el => { el.value = Q[el.dataset.q] ? '1' : '0'; });
   }
-  try { localStorage.setItem('cf-quality2', JSON.stringify(Q)); } catch (e) { /* storage blocked */ }
+  try { localStorage.setItem('cf-quality3', JSON.stringify(Q)); } catch (e) { /* storage blocked */ }
 }
 let dprNow = 1, ftAvg = 16, ftCheck = 0;
 $('qPreset').onchange = e => { const p = e.target.value; if (QPRESETS[p]) Q = { preset: p, ...QPRESETS[p] }; else Q.preset = 'custom'; applyQuality(true); };
@@ -5454,9 +5455,9 @@ function adaptResolution(ms) {
   ftAvg += (Math.min(ms, 100) - ftAvg) * .05;
   if (!Q.auto || performance.now() < ftCheck) return;
   let next = dprNow;
-  if (ftAvg > 22 && dprNow > DPR_MIN) next = Math.max(DPR_MIN, dprNow - .15);
+  if (ftAvg > 19 && dprNow > DPR_MIN) next = Math.max(DPR_MIN, dprNow - .15);
   else if (ftAvg < 13 && dprNow < DPR_MAX) next = Math.min(DPR_MAX, dprNow + .1);
-  if (next !== dprNow) { dprNow = next; renderer.setPixelRatio(dprNow); resize(); ftCheck = performance.now() + 1500; }
+  if (next !== dprNow) { const down = next < dprNow; dprNow = next; renderer.setPixelRatio(dprNow); resize(); ftCheck = performance.now() + (down ? 700 : 2500); }
 }
 function frame() {
   const dt = Math.min(.05, (performance.now() - lastFrame) / 1000);
