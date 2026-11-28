@@ -2,8 +2,8 @@
 import os, re, shutil, subprocess, urllib.request
 SRC = 'chess'; OUT = 'android/app/src/main/assets/www'; T = 'node_modules/three'
 shutil.rmtree(OUT, ignore_errors=True); os.makedirs(OUT)
-for f in ['index.html', 'engine.js', 'mechrig.js']: shutil.copy(f'{SRC}/{f}', f'{OUT}/{f}')
-shutil.copytree(f'{SRC}/models', f'{OUT}/models')
+for f in ['index.html', 'engine.js', 'mechrig.js', 'ai-worker.js']: shutil.copy(f'{SRC}/{f}', f'{OUT}/{f}')
+shutil.copytree(f'{SRC}/models', f'{OUT}/models'); shutil.copytree(f'{SRC}/icons', f'{OUT}/icons')
 os.makedirs(f'{OUT}/assets'); os.makedirs(f'{OUT}/music')
 skip = {'keyart_moon.jpg', 'keyart_ops.jpg', 'keyart_strand.jpg', 'intro_moon.mp4'}   # editions the app does not ship
 for f in os.listdir(f'{SRC}/assets'):
