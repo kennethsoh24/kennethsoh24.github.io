@@ -1013,6 +1013,50 @@
     #title .left { overflow-y: auto; -webkit-overflow-scrolling: touch; }
     body.monolith .mi { padding: 6px 4px 5px; } body.monolith .mi .t { font-size: 25px; } body.monolith #title .foot { gap: 7px; } body.monolith .opts .btn { padding: 5px 9px; }
   }
+
+  /* hint button on the right edge, the hint bubble, and the tutorial card */
+  #hintBtn { position: fixed; z-index: 6; right: 0; top: 46%; display: grid; justify-items: center; gap: 4px; padding: 12px 10px 10px; border: 1px solid var(--ink);
+    border-right: 0; background: var(--white); color: var(--ink); font-size: 10px; letter-spacing: .18em; cursor: pointer; }
+  #hintBtn[hidden] { display: none; }
+  #hintBtn .hi { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--white); font: 700 16px var(--sans); letter-spacing: 0; }
+  body.monolith #hintBtn { background: rgba(10,12,15,.72); border-color: var(--edge); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  body.monolith #hintBtn .hi { background: #eef2f6; color: #07080a; box-shadow: 0 0 16px rgba(220,232,255,.6); animation: hintGlow 2.4s ease-in-out infinite; }
+  @keyframes hintGlow { 50% { box-shadow: 0 0 4px rgba(220,232,255,.2); } }
+  #hintBox { position: fixed; z-index: 6; right: 64px; top: calc(46% - 6px); width: min(260px, 64vw); padding: 10px 12px; display: grid; gap: 4px;
+    background: var(--white); color: var(--ink); border: 1px solid var(--ink); font-size: 13px; line-height: 1.35; }
+  #hintBox[hidden] { display: none; }
+  #hintBox b { font-size: 11px; letter-spacing: .14em; }
+  #hintBox .z { color: var(--grey); font-size: 12px; }
+  body.monolith #hintBox { background: rgba(10,12,15,.86); border-color: var(--edge); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  #tutCard { position: fixed; z-index: 7; left: 50%; top: 76px; transform: translateX(-50%); width: min(520px, 94vw); padding: 12px 14px 12px;
+    background: var(--white); color: var(--ink); border: 1px solid var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.35); animation: rise .35s cubic-bezier(.2,1,.2,1) both; }
+  #tutCard[hidden] { display: none; }
+  body.monolith #tutCard { background: rgba(10,12,15,.88); border-color: var(--edge); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  #tutCard .th { display: flex; justify-content: space-between; align-items: center; color: var(--grey); margin-bottom: 6px; }
+  #tutCard .tx { all: unset; cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; color: var(--ink); padding: 4px 2px; }
+  #tutCard .tmove { font-weight: 900; font-stretch: 62%; font-size: 40px; line-height: .9; text-transform: none; }
+  #tutCard .ts { margin: 6px 0 2px; font-size: 15px; line-height: 1.4; }
+  #tutCard .tz { margin: 0 0 4px; font-size: 13.5px; color: var(--grey); line-height: 1.45; }
+  #tutCard .tb { display: grid; grid-template-columns: 1fr 1fr 1.3fr; margin-top: 10px; }
+  #tutCard .tb .btn { margin-left: -1px; padding: 10px 4px; }
+  #tutCard .btn.primary { background: var(--ink); color: var(--white); }
+  #tutCard .btn[disabled] { opacity: .35; pointer-events: none; }
+  #tutCard.wait .tb { opacity: .4; pointer-events: none; }
+  #tutCard .tlist { display: grid; grid-template-columns: 1fr 1fr; }
+  #tutCard .tlist .btn { display: grid; gap: 3px; text-align: left; margin: -1px 0 0 -1px; padding: 10px; text-transform: none; letter-spacing: .04em; }
+  #tutCard .tlist .btn b { font: 800 16px var(--sans); font-stretch: 75%; text-transform: uppercase; letter-spacing: .02em; }
+  #tutCard .tlist .btn span { color: var(--grey); font-size: 12px; }
+  #tutCard .tlist .btn:hover span { color: inherit; }
+  .tut-pulse { outline: 2px solid #eef2f6 !important; outline-offset: 2px; animation: tutPulse 1s ease-in-out infinite; }
+  @keyframes tutPulse { 50% { outline-color: transparent; } }
+  body.intro #tutCard, body.gallery #tutCard, body.gallery #hintBtn { display: none !important; }
+  @media (max-width: 760px) {
+    #tutCard { top: 64px; padding: 10px 12px; }
+    #tutCard .tmove { font-size: 30px; }
+    #tutCard .ts { font-size: 14px; } #tutCard .tz { font-size: 12.5px; }
+    #hintBtn { top: 30%; padding: 10px 7px 8px; }
+    #hintBox { top: calc(30% - 4px); right: 52px; }
+  }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; } }
 </style>
 </head>
@@ -1043,7 +1087,7 @@
     <div class="bootload mono"><span id="bootText">Loading 00/12</span><div class="track"><div class="fill" id="bootFill"></div></div></div>
   </div>
   <div class="bootcredit mono">A Kenneth So Production</div>
-  <div class="build mono">Build 64</div>
+  <div class="build mono">Build 65</div>
 </section>
 <div id="grid"></div>
 <div id="sea" aria-hidden="true"></div>
@@ -1061,6 +1105,7 @@
     <div class="tagline mono"><b></b><span class="not-dc">Every piece transforms.</span><span class="dc-only dc-cut">Director's Cut</span></div>
     <div class="dc-only dc-quote mono" id="dcQuote">“A pawn is a king that has not yet remembered.”</div>
     <nav aria-label="Main menu">
+      <button class="mi" id="tTutorial"><span class="n">00</span><span class="t">Tutorial</span><span class="a">→</span></button>
       <button class="mi" data-mode="ai-w"><span class="n">01</span><span class="t">Play White</span><span class="a">→</span></button>
       <button class="mi" data-mode="ai-b"><span class="n">02</span><span class="t">Play Black</span><span class="a">→</span></button>
       <button class="mi" data-mode="pvp"><span class="n">03</span><span class="t">Versus</span><span class="a">→</span></button>
@@ -1157,6 +1202,9 @@
   </section>
 </aside>
 
+<button id="hintBtn" class="mono" hidden title="Suggest a move"><span class="hi">?</span><span>Hint</span></button>
+<div id="hintBox" hidden></div>
+<section id="tutCard" hidden aria-live="polite"></section>
 <button id="fab" title="Transform the whole army"><span class="t">Gear<br>Up</span><span class="mono"><span>All units</span><span>→</span></span></button>
 
 <p id="gName">Pawn 2</p>
@@ -1256,7 +1304,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=64';
+import { RIGS, weightGeometry, makeSkeleton, poseTarget, poseNow, blendPose } from './mechrig.js?v=65';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -3636,7 +3684,7 @@ function updateTurnUI() {
   const who = c => settings.mode === 'pvp' ? '' : settings.mode === 'demo' ? `COM ${c === 'w' ? 1 : 2} · ${lvl}` : (isHuman(c) ? 'YOU' : `AI · ${lvl}`);
   $('nW').innerHTML = `White<small>${who('w') || 'Player 1'}</small>`;
   $('nB').innerHTML = `Black<small>${who('b') || 'Player 2'}</small>`;
-  $('modeLabel').textContent = { 'ai-w': 'vs AI', 'ai-b': 'vs AI', pvp: 'Versus', demo: 'COM vs COM', idle: '—' }[settings.mode];
+  $('modeLabel').textContent = { 'ai-w': 'vs AI', 'ai-b': 'vs AI', pvp: 'Versus', demo: 'COM vs COM', tutor: 'Tutorial', idle: '—' }[settings.mode];
   $('liveLabel').textContent = settings.mode === 'demo' ? 'Demo — auto play' : 'Live';
   $('mcount').textContent = 'Move ' + String(Math.floor(history.length / 2) + 1).padStart(3, '0');
   // captured material, worked out from what is missing from the board
@@ -3675,7 +3723,7 @@ function updateMarks() {
   if (checkMark.visible) checkMark.position.copy(sqPos(ks)).setY(.02);
 }
 const isHuman = color => settings.mode === 'demo' ? false
-  : settings.mode === 'pvp' || settings.mode === 'idle' || (settings.mode === 'ai-w' ? color === 'w' : color === 'b');
+  : settings.mode === 'pvp' || settings.mode === 'idle' || settings.mode === 'tutor' || (settings.mode === 'ai-w' ? color === 'w' : color === 'b');
 
 function refreshStatus() {
   updateMarks();
@@ -4087,7 +4135,8 @@ function startGame(mode) {
     newGame();
     servo(true, .5);
     if (DC) dcStart();
-    else setTimeout(() => mode === 'demo' ? toast('Demo', 1600, 'COM vs COM') : toast('Game Start', 1500, 'Channel 01'), 500);
+    if (['ai-w', 'ai-b', 'pvp'].includes(mode) && !DC) setTimeout(offerTutorial, 1800);
+    if (DC) { /* handled above */ } else if (mode !== 'tutor') setTimeout(() => mode === 'demo' ? toast('Demo', 1600, 'COM vs COM') : toast('Game Start', 1500, 'Channel 01'), 500);
   });
 }
 document.querySelectorAll('#title [data-mode]').forEach(b => b.onclick = () => startGame(b.dataset.mode));
@@ -4099,6 +4148,213 @@ addEventListener('keydown', e => {
   items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1) + (i < 0 ? 1 : 0)) % items.length].focus();
   e.preventDefault();
 });
+/* ================================================================
+   Tutorial — skippable lessons: how to play, opening principles and named openings,
+   played out on the real board one move at a time
+   ================================================================ */
+const LESSONS = [
+  { id: 'basics', name: 'How to play', zh: '基本玩法', steps: [
+    { say: 'Tap one of your pieces. Glowing dots show every square it can reach; a glowing ring marks a capture.', zh: '撳你嘅棋，發光圓點係可以行嘅格，光環係可以食嘅棋。' },
+    { say: 'Tap a glowing square to move there. Each move transforms the piece into its mech and back.', zh: '撳發光嘅格就行過去，每行一步棋都會變身。' },
+    { say: 'Moving onto an enemy piece starts a battle — every piece has its own attack.', zh: '行去對方棋子嘅格就會開打，每隻棋有自己嘅攻擊。' },
+    { say: 'Not sure what to play? Tap HINT on the right for the best move and why.', zh: '唔知點行？撳右邊 HINT，會話你下一步同原因。', point: '#hintBtn' },
+    { say: 'GEAR UP turns your whole army into mechs at once.', zh: 'GEAR UP 一次過將全軍變做機械人。', point: '#fab' },
+    { say: 'Mono / Glow / Chrome / Metal change the finish any time. Config holds AI level and graphics quality.', zh: 'Mono / Glow / Chrome / Metal 隨時換顏色，Config 入面調 AI 同畫質。', point: '#styles' },
+    { say: 'CAST opens the gallery: every piece, its attack demo and the sketch it was born from.', zh: 'CAST 打開角色畫廊：睇每隻棋、攻擊示範同原稿。', point: '#bGallery' },
+  ] },
+  { id: 'principles', name: 'Opening principles', zh: '開局三原則', steps: [
+    { say: 'Three rules win most openings: take the centre, develop your pieces, castle early.', zh: '開局三大原則：搶中心、出子、早啲易位。' },
+    { san: 'e4', say: 'Take the centre: the pawn on e4 controls d5 and f5 and frees the queen and bishop.', zh: '搶中心：e4 兵控制 d5、f5，亦打開后同象嘅路。' },
+    { san: 'e5', say: 'Black claims his share of the centre the same way.', zh: '黑方用同一招搶返中心。' },
+    { san: 'Nf3', say: 'Develop: knights before bishops. Nf3 also attacks the pawn on e5.', zh: '出子：馬先過象。Nf3 仲攻擊緊 e5 兵。' },
+    { san: 'Nc6', say: 'Black defends e5 by developing too — every move should do something.', zh: '黑方出馬保護 e5，每一步都要有作用。' },
+    { san: 'Bc4', say: 'The bishop eyes f7 — the weakest square, guarded only by the king.', zh: '象瞄住 f7：全場最弱嘅格，只有王保護。' },
+    { san: 'Bc5', say: 'Black mirrors it.', zh: '黑方照樣出象。' },
+    { san: 'O-O', say: 'Castle early: the king hides behind pawns and the rook joins the game.', zh: '早啲易位：王匿入兵後面，車亦可以出嚟。' },
+    { san: 'Nf6', say: 'Both sides are developed — now the middlegame can begin.', zh: '雙方出子完成，中局開始。' },
+  ] },
+  { id: 'qg', name: "Queen's Gambit", zh: '后翼棄兵', steps: [
+    { say: "The Queen's Gambit is one of the oldest and most respected openings. White offers a pawn for the centre.", zh: '后翼棄兵係最經典嘅開局之一：白方送一隻兵去換中心。' },
+    { san: 'd4', say: 'White opens with the queen’s pawn.', zh: '白方行后前兵。' },
+    { san: 'd5', say: 'Black answers symmetrically.', zh: '黑方對稱回應。' },
+    { san: 'c4', say: "The gambit! c4 offers a pawn to lure Black's d-pawn away from the centre.", zh: '棄兵！c4 引黑方 d 兵離開中心。' },
+    { san: 'e6', say: "Declined (QGD): Black keeps the d5 pawn solidly protected instead of taking.", zh: '拒絕棄兵：黑方唔食，用 e6 穩住 d5。' },
+    { san: 'Nc3', say: 'White adds pressure on d5.', zh: '白方再加壓 d5。' },
+    { san: 'Nf6', say: 'Black defends d5 again.', zh: '黑方再保護 d5。' },
+    { san: 'Bg5', say: 'The bishop pins the knight to the queen behind it — a classic QGD idea.', zh: '象牽制住馬（後面係后），后翼棄兵經典手法。' },
+    { san: 'Be7', say: 'Black breaks the pin. If Black had taken on c4 (Accepted), White wins the pawn back with e3 and Bxc4.', zh: '黑方解除牽制。如果黑方食咗 c4（接受棄兵），白方用 e3、Bxc4 食返。' },
+  ] },
+  { id: 'italian', name: 'Italian Game', zh: '意大利開局', steps: [
+    { say: 'The Italian Game: fast development and an early bishop aimed at f7.', zh: '意大利開局：快速出子，象一早瞄住 f7。' },
+    { san: 'e4' }, { san: 'e5' },
+    { san: 'Nf3', say: 'Knight out, attacking e5.', zh: '出馬攻擊 e5。' },
+    { san: 'Nc6', say: 'Defended.', zh: '保護。' },
+    { san: 'Bc4', say: 'The Italian bishop.', zh: '意大利象。' },
+    { san: 'Bc5', say: 'Giuoco Piano — "the quiet game".', zh: 'Giuoco Piano：「安靜嘅棋」。' },
+    { san: 'c3', say: 'c3 prepares d4 to build a big pawn centre.', zh: 'c3 準備 d4，建立大中心。' },
+    { san: 'Nf6', say: 'Black hits e4.', zh: '黑方攻擊 e4。' },
+    { san: 'd4', say: 'White strikes in the centre. The fight is on.', zh: '白方中心突破，正式開戰。' },
+  ] },
+  { id: 'sicilian', name: 'Sicilian Defence', zh: '西西里防禦', steps: [
+    { say: "The Sicilian is Black's most popular and combative answer to 1.e4.", zh: '西西里防禦：黑方對付 1.e4 最受歡迎、最好戰嘅回應。' },
+    { san: 'e4' },
+    { san: 'c5', say: 'Black fights for d4 from the side instead of mirroring.', zh: '黑方唔對稱，由側面爭 d4。' },
+    { san: 'Nf3' }, { san: 'd6' },
+    { san: 'd4', say: 'White opens the centre.', zh: '白方打開中心。' },
+    { san: 'cxd4', say: 'Black trades a wing pawn for a centre pawn — a long-term plus.', zh: '黑方用翼兵換中心兵，長遠有利。' },
+    { san: 'Nxd4' }, { san: 'Nf6' }, { san: 'Nc3' },
+    { san: 'a6', say: 'The Najdorf — the favourite of world champions. Sharp play for both sides.', zh: 'Najdorf 變例：世界冠軍最愛，雙方都好尖銳。' },
+  ] },
+  { id: 'ruy', name: 'Ruy Lopez', zh: '西班牙開局', steps: [
+    { say: 'The Ruy Lopez (Spanish): pressure on the knight that defends e5.', zh: '西班牙開局：壓住保護 e5 嘅馬。' },
+    { san: 'e4' }, { san: 'e5' }, { san: 'Nf3' }, { san: 'Nc6' },
+    { san: 'Bb5', say: 'The bishop attacks the knight that guards e5.', zh: '象攻擊保護 e5 嘅馬。' },
+    { san: 'a6', say: 'The Morphy Defence: ask the bishop what it wants.', zh: 'Morphy 防禦：逼象表態。' },
+    { san: 'Ba4', say: 'The bishop keeps the pin-like pressure.', zh: '象退後繼續施壓。' },
+    { san: 'Nf6' },
+    { san: 'O-O', say: 'White castles. One of the deepest openings in chess.', zh: '白方易位。呢個係國際象棋最深奧嘅開局之一。' },
+  ] },
+  { id: 'scholar', name: "Scholar's Mate (trap)", zh: '學者殺（陷阱）', steps: [
+    { say: "The four-move checkmate every beginner should know — so you never fall for it.", zh: '四步殺：新手必學，學識咗就唔會中伏。' },
+    { san: 'e4' }, { san: 'e5' },
+    { san: 'Bc4', say: 'Bishop aims at f7…', zh: '象瞄住 f7……' },
+    { san: 'Nc6' },
+    { san: 'Qh5', say: 'The queen joins the attack on f7. Threat: Qxf7 mate!', zh: '后都瞄住 f7，威脅 Qxf7 殺！' },
+    { san: 'Nf6', say: 'A natural move… and a blunder. The right defence was ...g6 or ...Qe7.', zh: '睇落自然……其實係漏著。正確防守係 ...g6 或 ...Qe7。' },
+    { san: 'Qxf7', say: 'Checkmate! Guard f7 early and this never happens to you.', zh: '將死！早啲保護 f7 就唔會中呢招。' },
+  ] },
+];
+let tut = null;   // { L, k, saved }
+const tutCard = $('tutCard');
+function openLessonPicker() {
+  tutCard.hidden = false; tutCard.classList.add('picker');
+  tutCard.innerHTML = `<div class="th mono"><span>Tutorial — 教學</span><button class="tx" id="tutX" aria-label="Close">Skip ✕</button></div>
+    <div class="tlist">${LESSONS.map((l, i) => `<button class="btn" data-l="${i}"><b>${l.name}</b><span>${l.zh}</span></button>`).join('')}</div>`;
+  $('tutX').onclick = closeTutorial;
+  tutCard.querySelectorAll('[data-l]').forEach(b => b.onclick = () => startLesson(+b.dataset.l));
+}
+function startLesson(i) {
+  const L = LESSONS[i];
+  if (!tut) tut = { saved: { tmode: settings.tmode, battle: settings.battle, mode: settings.mode } };
+  tut.L = L; tut.k = 0; tut.i = i;
+  settings.tmode = 'capture'; settings.battle = 'quick';   // keep the lesson brisk
+  if (document.body.classList.contains('intro') || settings.mode !== 'tutor') startGame('tutor');
+  whenIdle(() => { jumpTo(0); renderStep(); });
+}
+// rebuild the position after the first k lesson moves, instantly
+function jumpTo(k) {
+  state = E.initialState(); history = []; gameOver = false;
+  for (let j = 1; j <= k; j++) {
+    const san = tut.L.steps[j].san; if (!san) continue;
+    const m = E.legalMoves(state).find(m => E.toSAN(state, m).replace(/[+#]/g, '') === san);
+    history.push({ state, san: E.toSAN(state, m), move: m }); state = E.makeMove(state, m);
+  }
+  tut.k = k;
+  deselect(); syncAll(); renderMoves(); refreshStatus();
+}
+function renderStep() {
+  const L = tut.L, st = L.steps[tut.k], last = tut.k === L.steps.length - 1;
+  tutCard.hidden = false; tutCard.classList.remove('picker');
+  let say = st.say, zh = st.zh;
+  if (!say && st.san) { say = `${history.length % 2 ? 'White' : 'Black'} plays ${history[history.length - 1].san}.`; zh = ''; }
+  tutCard.innerHTML = `<div class="th mono"><span>${L.name} · ${tut.k + 1}/${L.steps.length}</span><button class="tx" id="tutX">Skip ✕</button></div>
+    ${st.san ? `<div class="tmove">${history[history.length - 1].san}</div>` : ''}
+    <p class="ts">${say}</p>${zh ? `<p class="tz">${zh}</p>` : ''}
+    <div class="tb"><button class="btn" id="tutPrev" ${tut.k ? '' : 'disabled'}>Back</button><button class="btn" id="tutList">Lessons</button>
+    <button class="btn primary" id="tutNext">${last ? 'Done' : 'Next'}</button></div>`;
+  $('tutX').onclick = closeTutorial; $('tutList').onclick = openLessonPicker;
+  $('tutPrev').onclick = () => { if (busy || !tut.k) return; jumpTo(tut.k - 1); renderStep(); };
+  $('tutNext').onclick = nextStep;
+  document.querySelectorAll('.tut-pulse').forEach(e => e.classList.remove('tut-pulse'));
+  if (st.point && $(st.point.slice(1))) $(st.point.slice(1)).classList.add('tut-pulse');
+}
+async function nextStep() {
+  if (busy) return;
+  const L = tut.L;
+  if (tut.k >= L.steps.length - 1) {   // lesson finished: offer the next one
+    const n = (tut.i + 1) % LESSONS.length;
+    tutCard.innerHTML = `<div class="th mono"><span>Lesson complete ✓</span><button class="tx" id="tutX">Close ✕</button></div>
+      <p class="ts">Nice. Next up: <b>${LESSONS[n].name}</b> (${LESSONS[n].zh}).</p>
+      <div class="tb"><button class="btn" id="tutList">Lessons</button><button class="btn" id="tutPlay">Play vs AI</button><button class="btn primary" id="tutNextL">Next lesson</button></div>`;
+    $('tutX').onclick = closeTutorial; $('tutList').onclick = openLessonPicker;
+    $('tutNextL').onclick = () => startLesson(n);
+    $('tutPlay').onclick = () => { closeTutorial(true); startGame('ai-w'); };
+    return;
+  }
+  const st = L.steps[tut.k + 1];
+  if (st.san) {
+    const m = E.legalMoves(state).find(m => E.toSAN(state, m).replace(/[+#]/g, '') === st.san);
+    tutCard.classList.add('wait');
+    await play(m);
+    await new Promise(r => whenIdle(r));
+    tutCard.classList.remove('wait');
+  }
+  tut.k++; renderStep();
+}
+function closeTutorial(silent) {
+  tutCard.hidden = true;
+  document.querySelectorAll('.tut-pulse').forEach(e => e.classList.remove('tut-pulse'));
+  if (!tut) return;
+  settings.tmode = tut.saved.tmode; settings.battle = tut.saved.battle;
+  const wasTutor = settings.mode === 'tutor';
+  tut = null;
+  try { localStorage.setItem('cf-tut-seen', '1'); } catch (e) { /* storage blocked */ }
+  if (wasTutor && silent !== true) $('bMenu').click();
+}
+// first real game ever: offer the tutorial once (skippable)
+function offerTutorial() {
+  try { if (localStorage.getItem('cf-tut-seen')) return; localStorage.setItem('cf-tut-seen', '1'); } catch (e) { return; }
+  tutCard.hidden = false; tutCard.classList.remove('picker');
+  tutCard.innerHTML = `<div class="th mono"><span>New here? — 新手？</span><button class="tx" id="tutX">Skip ✕</button></div>
+    <p class="ts">Take the one-minute tutorial: how to play, plus openings like the Queen's Gambit.</p><p class="tz">一分鐘教學：基本玩法，同埋后翼棄兵等開局技巧。</p>
+    <div class="tb" style="grid-template-columns:1fr 1fr"><button class="btn" id="tutNo">Skip</button><button class="btn primary" id="tutYes">Start tutorial</button></div>`;
+  $('tutX').onclick = $('tutNo').onclick = () => { tutCard.hidden = true; };
+  $('tutYes').onclick = () => { whenIdle(() => { openLessonPicker(); startGame('tutor'); }); };
+}
+$('tTutorial').onclick = () => { document.body.classList.remove('intro'); $('title').classList.add('hide'); openLessonPicker(); startGame('tutor'); };
+
+/* ---------- Hint: the engine's move for you, shown on the board with a reason ---------- */
+const hintBtn = $('hintBtn'), hintBox = $('hintBox');
+let hintArrow = null;
+const PNAME = { P: 'pawn', N: 'knight', B: 'bishop', R: 'rook', Q: 'queen', K: 'king' };
+function whyMove(s, m) {
+  const after = E.makeMove(s, m), san = E.toSAN(s, m), pc = m.piece.toUpperCase();
+  if (E.status(after) === 'checkmate') return ['Checkmate!', '將死！'];
+  if (m.castle) return ['Castle — tuck the king away and bring the rook into play.', '易位：保護王，車出嚟參戰。'];
+  if (m.promo) return ['Promote the pawn to a queen.', '兵升變做后。'];
+  if (m.captured) {
+    const val = { p: 1, n: 3, b: 3, r: 5, q: 9 }[m.captured.toLowerCase()] || 0;
+    return [`Capture the ${PNAME[m.captured.toUpperCase()]}${val >= 3 ? ' — a clear material gain' : ''}.`, `食咗對方嘅${{ P: '兵', N: '馬', B: '象', R: '車', Q: '后' }[m.captured.toUpperCase()] || '棋'}。`];
+  }
+  if (E.inCheck(after)) return ['Check — the enemy king has to respond.', '將軍！對方一定要應付。'];
+  const to = E.sqName(m.to), fromRank = E.sqName(m.from)[1], moveNo = Math.floor(history.length / 2) + 1;
+  if (pc === 'P' && ['d4', 'e4', 'd5', 'e5', 'c4', 'c5'].includes(to)) return ['Claim the centre with a pawn.', '用兵搶中心。'];
+  if ((pc === 'N' || pc === 'B') && (fromRank === '1' || fromRank === '8') && moveNo <= 12) return [`Develop the ${PNAME[pc]} toward the centre.`, `出${pc === 'N' ? '馬' : '象'}，向中心發展。`];
+  return ["The engine's top pick here: it improves your position.", '引擎認為呢步最好，可以改善你嘅局面。'];
+}
+function clearHint() { hintBox.hidden = true; if (hintArrow) { hintArrow.removeFromParent(); hintArrow.geometry.dispose(); hintArrow = null; } }
+hintBtn.onclick = () => {
+  if (busy || gameOver || !isHuman(state.turn)) return;
+  clearHint();
+  const m = E.bestMove(state, Math.max(2, settings.level), 0);
+  if (!m) return;
+  select(m.from);
+  // a glowing ribbon from the piece to its best square
+  const a = sqPos(m.from).setY(.06), b = sqPos(m.to).setY(.06), d = b.clone().sub(a), len = d.length();
+  hintArrow = new THREE.Mesh(new THREE.PlaneGeometry(.16, len).rotateX(-PI / 2).translate(0, 0, len / 2), new THREE.MeshBasicMaterial({
+    color: ABYSS() ? hintColor(state.turn, 1.4) : new THREE.Color(SC().mark), transparent: true, opacity: .85, depthWrite: false, toneMapped: !ABYSS(), blending: ABYSS() ? THREE.AdditiveBlending : THREE.NormalBlending }));
+  hintArrow.position.copy(a); hintArrow.rotation.y = Math.atan2(d.x, d.z); hintArrow.renderOrder = 3; hintArrow.raycast = () => {};
+  markGroup.add(hintArrow);
+  const [en, zh] = whyMove(state, m);
+  hintBox.innerHTML = `<b class="mono">Hint · ${E.toSAN(state, m)}</b><span>${en}</span><span class="z">${zh}</span>`;
+  hintBox.hidden = false;
+};
+setInterval(() => {
+  const show = !document.body.classList.contains('intro') && !galleryOn && ['ai-w', 'ai-b', 'pvp'].includes(settings.mode) && !gameOver && isHuman(state.turn) && !busy;
+  hintBtn.hidden = !show;
+  if (!show || selected < 0) clearHint();
+}, 250);
+
 // title Config: the in-game settings (and the finish switch) move into a sheet over the menu, and back on close
 const cfgModal = document.createElement('div');
 cfgModal.className = 'modal'; cfgModal.id = 'cfgModal'; cfgModal.hidden = true;
@@ -4117,6 +4373,7 @@ $('cfgClose').onclick = cfgModal.onclick = e => {
 $('tGallery').onclick = () => { document.body.classList.remove('intro'); $('title').classList.add('hide'); openGallery(true); };
 $('bMenu').onclick = () => {
   if (busy && settings.mode !== 'demo') return;
+  if (tut || !tutCard.hidden) { const t = tut; tut = null; tutCard.hidden = true; if (t) { settings.tmode = t.saved.tmode; settings.battle = t.saved.battle; } }
   if (settings.mode === 'demo') { settings.mode = 'idle'; clearTimeout(demoTimer); controls.autoRotate = false; document.body.classList.remove('demo'); }
   tvStatic();
   setMusic('title');
